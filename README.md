@@ -1,17 +1,9 @@
-# Keycloak 2FA SMS Authenticator
+# Keycloak 2FA E-Mail Authenticator
 
-Keycloak Authentication Provider implementation to get a 2nd-factor authentication with a OTP/code/token send via SMS (through AWS SNS).
+Keycloak Authentication Provider implementation to get a 2nd-factor authentication with a OTP/code/token send via E-Mail.
 
-_Demo purposes only!_
+If you intend to use this plugin, read the following paragraph carefully:
 
-Unfortunately, I don't have a real readme yet.
-Blame on me!
+This plugin provides a second factor via e-mail. This is considered to be a fall back mechanism. We recommend to set the Verify Profile action for all new users to ensure an e-mail exists. If no e-mail is set in the user profile, this plugin will skip the second authentication step and then proceed to the configured Profile Vverification action, which includes entering an e-mail. As soon as TOTP or Webauthn is configured, the e-mail verification will be disabled.
 
-But, for now, you can at least read my **blog post** about this autenticator here:  
-https://www.n-k.de/2020/12/keycloak-2fa-sms-authentication.html
-
-Or, just watch my **video** about this 2FA SMS SPI:
-
-[![](http://img.youtube.com/vi/GQi19817fFk/maxresdefault.jpg)](http://www.youtube.com/watch?v=GQi19817fFk "")
-
-[![](http://img.youtube.com/vi/FHJ5WOx1es0/maxresdefault.jpg)](http://www.youtube.com/watch?v=FHJ5WOx1es0 "")
+This work is based on https://github.com/dasniko/keycloak-2fa-sms-authenticator and https://gitlab.com/niroj.adhikary/keycloak-email-otp/.
