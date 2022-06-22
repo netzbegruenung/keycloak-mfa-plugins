@@ -1,4 +1,4 @@
-package dasniko.keycloak.authenticator;
+package niroj.keycloak.authenticator;
 
 import org.keycloak.Config;
 import org.keycloak.authentication.Authenticator;
@@ -8,28 +8,29 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.provider.ProviderConfigProperty;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
- * @author Niko Köbler, https://www.n-k.de, @dasniko
+ * @author Niko Köbler, https://www.n-k.de
+ * @author @niroj, https://gitlab.com/niroj.adhikary/keycloak-email-otp/
+ * @author Netzbegruenung https://github.com/netzbegruenung/keycloak-2fa-email-authenticator
  */
-public class SmsAuthenticatorFactory implements AuthenticatorFactory {
-
-	public static final String PROVIDER_ID = "sms-authenticator";
+public class EmailAuthenticatorFactory implements AuthenticatorFactory {
 
 	@Override
 	public String getId() {
-		return PROVIDER_ID;
+		return "email-authenticator";
 	}
 
 	@Override
 	public String getDisplayType() {
-		return "SMS Authentication";
+		return "EMAIL Authentication";
 	}
 
 	@Override
 	public String getHelpText() {
-		return "Validates an OTP sent via SMS to the users mobile phone.";
+		return "Validates an OTP sent via EMAIL to the users email address.";
 	}
 
 	@Override
@@ -49,22 +50,26 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 
 	@Override
 	public AuthenticationExecutionModel.Requirement[] getRequirementChoices() {
-		return REQUIREMENT_CHOICES;
+		return new AuthenticationExecutionModel.Requirement[] {
+			AuthenticationExecutionModel.Requirement.REQUIRED,
+			AuthenticationExecutionModel.Requirement.ALTERNATIVE,
+			AuthenticationExecutionModel.Requirement.DISABLED,
+		};
 	}
 
 	@Override
 	public List<ProviderConfigProperty> getConfigProperties() {
-		return List.of(
+		return Arrays.asList(
 			new ProviderConfigProperty("length", "Code length", "The number of digits of the generated code.", ProviderConfigProperty.STRING_TYPE, 6),
 			new ProviderConfigProperty("ttl", "Time-to-live", "The time to live in seconds for the code to be valid.", ProviderConfigProperty.STRING_TYPE, "300"),
 			new ProviderConfigProperty("senderId", "SenderId", "The sender ID is displayed as the message sender on the receiving device.", ProviderConfigProperty.STRING_TYPE, "Keycloak"),
-			new ProviderConfigProperty("simulation", "Simulation mode", "In simulation mode, the SMS won't be sent, but printed to the server logs", ProviderConfigProperty.BOOLEAN_TYPE, true)
+			new ProviderConfigProperty("simulation", "Simulation mode", "In simulation mode, the EMAIL won't be sent, but printed to the server logs", ProviderConfigProperty.BOOLEAN_TYPE, true)
 		);
 	}
 
 	@Override
 	public Authenticator create(KeycloakSession session) {
-		return new SmsAuthenticator();
+		return new EmailAuthenticator();
 	}
 
 	@Override

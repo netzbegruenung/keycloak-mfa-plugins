@@ -1,10 +1,9 @@
-package dasniko.keycloak.authenticator;
+package niroj.keycloak.authenticator;
 
-import dasniko.keycloak.authenticator.gateway.SmsServiceFactory;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
-import org.keycloak.common.util.SecretGenerator;
+import org.keycloak.common.util.RandomString;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
@@ -16,12 +15,18 @@ import org.keycloak.theme.Theme;
 import javax.ws.rs.core.Response;
 import java.util.Locale;
 
-/**
- * @author Niko Köbler, https://www.n-k.de, @dasniko
- */
-public class SmsAuthenticator implements Authenticator {
 
-	private static final String TPL_CODE = "login-sms.ftl";
+// email provider from keycloak
+import org.keycloak.email.DefaultEmailSenderProvider;
+
+/**
+ * @author Niko Köbler, https://www.n-k.de
+ * @author @niroj, https://gitlab.com/niroj.adhikary/keycloak-email-otp/
+ * @author Netzbegruenung https://github.com/netzbegruenung/keycloak-2fa-email-authenticator
+ */
+public class EmailAuthenticator implements Authenticator {
+
+	private static final String TPL_CODE = "login-email.ftl";
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
@@ -29,13 +34,10 @@ public class SmsAuthenticator implements Authenticator {
 		KeycloakSession session = context.getSession();
 		UserModel user = context.getUser();
 
-		String mobileNumber = user.getFirstAttribute("mobile_number");
-		// mobileNumber of course has to be further validated on proper format, country code, ...
-
 		int length = Integer.parseInt(config.getConfig().get("length"));
 		int ttl = Integer.parseInt(config.getConfig().get("ttl"));
 
-		String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
+		String code = RandomString.randomCode(length);
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
 		authSession.setAuthNote("code", code);
 		authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
@@ -43,15 +45,23 @@ public class SmsAuthenticator implements Authenticator {
 		try {
 			Theme theme = session.theme().getTheme(Theme.Type.LOGIN);
 			Locale locale = session.getContext().resolveLocale(user);
-			String smsAuthText = theme.getMessages(locale).getProperty("smsAuthText");
-			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
+			String emailAuthText = theme.getMessages(locale).getProperty("emailAuthText");
+			String emailText = String.format(emailAuthText, code, Math.floorDiv(ttl, 60));
 
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
+			DefaultEmailSenderProvider senderProvider = new DefaultEmailSenderProvider(session);
+			senderProvider.send(
+				        session.getContext().getRealm().getSmtpConfig(),
+				        user,
+				        "2FA Authentication",
+				        emailText,
+				        emailText
+				);
+
 
 			context.challenge(context.form().setAttribute("realm", context.getRealm()).createForm(TPL_CODE));
 		} catch (Exception e) {
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
-				context.form().setError("smsAuthSmsNotSent", e.getMessage())
+				context.form().setError("emailAuthEmailNotSent", e.getMessage())
 					.createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
 		}
 	}
@@ -75,7 +85,7 @@ public class SmsAuthenticator implements Authenticator {
 			if (Long.parseLong(ttl) < System.currentTimeMillis()) {
 				// expired
 				context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE,
-					context.form().setError("smsAuthCodeExpired").createErrorPage(Response.Status.BAD_REQUEST));
+					context.form().setError("emailAuthCodeExpired").createErrorPage(Response.Status.BAD_REQUEST));
 			} else {
 				// valid
 				context.success();
@@ -86,7 +96,7 @@ public class SmsAuthenticator implements Authenticator {
 			if (execution.isRequired()) {
 				context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
 					context.form().setAttribute("realm", context.getRealm())
-						.setError("smsAuthCodeInvalid").createForm(TPL_CODE));
+						.setError("emailAuthCodeInvalid").createForm(TPL_CODE));
 			} else if (execution.isConditional() || execution.isAlternative()) {
 				context.attempted();
 			}
@@ -100,7 +110,7 @@ public class SmsAuthenticator implements Authenticator {
 
 	@Override
 	public boolean configuredFor(KeycloakSession session, RealmModel realm, UserModel user) {
-		return user.getFirstAttribute("mobile_number") != null;
+		return user.getEmail() != null;
 	}
 
 	@Override
