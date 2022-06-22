@@ -10,7 +10,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<keycloak.version>18.0.1</keycloak.version>
+		<keycloak.version>18.0.0</keycloak.version>
 		<maven.compiler.release>11</maven.compiler.release>
 		<maven.compiler.version>3.8.1</maven.compiler.version>
 		<maven.shade.version>3.2.4</maven.shade.version>
@@ -28,7 +28,7 @@
 			<dependency>
 				<groupId>com.github.netzbegruenung</groupId>
 				<artifactId>keycloak-spi-bom</artifactId>
-				<version>${keycloak.version}</version>
+				<version>-SNAPSHOT</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
