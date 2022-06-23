@@ -22,7 +22,7 @@
 			<url>https://jitpack.io</url>
 		</repository>
 	</repositories>
-
+<!--
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -34,19 +34,22 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
-
+-->
 	<dependencies>
 		<dependency>
 			<groupId>org.keycloak</groupId>
 			<artifactId>keycloak-server-spi</artifactId>
+			<version>18.0.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.keycloak</groupId>
 			<artifactId>keycloak-server-spi-private</artifactId>
+			<version>18.0.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.keycloak</groupId>
 			<artifactId>keycloak-services</artifactId>
+			<version>18.0.1</version>
 		</dependency>
 	</dependencies>
 

@@ -1,9 +1,9 @@
-package dasniko.keycloak.authenticator.gateway;
+package netzbegruenung.keycloak.authenticator.gateway;
 
 import java.util.Map;
 
 /**
- * @author Niko Köbler, https://www.n-k.de, @dasniko
+ * @author Netzbegrünung e.V.
  */
 public interface SmsService {
 
