@@ -17,7 +17,8 @@ public class SmsServiceFactory {
 			return (phoneNumber, message) ->
 				LOG.warn(String.format("***** SIMULATION MODE ***** Would send SMS to %s with text: %s", phoneNumber, message));
 		} else {
-			LOG.warn(String.format("***** SIMULATION MODE ***** Would send SMS to %s with text: %s", phoneNumber, message));
+			return (phoneNumber, message) ->
+				LOG.warn(String.format("***** SIMULATION MODE ***** Would send SMS to %s with text: %s", phoneNumber, message));
 		}
 	}
 
