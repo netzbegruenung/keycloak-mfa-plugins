@@ -18,7 +18,7 @@ import org.jboss.logging.Logger;
  */
 public class ApiSmsService implements SmsService{
 
-	private final String apipath;
+	private final String apiurl;
 	private final Boolean urlencode;
 
 	private final String apitoken;
@@ -34,8 +34,8 @@ public class ApiSmsService implements SmsService{
 	private static final Logger LOG = Logger.getLogger(SmsServiceFactory.class);
 
 	ApiSmsService(Map<String, String> config) {
-		apipath = config.get("apipath");
-		LOG.warn(String.format("Parsed apipath: %s", apipath));
+		apiurl = config.get("apiurl");
+		LOG.warn(String.format("Parsed apiurl: %s", apiurl));
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
 		LOG.warn(String.format("Parsed urlencode: %b", urlencode));
 
@@ -80,7 +80,7 @@ public class ApiSmsService implements SmsService{
             .concat("}");
 
         LOG.warn("Creating URI");
-        var uri = URI.create(apipath);
+        var uri = URI.create(apiurl);
         LOG.warn("Creating body");
         var body = HttpRequest.BodyPublishers.ofString(sendJson);
         LOG.warn("Building Request");
@@ -97,12 +97,12 @@ public class ApiSmsService implements SmsService{
         HttpResponse<String> response;
 		try {
 			response = client.send(request, HttpResponse.BodyHandlers.ofString());
-			LOG.warn(String.format("Sent message to %s with body %s; Response: %s ", apipath, sendJson, response));
+			LOG.warn(String.format("Sent message to %s with body %s; Response: %s ", apiurl, sendJson, response));
 		} catch (IOException e) {
-			LOG.warn(String.format("Failed to send message to %s with body %s", apipath, sendJson));
+			LOG.warn(String.format("Failed to send message to %s with body %s", apiurl, sendJson));
 			e.printStackTrace();
 		} catch (InterruptedException e) {
-			LOG.warn(String.format("Failed to send message to %s with body %s", apipath, sendJson));
+			LOG.warn(String.format("Failed to send message to %s with body %s", apiurl, sendJson));
 			e.printStackTrace();
 		}
 	}
@@ -118,16 +118,16 @@ public class ApiSmsService implements SmsService{
 
 	    var client = HttpClient.newHttpClient();
 	    var form_data = getFormDataAsString(formData);
-	    var request = HttpRequest.newBuilder(URI.create(apipath))
+	    var request = HttpRequest.newBuilder(URI.create(apiurl))
 	            .POST(HttpRequest.BodyPublishers.ofString(form_data))
 	            .build();
 	    try {
 			client.send(request, HttpResponse.BodyHandlers.ofString());
 		} catch (IOException e) {
-			LOG.warn(String.format("Failed to send message to %s with params %s", apipath, form_data));
+			LOG.warn(String.format("Failed to send message to %s with params %s", apiurl, form_data));
 			e.printStackTrace();
 		} catch (InterruptedException e) {
-			LOG.warn(String.format("Failed to send message to %s with params %s", apipath, form_data));
+			LOG.warn(String.format("Failed to send message to %s with params %s", apiurl, form_data));
 			e.printStackTrace();
 		}
 	}
