@@ -111,7 +111,7 @@ public class SmsAuthenticator implements Authenticator {
 
 	@Override
 	public void setRequiredActions(KeycloakSession session, RealmModel realm, UserModel user) {
-		user.addRequiredAction("SET_MOBILE_NUMBER");
+		user.addRequiredAction("MOBILE_NUMBER");
 	}
 
 	@Override

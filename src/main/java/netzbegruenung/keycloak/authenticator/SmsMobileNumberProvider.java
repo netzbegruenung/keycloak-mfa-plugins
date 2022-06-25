@@ -115,10 +115,9 @@ public class SmsMobileNumberProvider implements CredentialProvider<SmsAuthentica
                 .type(getType())
                 .category(CredentialTypeMetadata.Category.TWO_FACTOR)
                 .displayName(SmsMobileNumberProviderFactory.PROVIDER_ID)
-                .helpText("secret-question-text")
+                .helpText("sms-setup-text")
                 .createAction(SmsAuthenticatorFactory.PROVIDER_ID)
-                .updateAction(SmsAuthenticatorFactory.PROVIDER_ID)
-                .removeable(false)
+                .removeable(true)
                 .build(session);
     }
 

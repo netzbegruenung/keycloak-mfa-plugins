@@ -16,7 +16,7 @@ import java.util.List;
  */
 public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 
-	public static final String PROVIDER_ID = "sms-authenticator";
+	public static final String PROVIDER_ID = "MOBILE_NUMBER";
 
 	@Override
 	public String getId() {
@@ -30,7 +30,8 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 
 	private static AuthenticationExecutionModel.Requirement[] REQUIREMENT_CHOICES = {
 		AuthenticationExecutionModel.Requirement.REQUIRED,
-		AuthenticationExecutionModel.Requirement.ALTERNATIVE
+		AuthenticationExecutionModel.Requirement.ALTERNATIVE,
+		AuthenticationExecutionModel.Requirement.DISABLED
 	};
 	@Override
 	public AuthenticationExecutionModel.Requirement[] getRequirementChoices() {
@@ -69,7 +70,7 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 
 	@Override
 	public String getReferenceCategory() {
-		return "otp";
+		return "MOBILE_NUMBER";
 	}
 
 	@Override

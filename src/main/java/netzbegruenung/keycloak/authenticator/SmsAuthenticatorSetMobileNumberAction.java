@@ -12,7 +12,7 @@ import org.jboss.logging.Logger;
 
 public class SmsAuthenticatorSetMobileNumberAction implements RequiredActionProvider {
 
-	public static String PROVIDER_ID = "SET_MOBILE_NUMBER";
+	public static String PROVIDER_ID = "MOBILE_NUMBER";
 	private static final Logger LOG = Logger.getLogger(SmsAuthenticatorSetMobileNumberAction.class);
 
 	@Override
