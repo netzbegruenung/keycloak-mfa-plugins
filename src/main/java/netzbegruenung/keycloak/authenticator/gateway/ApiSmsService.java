@@ -18,37 +18,37 @@ import org.jboss.logging.Logger;
  */
 public class ApiSmsService implements SmsService{
 
-	private String apipath;
-	private Boolean urlencode;
+	private final String apipath;
+	private final Boolean urlencode;
 
-	private String apitoken;
-	private String apiuser;
+	private final String apitoken;
+	private final String apiuser;
 
-	private String from;
+	private final String from;
 
-	private String apitokenattribute;
-	private String messageattribute;
-	private String receiverattribute;
-	private String senderattribute;
+	private final String apitokenattribute;
+	private final String messageattribute;
+	private final String receiverattribute;
+	private final String senderattribute;
 
 	private static final Logger LOG = Logger.getLogger(SmsServiceFactory.class);
 
 	ApiSmsService(Map<String, String> config) {
-		LOG.warn("Parsing path");
 		apipath = config.get("apipath");
-		LOG.warn("Parsing urlencode");
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
 
-		LOG.warn("Parsing apitoken");
-		apitoken = config.get("apitoken");
-		LOG.warn("Parsing apiuser");
-		apiuser = config.get("apiuser");
+		apitoken = config.getOrDefault("apitoken", "");
+		apiuser = config.getOrDefault("apiuser", "");
 
 		from = config.get("senderId");
 
-		apitokenattribute = config.get("apitokenattribute");
+		LOG.warn("Parsing apitokenattribute");
+		apitokenattribute = config.getOrDefault("apitokenattribute", "");
+		LOG.warn("Parsing messageattribute");
 		messageattribute = config.get("messageattribute");
+		LOG.warn("Parsing receiverattribute");
 		receiverattribute = config.get("receiverattribute");
+		LOG.warn("Parsing senderattribute");
 		senderattribute = config.get("senderattribute");
 	}
 
