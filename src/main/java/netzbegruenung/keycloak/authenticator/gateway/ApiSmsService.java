@@ -58,16 +58,20 @@ public class ApiSmsService implements SmsService{
 	}
 
 	public void send(String phoneNumber, String message) {
+		
 		if (urlencode) {
+			LOG.warn("Trying to send URLENCODE");
 			send_urlencoded(phoneNumber, message);
 			LOG.warn(String.format("Trying to send %s to %s via URL encoded request", message, phoneNumber));
 		} else {
+			LOG.warn("Trying to send JSON");
 			send_json(phoneNumber, message);
 			LOG.warn(String.format("Trying to send %s to %s via JSON body", message, phoneNumber));
 		}
 	}
 
 	public void send_json(String phoneNumber, String message) {
+		LOG.warn("Building JSON");
         String sendJson = "{"
             .concat(apitokenattribute != "" ? String.format("\"%s\":\"%s\",", apitokenattribute, apitoken): "")
             .concat(String.format("\"%s\":\"%s\",", messageattribute, message))
@@ -75,14 +79,17 @@ public class ApiSmsService implements SmsService{
             .concat(String.format("\"%s\":\"%s\"", senderattribute, from))
             .concat("}");
 
+        LOG.warn("Building Request");
         var request = HttpRequest.newBuilder()
             .uri(URI.create(apipath))
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(sendJson))
             .build();
 
+        LOG.warn("Starting HTTP client");
         var client = HttpClient.newHttpClient();
 
+        LOG.warn("Retting response");
         HttpResponse<String> response;
 		try {
 			response = client.send(request, HttpResponse.BodyHandlers.ofString());
