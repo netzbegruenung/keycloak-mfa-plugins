@@ -56,11 +56,11 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 			new ProviderConfigProperty("simulation", "Simulation mode", "In simulation mode, the SMS won't be sent, but printed to the server logs", ProviderConfigProperty.BOOLEAN_TYPE, true),
 			new ProviderConfigProperty("apiurl", "SMS API URL", "The path to the API that receives an HTTP request.", ProviderConfigProperty.STRING_TYPE, "https://example.com/api/sms/send"),
 			new ProviderConfigProperty("urlencode", "URL encode data", "By default send a JSON in HTTP POST body. You can URL encode the data instead.", ProviderConfigProperty.BOOLEAN_TYPE, false),
-			new ProviderConfigProperty("apitokenattribute", "API Secret Token Attribute", "Name of attribute that contains your API token/secret.", ProviderConfigProperty.STRING_TYPE, ""),
-			new ProviderConfigProperty("apitoken", "API Secret Token", "Your API secret/token.", ProviderConfigProperty.STRING_TYPE, "changeme"),
+			new ProviderConfigProperty("apitokenattribute", "API Secret Token Attribute", "Name of attribute that contains your API token/secret. In some APIs the secret is already configured in the path. In this case, this can be left empty.", ProviderConfigProperty.STRING_TYPE, ""),
+			new ProviderConfigProperty("apitoken", "API Secret", "Your API secret. If a Basic Auth user is set, this will be the Basic Auth password.", ProviderConfigProperty.STRING_TYPE, "changeme"),
 			new ProviderConfigProperty("apiuser", "Basic Auth Username", "If set, Basic Auth will be performed. Leave empty if not required.", ProviderConfigProperty.STRING_TYPE, ""),
-			new ProviderConfigProperty("messageattribute", "Message Atrribute", "The attribute that contains the SMS message.", ProviderConfigProperty.STRING_TYPE, "text"),
-			new ProviderConfigProperty("receiverattribute", "Receiver Phone Number Attribute", "The attribute that contains the reciever phone number.", ProviderConfigProperty.STRING_TYPE, "to"),
+			new ProviderConfigProperty("messageattribute", "Message Atrribute", "The attribute that contains the SMS message text.", ProviderConfigProperty.STRING_TYPE, "text"),
+			new ProviderConfigProperty("receiverattribute", "Receiver Phone Number Attribute", "The attribute that contains the receiver phone number.", ProviderConfigProperty.STRING_TYPE, "to"),
 			new ProviderConfigProperty("senderattribute", "Sender Phone Number Attribute", "The attribute that contains the sender phone number. Leave empty if not required.", ProviderConfigProperty.STRING_TYPE, "from")
 		);
 	}

@@ -40,7 +40,7 @@ public class ApiSmsService implements SmsService{
 		apitoken = config.get("apitoken");
 		apiuser = config.get("apiuser");
 
-		from = config.get("from");
+		from = config.get("senderId");
 
 		apitokenattribute = config.get("apitokenattribute");
 		messageattribute = config.get("messageattribute");
