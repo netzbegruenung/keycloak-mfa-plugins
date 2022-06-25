@@ -35,21 +35,26 @@ public class ApiSmsService implements SmsService{
 
 	ApiSmsService(Map<String, String> config) {
 		apipath = config.get("apipath");
+		LOG.warn(String.format("Parsed apipath: %", apipath));
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
+		LOG.warn(String.format("Parsed urlencode: %", urlencode));
 
 		apitoken = config.getOrDefault("apitoken", "");
+		LOG.warn(String.format("Parsed apitoken: %", apitoken));
 		apiuser = config.getOrDefault("apiuser", "");
+		LOG.warn(String.format("Parsed apiuser: %", apiuser));
 
 		from = config.get("senderId");
+		LOG.warn(String.format("Parsed senderId: %", from));
 
-		LOG.warn("Parsing apitokenattribute");
 		apitokenattribute = config.getOrDefault("apitokenattribute", "");
-		LOG.warn("Parsing messageattribute");
+		LOG.warn(String.format("Parsed apitokenattribute: %", apitokenattribute));
 		messageattribute = config.get("messageattribute");
-		LOG.warn("Parsing receiverattribute");
+		LOG.warn(String.format("Parsed messageattribute: %", messageattribute));
 		receiverattribute = config.get("receiverattribute");
-		LOG.warn("Parsing senderattribute");
+		LOG.warn(String.format("Parsed receiverattribute: %", receiverattribute));
 		senderattribute = config.get("senderattribute");
+		LOG.warn(String.format("Parsed senderattribute: %", senderattribute));
 	}
 
 	public void send(String phoneNumber, String message) {
