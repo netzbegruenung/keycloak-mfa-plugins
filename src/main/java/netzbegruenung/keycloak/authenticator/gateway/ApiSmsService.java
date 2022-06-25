@@ -35,26 +35,26 @@ public class ApiSmsService implements SmsService{
 
 	ApiSmsService(Map<String, String> config) {
 		apipath = config.get("apipath");
-		LOG.warn(String.format("Parsed apipath: %", apipath));
+		LOG.warn(String.format("Parsed apipath: %s", apipath));
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
-		LOG.warn(String.format("Parsed urlencode: %", urlencode));
+		LOG.warn(String.format("Parsed urlencode: %b", urlencode));
 
 		apitoken = config.getOrDefault("apitoken", "");
-		LOG.warn(String.format("Parsed apitoken: %", apitoken));
+		LOG.warn(String.format("Parsed apitoken: %s", apitoken));
 		apiuser = config.getOrDefault("apiuser", "");
-		LOG.warn(String.format("Parsed apiuser: %", apiuser));
+		LOG.warn(String.format("Parsed apiuser: %s", apiuser));
 
 		from = config.get("senderId");
-		LOG.warn(String.format("Parsed senderId: %", from));
+		LOG.warn(String.format("Parsed senderId: %s", from));
 
 		apitokenattribute = config.getOrDefault("apitokenattribute", "");
-		LOG.warn(String.format("Parsed apitokenattribute: %", apitokenattribute));
+		LOG.warn(String.format("Parsed apitokenattribute: %s", apitokenattribute));
 		messageattribute = config.get("messageattribute");
-		LOG.warn(String.format("Parsed messageattribute: %", messageattribute));
+		LOG.warn(String.format("Parsed messageattribute: %s", messageattribute));
 		receiverattribute = config.get("receiverattribute");
-		LOG.warn(String.format("Parsed receiverattribute: %", receiverattribute));
+		LOG.warn(String.format("Parsed receiverattribute: %s", receiverattribute));
 		senderattribute = config.get("senderattribute");
-		LOG.warn(String.format("Parsed senderattribute: %", senderattribute));
+		LOG.warn(String.format("Parsed senderattribute: %s", senderattribute));
 	}
 
 	public void send(String phoneNumber, String message) {
