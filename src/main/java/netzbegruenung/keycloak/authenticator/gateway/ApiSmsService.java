@@ -18,26 +18,30 @@ import org.jboss.logging.Logger;
  */
 public class ApiSmsService implements SmsService{
 
-	private final String apipath;
-	private final Boolean urlencode;
+	private String apipath;
+	private Boolean urlencode;
 
-	private final String apitoken;
-	private final String apiuser;
+	private String apitoken;
+	private String apiuser;
 
-	private final String from;
+	private String from;
 
-	private final String apitokenattribute;
-	private final String messageattribute;
-	private final String receiverattribute;
-	private final String senderattribute;
+	private String apitokenattribute;
+	private String messageattribute;
+	private String receiverattribute;
+	private String senderattribute;
 
 	private static final Logger LOG = Logger.getLogger(SmsServiceFactory.class);
 
 	ApiSmsService(Map<String, String> config) {
-		apipath = config.get("apipath");;
+		LOG.warn("Parsing path");
+		apipath = config.get("apipath");
+		LOG.warn("Parsing urlencode");
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
 
+		LOG.warn("Parsing apitoken");
 		apitoken = config.get("apitoken");
+		LOG.warn("Parsing apiuser");
 		apiuser = config.get("apiuser");
 
 		from = config.get("senderId");
