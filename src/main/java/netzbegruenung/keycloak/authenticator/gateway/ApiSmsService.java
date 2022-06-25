@@ -79,11 +79,15 @@ public class ApiSmsService implements SmsService{
             .concat(String.format("\"%s\":\"%s\"", senderattribute, from))
             .concat("}");
 
+        LOG.warn("Creating URI");
+        var uri = URI.create(apipath);
+        LOG.warn("Creating body");
+        var body = HttpRequest.BodyPublishers.ofString(sendJson);
         LOG.warn("Building Request");
         var request = HttpRequest.newBuilder()
-            .uri(URI.create(apipath))
+            .uri(uri)
             .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(sendJson))
+            .POST(body)
             .build();
 
         LOG.warn("Starting HTTP client");
