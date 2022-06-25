@@ -17,6 +17,7 @@ public class SmsServiceFactory {
 			return (phoneNumber, message) ->
 				LOG.warn(String.format("***** SIMULATION MODE ***** Would send SMS to %s with text: %s", phoneNumber, message));
 		} else {
+			LOG.warn("Returning ApiSmsService");
 			return new ApiSmsService(config);
 		}
 	}

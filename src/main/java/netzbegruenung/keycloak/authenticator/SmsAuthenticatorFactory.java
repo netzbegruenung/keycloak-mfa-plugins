@@ -9,6 +9,7 @@ import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.authentication.RequiredActionContext;
 
+import org.jboss.logging.Logger;
 import java.util.List;
 
 /**
