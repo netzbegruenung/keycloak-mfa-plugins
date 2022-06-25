@@ -58,13 +58,12 @@ public class ApiSmsService implements SmsService{
 	}
 
 	public void send(String phoneNumber, String message) {
-		
 		if (urlencode) {
-			LOG.warn("Trying to send URLENCODE");
+			LOG.warn("Trying to send URLENCODE"+phoneNumber);
 			send_urlencoded(phoneNumber, message);
 			LOG.warn(String.format("Trying to send %s to %s via URL encoded request", message, phoneNumber));
 		} else {
-			LOG.warn("Trying to send JSON");
+			LOG.warn("Trying to send JSON to "+phoneNumber);
 			send_json(phoneNumber, message);
 			LOG.warn(String.format("Trying to send %s to %s via JSON body", message, phoneNumber));
 		}
