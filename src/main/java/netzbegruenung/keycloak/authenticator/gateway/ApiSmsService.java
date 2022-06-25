@@ -35,42 +35,30 @@ public class ApiSmsService implements SmsService{
 
 	ApiSmsService(Map<String, String> config) {
 		apiurl = config.get("apiurl");
-		LOG.warn(String.format("Parsed apiurl: %s", apiurl));
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
-		LOG.warn(String.format("Parsed urlencode: %b", urlencode));
 
 		apitoken = config.getOrDefault("apitoken", "");
-		LOG.warn(String.format("Parsed apitoken: %s", apitoken));
 		apiuser = config.getOrDefault("apiuser", "");
-		LOG.warn(String.format("Parsed apiuser: %s", apiuser));
 
 		from = config.get("senderId");
-		LOG.warn(String.format("Parsed senderId: %s", from));
 
 		apitokenattribute = config.getOrDefault("apitokenattribute", "");
-		LOG.warn(String.format("Parsed apitokenattribute: %s", apitokenattribute));
 		messageattribute = config.get("messageattribute");
-		LOG.warn(String.format("Parsed messageattribute: %s", messageattribute));
 		receiverattribute = config.get("receiverattribute");
-		LOG.warn(String.format("Parsed receiverattribute: %s", receiverattribute));
 		senderattribute = config.get("senderattribute");
-		LOG.warn(String.format("Parsed senderattribute: %s", senderattribute));
 	}
 
 	public void send(String phoneNumber, String message) {
 		if (urlencode) {
-			LOG.warn("Trying to send URLENCODE"+phoneNumber);
 			send_urlencoded(phoneNumber, message);
 			LOG.warn(String.format("Trying to send %s to %s via URL encoded request", message, phoneNumber));
 		} else {
-			LOG.warn("Trying to send JSON to "+phoneNumber);
 			send_json(phoneNumber, message);
 			LOG.warn(String.format("Trying to send %s to %s via JSON body", message, phoneNumber));
 		}
 	}
 
 	public void send_json(String phoneNumber, String message) {
-		LOG.warn("Building JSON");
         String sendJson = "{"
             .concat(apitokenattribute != "" ? String.format("\"%s\":\"%s\",", apitokenattribute, apitoken): "")
             .concat(String.format("\"%s\":\"%s\",", messageattribute, message))
@@ -78,21 +66,14 @@ public class ApiSmsService implements SmsService{
             .concat(String.format("\"%s\":\"%s\"", senderattribute, from))
             .concat("}");
 
-        LOG.warn("Creating URI");
-        var uri = URI.create(apiurl);
-        LOG.warn("Creating body");
-        var body = HttpRequest.BodyPublishers.ofString(sendJson);
-        LOG.warn("Building Request");
         var request = HttpRequest.newBuilder()
-            .uri(uri)
+            .uri(URI.create(apiurl))
             .header("Content-Type", "application/json")
-            .POST(body)
+            .POST(HttpRequest.BodyPublishers.ofString(sendJson))
             .build();
 
-        LOG.warn("Starting HTTP client");
         var client = HttpClient.newHttpClient();
 
-        LOG.warn("Retting response");
         HttpResponse<String> response;
 		try {
 			response = client.send(request, HttpResponse.BodyHandlers.ofString());

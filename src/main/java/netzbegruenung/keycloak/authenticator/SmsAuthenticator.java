@@ -15,7 +15,6 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
-import org.jboss.logging.Logger;
 
 import javax.ws.rs.core.Response;
 import java.util.Locale;
@@ -28,7 +27,6 @@ public class SmsAuthenticator implements Authenticator {
 
 	private static final String TPL_CODE = "login-sms.ftl";
 	private static final String CREDENTIAL_TYPE  = "MOBILE_NUMBER";
-	private static final Logger LOG = Logger.getLogger(SmsServiceFactory.class);
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
@@ -53,9 +51,7 @@ public class SmsAuthenticator implements Authenticator {
 			String smsAuthText = theme.getMessages(locale).getProperty("smsAuthText");
 			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
 
-			var foo = SmsServiceFactory.get(config.getConfig());
-			LOG.warn("Sending SMS");
-			foo.send(mobileNumber, smsText);
+			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
 
 			context.challenge(context.form().setAttribute("realm", context.getRealm()).createForm(TPL_CODE));
 		} catch (Exception e) {
