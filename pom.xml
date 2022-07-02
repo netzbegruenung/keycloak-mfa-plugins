@@ -5,8 +5,8 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>netzbegruenung</groupId>
-	<artifactId>keycloak-2fa-email-authenticator</artifactId>
-	<version>0.9</version>
+	<artifactId>keycloak-2fa-sms-authenticator</artifactId>
+	<version>0.1.1</version>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
