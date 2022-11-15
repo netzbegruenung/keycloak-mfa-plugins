@@ -98,7 +98,8 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 				PhoneNumberRequiredAction.PROVIDER_ID,
 				PhoneValidationRequiredAction.PROVIDER_ID,
 				UserModel.RequiredAction.CONFIGURE_TOTP.name(),
-				WebAuthnRegisterFactory.PROVIDER_ID
+				WebAuthnRegisterFactory.PROVIDER_ID,
+				UserModel.RequiredAction.UPDATE_PASSWORD.name()
 			);
 			if (
 				credentialList.isEmpty()
