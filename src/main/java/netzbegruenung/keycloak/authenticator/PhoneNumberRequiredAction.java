@@ -75,25 +75,21 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 				}
 			}
 
-			Stream<CredentialModel> credentials = context
-				.getUser()
-				.credentialManager()
-				.getStoredCredentialsStream();
 			// list of accepted 2FA alternatives
 			List<String> secondFactors = Arrays.asList(
 				SmsAuthenticatorModel.TYPE,
 				WebAuthnCredentialModel.TYPE_TWOFACTOR,
 				OTPCredentialModel.TYPE
 			);
-			List<CredentialModel> credentialList = credentials
-				.filter(c -> secondFactors.contains(c.getType()))
-				.collect(Collectors.toList());
-			Stream<String> usersRequiredActions = context.getUser().getRequiredActionsStream();
-			// merge required actions of current authentication session
-			Stream<String> allRequiredActions = Stream.concat(
-				usersRequiredActions,
-				context.getAuthenticationSession().getRequiredActions().stream()
-			);
+			Stream<CredentialModel> credentials = context
+				.getUser()
+				.credentialManager()
+				.getStoredCredentialsStream();
+			if (credentials.anyMatch(x -> secondFactors.contains(x.getType()))) {
+				// skip as 2FA is already set
+				return;
+			}
+
 			Set<String> availableRequiredActions = Set.of(
 				PhoneNumberRequiredAction.PROVIDER_ID,
 				PhoneValidationRequiredAction.PROVIDER_ID,
@@ -101,10 +97,15 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 				WebAuthnRegisterFactory.PROVIDER_ID,
 				UserModel.RequiredAction.UPDATE_PASSWORD.name()
 			);
-			if (
-				credentialList.isEmpty()
-				&& !allRequiredActions.anyMatch(x -> availableRequiredActions.contains(x))
-			) {
+			Set<String> authSessionRequiredActions = context.getAuthenticationSession().getRequiredActions();
+			authSessionRequiredActions.retainAll(availableRequiredActions);
+			if (!authSessionRequiredActions.isEmpty()) {
+				// skip as relevant required action is already set
+				return;
+			}
+
+			Stream<String> usersRequiredActions = context.getUser().getRequiredActionsStream();
+			if (!usersRequiredActions.anyMatch(x -> availableRequiredActions.contains(x))) {
 				logger.infof(
 					"No 2FA method configured for user: %s, setting required action for SMS authenticator",
 					context.getUser().getUsername()
