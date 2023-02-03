@@ -3,7 +3,7 @@
 	<#if section = "header">
 		${msg("smsPhoneNumberTitle",realm.displayName)}
 	<#elseif section = "form">
-		<form id="kc-sms-code-login-form" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
+		<form onsubmit="phonenumber.disabled = true; return true;" id="kc-sms-code-login-form" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
 			<div class="${properties.kcFormGroupClass!}">
 				<div class="${properties.kcLabelWrapperClass!}">
 					<label for="code" class="${properties.kcLabelClass!}">${msg("smsPhoneNumberLabel")}</label>
@@ -20,7 +20,7 @@
 				</div>
 
 				<div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
-					<input class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("doSubmit")}"/>
+					<input name="phonenumber" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("doSubmit")}"/>
 				</div>
 			</div>
 		</form>
