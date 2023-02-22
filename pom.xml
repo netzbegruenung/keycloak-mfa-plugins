@@ -6,7 +6,12 @@
 
 	<groupId>netzbegruenung</groupId>
 	<artifactId>keycloak-2fa-sms-authenticator</artifactId>
+	<packaging>pom</packaging>
 	<version>1.0.4</version>
+	<modules>
+		<module>dev</module>
+		<module>sms-authenticator</module>
+	</modules>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -14,60 +19,76 @@
 		<maven.compiler.release>11</maven.compiler.release>
 		<maven.compiler.version>3.8.1</maven.compiler.version>
 		<maven.shade.version>3.2.4</maven.shade.version>
+		<infinispan.version>13.0.10.Final</infinispan.version>
+		<infinispan.protostream.processor.version>4.4.1.Final</infinispan.protostream.processor.version>
+		<resteasy.version>4.7.7.Final</resteasy.version>
+		<liquibase.version>4.8.0</liquibase.version>
 	</properties>
 
-	<dependencies>
-		<dependency>
-			<groupId>org.keycloak</groupId>
-			<artifactId>keycloak-server-spi</artifactId>
-			<version>${keycloak.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.keycloak</groupId>
-			<artifactId>keycloak-server-spi-private</artifactId>
-			<version>${keycloak.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.keycloak</groupId>
-			<artifactId>keycloak-services</artifactId>
-			<version>${keycloak.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.json</groupId>
-			<artifactId>json</artifactId>
-			<version>20220320</version>
-		</dependency>
-	</dependencies>
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.keycloak</groupId>
+				<artifactId>keycloak-server-spi</artifactId>
+				<version>${keycloak.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.keycloak</groupId>
+				<artifactId>keycloak-server-spi-private</artifactId>
+				<version>${keycloak.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.keycloak</groupId>
+				<artifactId>keycloak-services</artifactId>
+				<version>${keycloak.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.json</groupId>
+				<artifactId>json</artifactId>
+				<version>20220320</version>
+			</dependency>
+
+			<!-- Embedded Keycloak sample -->
+			<dependency>
+				<groupId>com.baeldung</groupId>
+				<artifactId>oauth-authorization-server</artifactId>
+				<version>0.1.0-SNAPSHOT</version>
+				<scope>test</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<build>
 		<finalName>${project.groupId}.${project.artifactId}-v${project.version}</finalName>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>${maven.compiler.version}</version>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-shade-plugin</artifactId>
-				<version>${maven.shade.version}</version>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>shade</goal>
-						</goals>
-						<configuration>
-							<artifactSet>
-								<includes>
-									<include>org.reactivestreams:reactive-streams</include>
-								</includes>
-							</artifactSet>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-		</plugins>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>${maven.compiler.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-shade-plugin</artifactId>
+					<version>${maven.shade.version}</version>
+					<executions>
+						<execution>
+							<phase>package</phase>
+							<goals>
+								<goal>shade</goal>
+							</goals>
+							<configuration>
+								<artifactSet>
+									<includes>
+										<include>org.reactivestreams:reactive-streams</include>
+									</includes>
+								</artifactSet>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 	</build>
 
 </project>

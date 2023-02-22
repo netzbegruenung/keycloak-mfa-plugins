@@ -1,6 +1,5 @@
 .idea
 *.iml
-config
 target
 copy.sh
 dependency-reduced-pom.xml
