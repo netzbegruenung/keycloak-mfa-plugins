@@ -83,6 +83,14 @@
 										<include>org.reactivestreams:reactive-streams</include>
 									</includes>
 								</artifactSet>
+								<filters>
+									<filter>
+										<artifact>org.reactivestreams:reactive-streams</artifact>
+										<excludes>
+											<exclude>META-INF/MANIFEST.MF</exclude>
+										</excludes>
+									</filter>
+								</filters>
 							</configuration>
 						</execution>
 					</executions>
