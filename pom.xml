@@ -5,9 +5,10 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>netzbegruenung</groupId>
-	<artifactId>keycloak-2fa-sms-authenticator</artifactId>
+	<artifactId>keycloak-mfa-tools</artifactId>
 	<packaging>pom</packaging>
-	<version>1.0.4</version>
+	<version>1.0.0</version>
+
 	<modules>
 		<module>dev</module>
 		<module>sms-authenticator</module>
@@ -15,46 +16,63 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<keycloak.version>20.0.3</keycloak.version>
+		<keycloak.version>20.0.5</keycloak.version>
+		<json.version>20220320</json.version>
 		<maven.compiler.release>11</maven.compiler.release>
 		<maven.compiler.version>3.8.1</maven.compiler.version>
 		<maven.shade.version>3.2.4</maven.shade.version>
-		<infinispan.version>13.0.10.Final</infinispan.version>
-		<infinispan.protostream.processor.version>4.4.1.Final</infinispan.protostream.processor.version>
+		<maven.surefire.version>2.22.2</maven.surefire.version>
+		<spring.boot.version>2.6.7</spring.boot.version>
+		<!-- these should be updated together with Keycloak -->
+		<!-- check keycloak-dependencies-server-all effective pom -->
 		<resteasy.version>4.7.7.Final</resteasy.version>
-		<liquibase.version>4.8.0</liquibase.version>
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
+
 			<dependency>
 				<groupId>org.keycloak</groupId>
 				<artifactId>keycloak-server-spi</artifactId>
 				<version>${keycloak.version}</version>
 			</dependency>
+
 			<dependency>
 				<groupId>org.keycloak</groupId>
 				<artifactId>keycloak-server-spi-private</artifactId>
 				<version>${keycloak.version}</version>
 			</dependency>
+
 			<dependency>
 				<groupId>org.keycloak</groupId>
 				<artifactId>keycloak-services</artifactId>
 				<version>${keycloak.version}</version>
 			</dependency>
+
+			<dependency>
+				<groupId>org.keycloak</groupId>
+				<artifactId>keycloak-crypto-default</artifactId>
+				<version>${keycloak.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.keycloak</groupId>
+				<artifactId>keycloak-admin-ui</artifactId>
+				<version>${keycloak.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.jboss.resteasy</groupId>
+				<artifactId>resteasy-jackson2-provider</artifactId>
+				<version>${resteasy.version}</version>
+			</dependency>
+
 			<dependency>
 				<groupId>org.json</groupId>
 				<artifactId>json</artifactId>
-				<version>20220320</version>
+				<version>${json.version}</version>
 			</dependency>
 
-			<!-- Embedded Keycloak sample -->
-			<dependency>
-				<groupId>com.baeldung</groupId>
-				<artifactId>oauth-authorization-server</artifactId>
-				<version>0.1.0-SNAPSHOT</version>
-				<scope>test</scope>
-			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -62,11 +80,13 @@
 		<finalName>${project.groupId}.${project.artifactId}-v${project.version}</finalName>
 		<pluginManagement>
 			<plugins>
+
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>${maven.compiler.version}</version>
 				</plugin>
+
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-shade-plugin</artifactId>
@@ -94,6 +114,17 @@
 							</configuration>
 						</execution>
 					</executions>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>${maven.surefire.version}</version>
+					<configuration>
+						<excludes>
+							<exclude>**/*LiveTest.java</exclude>
+						</excludes>
+					</configuration>
 				</plugin>
 			</plugins>
 		</pluginManagement>
