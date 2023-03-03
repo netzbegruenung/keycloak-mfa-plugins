@@ -36,6 +36,7 @@
   "quickLoginCheckMilliSeconds" : 1000,
   "maxDeltaTimeSeconds" : 43200,
   "failureFactor" : 30,
+  "adminTheme": "keycloak",
   "roles" : {
     "realm" : [ {
       "id" : "3b6109f5-6e5a-4578-83c3-791ec3e2bf9e",

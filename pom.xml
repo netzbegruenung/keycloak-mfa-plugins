@@ -7,7 +7,7 @@
 	<groupId>netzbegruenung</groupId>
 	<artifactId>keycloak-mfa-tools</artifactId>
 	<packaging>pom</packaging>
-	<version>1.0.0</version>
+	<version>21.0.0</version>
 
 	<modules>
 		<module>dev</module>
@@ -16,20 +16,37 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<keycloak.version>20.0.5</keycloak.version>
+		<keycloak.version>21.0.1</keycloak.version>
 		<json.version>20220320</json.version>
 		<maven.compiler.release>11</maven.compiler.release>
 		<maven.compiler.version>3.8.1</maven.compiler.version>
 		<maven.shade.version>3.2.4</maven.shade.version>
 		<maven.surefire.version>2.22.2</maven.surefire.version>
-		<spring.boot.version>2.6.7</spring.boot.version>
+		<spring.boot.version>2.7.9</spring.boot.version>
 		<!-- these should be updated together with Keycloak -->
 		<!-- check keycloak-dependencies-server-all effective pom -->
 		<resteasy.version>4.7.7.Final</resteasy.version>
+		<infinispan.common.version>14.0.4.Final</infinispan.common.version>
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
+
+			<dependency>
+				<groupId>org.keycloak</groupId>
+				<artifactId>keycloak-dependencies-server-all</artifactId>
+				<version>${keycloak.version}</version>
+				<scope>import</scope>
+				<type>pom</type>
+			</dependency>
+
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-dependencies</artifactId>
+				<version>${spring.boot.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 
 			<dependency>
 				<groupId>org.keycloak</groupId>
@@ -65,6 +82,18 @@
 				<groupId>org.jboss.resteasy</groupId>
 				<artifactId>resteasy-jackson2-provider</artifactId>
 				<version>${resteasy.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.infinispan</groupId>
+				<artifactId>infinispan-commons</artifactId>
+				<version>${infinispan.common.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>com.h2database</groupId>
+				<artifactId>h2</artifactId>
+				<version>1.4.200</version>
 			</dependency>
 
 			<dependency>

@@ -2,14 +2,21 @@ package netzbegruenung.keycloak.dev.config;
 
 import java.io.File;
 
+import org.jboss.logging.Logger;
 import org.keycloak.Config;
 import org.keycloak.platform.PlatformProvider;
-import org.keycloak.services.ServicesLogger;
 
 public class SimplePlatformProvider implements PlatformProvider {
 
+    private static final org.jboss.logging.Logger logger = Logger.getLogger(SimplePlatformProvider.class);
+
     Runnable startupHook;
     Runnable shutdownHook;
+
+    @Override
+    public String name() {
+        return "embedded-platform-provider";
+    }
 
     @Override
     public void onStartup(Runnable startupHook) {
@@ -24,7 +31,7 @@ public class SimplePlatformProvider implements PlatformProvider {
 
     @Override
     public void exit(Throwable cause) {
-        ServicesLogger.LOGGER.fatal(cause);
+        logger.fatal("Shutdown Platform", cause);
         exit(1);
     }
 

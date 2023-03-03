@@ -1,6 +1,7 @@
 {
   "id": "baeldung",
   "realm": "baeldung",
+  "adminTheme": "keycloak",
   "notBefore": 0,
   "revokeRefreshToken": false,
   "refreshTokenMaxReuse": 0,
