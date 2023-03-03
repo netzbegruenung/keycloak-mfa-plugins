@@ -1,3 +1,12 @@
+# Keycloak MFA Plugin collection
+
+This repository contains the source code for a collection of Keycloak MFA plugins. The plugins are:
+* SMS authenticator (production ready)
+* Force MFA & Selection dialog (work in progress)
+* Native App MFA integration (work in progress)
+
+The different plugins are documented below.
+
 # Keycloak 2FA SMS Authenticator
 
 Keycloak Authentication Provider implementation to get a 2nd-factor authentication with a OTP/code/token send via SMS with a configurable HTTPS API. It should be possible to interact with most SMS providers. Issues and pull requests to support more SMS providers are welcome.
