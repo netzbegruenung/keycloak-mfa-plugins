@@ -35,7 +35,6 @@ import org.keycloak.models.credential.WebAuthnCredentialModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.ws.rs.core.Response;

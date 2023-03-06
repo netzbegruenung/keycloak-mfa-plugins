@@ -5,69 +5,158 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>netzbegruenung</groupId>
-	<artifactId>keycloak-2fa-sms-authenticator</artifactId>
-	<version>1.0.4</version>
+	<artifactId>keycloak-mfa-tools</artifactId>
+	<packaging>pom</packaging>
+	<version>21.0.0</version>
+
+	<modules>
+		<module>dev</module>
+		<module>sms-authenticator</module>
+	</modules>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<keycloak.version>20.0.3</keycloak.version>
+		<keycloak.version>21.0.1</keycloak.version>
+		<json.version>20220320</json.version>
 		<maven.compiler.release>11</maven.compiler.release>
 		<maven.compiler.version>3.8.1</maven.compiler.version>
 		<maven.shade.version>3.2.4</maven.shade.version>
+		<maven.surefire.version>2.22.2</maven.surefire.version>
+		<spring.boot.version>2.7.9</spring.boot.version>
+		<!-- these should be updated together with Keycloak -->
+		<!-- check keycloak-dependencies-server-all effective pom -->
+		<resteasy.version>4.7.7.Final</resteasy.version>
+		<infinispan.common.version>14.0.4.Final</infinispan.common.version>
 	</properties>
 
-	<dependencies>
-		<dependency>
-			<groupId>org.keycloak</groupId>
-			<artifactId>keycloak-server-spi</artifactId>
-			<version>${keycloak.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.keycloak</groupId>
-			<artifactId>keycloak-server-spi-private</artifactId>
-			<version>${keycloak.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.keycloak</groupId>
-			<artifactId>keycloak-services</artifactId>
-			<version>${keycloak.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.json</groupId>
-			<artifactId>json</artifactId>
-			<version>20220320</version>
-		</dependency>
-	</dependencies>
+	<dependencyManagement>
+		<dependencies>
+
+			<dependency>
+				<groupId>org.keycloak</groupId>
+				<artifactId>keycloak-dependencies-server-all</artifactId>
+				<version>${keycloak.version}</version>
+				<scope>import</scope>
+				<type>pom</type>
+			</dependency>
+
+			<dependency>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-dependencies</artifactId>
+				<version>${spring.boot.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.keycloak</groupId>
+				<artifactId>keycloak-server-spi</artifactId>
+				<version>${keycloak.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.keycloak</groupId>
+				<artifactId>keycloak-server-spi-private</artifactId>
+				<version>${keycloak.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.keycloak</groupId>
+				<artifactId>keycloak-services</artifactId>
+				<version>${keycloak.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.keycloak</groupId>
+				<artifactId>keycloak-crypto-default</artifactId>
+				<version>${keycloak.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.keycloak</groupId>
+				<artifactId>keycloak-admin-ui</artifactId>
+				<version>${keycloak.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.jboss.resteasy</groupId>
+				<artifactId>resteasy-jackson2-provider</artifactId>
+				<version>${resteasy.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.infinispan</groupId>
+				<artifactId>infinispan-commons</artifactId>
+				<version>${infinispan.common.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>com.h2database</groupId>
+				<artifactId>h2</artifactId>
+				<version>1.4.200</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.json</groupId>
+				<artifactId>json</artifactId>
+				<version>${json.version}</version>
+			</dependency>
+
+		</dependencies>
+	</dependencyManagement>
 
 	<build>
 		<finalName>${project.groupId}.${project.artifactId}-v${project.version}</finalName>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>${maven.compiler.version}</version>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-shade-plugin</artifactId>
-				<version>${maven.shade.version}</version>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>shade</goal>
-						</goals>
-						<configuration>
-							<artifactSet>
-								<includes>
-									<include>org.reactivestreams:reactive-streams</include>
-								</includes>
-							</artifactSet>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-		</plugins>
+		<pluginManagement>
+			<plugins>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>${maven.compiler.version}</version>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-shade-plugin</artifactId>
+					<version>${maven.shade.version}</version>
+					<executions>
+						<execution>
+							<phase>package</phase>
+							<goals>
+								<goal>shade</goal>
+							</goals>
+							<configuration>
+								<artifactSet>
+									<includes>
+										<include>org.reactivestreams:reactive-streams</include>
+									</includes>
+								</artifactSet>
+								<filters>
+									<filter>
+										<artifact>org.reactivestreams:reactive-streams</artifact>
+										<excludes>
+											<exclude>META-INF/MANIFEST.MF</exclude>
+										</excludes>
+									</filter>
+								</filters>
+							</configuration>
+						</execution>
+					</executions>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>${maven.surefire.version}</version>
+					<configuration>
+						<excludes>
+							<exclude>**/*LiveTest.java</exclude>
+						</excludes>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 	</build>
 
 </project>
