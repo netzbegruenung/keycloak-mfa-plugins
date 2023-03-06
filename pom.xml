@@ -106,7 +106,6 @@
 	</dependencyManagement>
 
 	<build>
-		<finalName>${project.groupId}.${project.artifactId}-v${project.version}</finalName>
 		<pluginManagement>
 			<plugins>
 
