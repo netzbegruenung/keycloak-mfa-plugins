@@ -23,28 +23,16 @@ import org.junit.jupiter.api.BeforeAll;
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = { AuthorizationServerApp.class }, webEnvironment = WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-public class ContextIntegrationLiveTest {
+public class SmsAuthenticatorLiveTest {
 
-	private static final Logger log = LoggerFactory.getLogger(ContextIntegrationLiveTest.class);
+	private static final Logger log = LoggerFactory.getLogger(SmsAuthenticatorLiveTest.class);
 
 	@LocalServerPort
 	int serverPort;
 
 
 	@BeforeAll
-	public static void populateTestDatabase() throws Exception {
-		log.info("Populating database...");
-		DataSource ds =  DataSourceBuilder.create()
-			.driverClassName("org.h2.Driver")
-			.url("jdbc:h2:./target/customuser")
-			.username("SA")
-			.password("")
-			.build();
-
-		ResourceDatabasePopulator populator = new ResourceDatabasePopulator(false, false, "UTF-8",
-			new ClassPathResource("custom-database-data.sql"));
-		populator.execute(ds);
-
+	public static void initProfile() throws Exception {
 		Profile profile = Profile.configure();
 		Profile.init(profile.getName(), profile.getFeatures());
 	}
