@@ -4,12 +4,4 @@ server:
 spring:
   datasource:
     username: sa
-    url: jdbc:h2:mem:testdb
-
-keycloak:
-  server:
-    contextPath: /auth
-    adminUser:
-      username: admin
-      password: admin
-    realmImportFile: custom-provider-realm.json
+    url: jdbc:h2:file:~/h2/smsauthdb

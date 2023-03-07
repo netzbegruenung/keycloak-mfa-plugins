@@ -12,7 +12,8 @@
 	<modules>
 		<module>dev</module>
 		<module>sms-authenticator</module>
-	</modules>
+        <module>app-authenticator</module>
+    </modules>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
