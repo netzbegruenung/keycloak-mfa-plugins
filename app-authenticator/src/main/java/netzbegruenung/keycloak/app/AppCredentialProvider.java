@@ -10,7 +10,7 @@ import org.keycloak.models.UserModel;
 
 import java.util.stream.Stream;
 
-public class AppCredentialProvider implements CredentialProvider<AppCredentialModel>, CredentialInputUpdater, CredentialInputValidator {
+public class AppCredentialProvider implements CredentialProvider<AppCredentialModel>, CredentialInputValidator {
 
 	private static final Logger logger = Logger.getLogger(AppCredentialProvider.class);
 
@@ -72,18 +72,4 @@ public class AppCredentialProvider implements CredentialProvider<AppCredentialMo
 		return false;
 	}
 
-	@Override
-	public boolean updateCredential(RealmModel realmModel, UserModel userModel, CredentialInput credentialInput) {
-		return true;
-	}
-
-	@Override
-	public void disableCredentialType(RealmModel realmModel, UserModel userModel, String s) {
-
-	}
-
-	@Override
-	public Stream<String> getDisableableCredentialTypesStream(RealmModel realmModel, UserModel userModel) {
-		return null;
-	}
 }
