@@ -16,7 +16,7 @@ import netzbegruenung.keycloak.dev.AuthorizationServerApp;
 import org.junit.jupiter.api.BeforeAll;
 
 @ExtendWith(SpringExtension.class)
-@SpringBootTest(classes = { AuthorizationServerApp.class }, webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = { AuthorizationServerApp.class }, webEnvironment = WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("test")
 public class AppAuthenticatorLiveTest {
 
@@ -41,7 +41,7 @@ public class AppAuthenticatorLiveTest {
 		log.info("Keycloak test server available at {}/auth", baseUrl);
 		log.info("To test a custom provider user login, go to {}/auth/realms/baeldung/account",baseUrl);
 
-		Thread.sleep(60*60*1000);
+		Thread.sleep(3*60*60*1000);
 
 	}
 
