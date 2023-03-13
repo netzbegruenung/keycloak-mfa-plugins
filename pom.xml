@@ -7,7 +7,7 @@
 	<groupId>netzbegruenung</groupId>
 	<artifactId>keycloak-mfa-tools</artifactId>
 	<packaging>pom</packaging>
-	<version>21.0.0</version>
+	<version>${revision}</version>
 
 	<modules>
 		<module>dev</module>
@@ -16,6 +16,7 @@
     </modules>
 
 	<properties>
+		<revision>21.1.0</revision>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<keycloak.version>21.0.1</keycloak.version>
 		<json.version>20230227</json.version>
