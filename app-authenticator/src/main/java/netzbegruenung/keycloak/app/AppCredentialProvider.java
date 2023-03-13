@@ -47,8 +47,8 @@ public class AppCredentialProvider implements CredentialProvider<AppCredentialMo
 		return CredentialTypeMetadata.builder()
 			.type(getType())
 			.category(CredentialTypeMetadata.Category.TWO_FACTOR)
-			.displayName(AppCredentialProviderFactory.PROVIDER_ID)
-			.helpText("app-authenticator-text")
+			.displayName("appAuthDisplayName")
+			.helpText("appAuthHelpText")
 			.createAction(AppRequiredAction.PROVIDER_ID)
 			.removeable(true)
 			.build(session);

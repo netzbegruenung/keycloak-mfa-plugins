@@ -28,13 +28,6 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 			return;
 		}
 
-		String secret = SecretGenerator.getInstance().randomString(SIGNATURE_LENGTH, SecretGenerator.ALPHANUM);
-
-		AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		authSession.setAuthNote("secret", secret);
-
-
-
 		Response challenge = context.form()
 			.createForm("app-login.ftl");
 		context.challenge(challenge);
@@ -51,22 +44,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 
 	@Override
 	public void action(AuthenticationFlowContext context) {
-		AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		String secret = authSession.getAuthNote("secret");
-
-		if (secret == null) {
-			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
-				context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
-			return;
-		}
-
-		String submittedSecret = context.getHttpRequest().getDecodedFormParameters().getFirst("secret");
-	}
-
-	protected boolean validateSecret(AuthenticationFlowContext context) {
-		MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
-		String secret = formData.getFirst("secret");
-		return true;
+		context.success();
 	}
 
 	@Override

@@ -30,6 +30,7 @@ public class AppCredentialModel extends CredentialModel {
 			appCredentialModel.setType(TYPE);
 			appCredentialModel.setId(credentialModel.getId());
 			appCredentialModel.setCredentialData(credentialModel.getCredentialData());
+			appCredentialModel.setUserLabel(credentialData.getDeviceOs());
 			return appCredentialModel;
 		} catch (IOException e) {
 			throw new RuntimeException(e);
