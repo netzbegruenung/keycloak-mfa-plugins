@@ -41,14 +41,15 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 
 	@Override
 	public void requiredActionChallenge(RequiredActionContext context) {
-		String qrCode = createActionToken(context);
+		URI actionTokenUrl = createActionToken(context);
 		Response challenge = context.form()
-			.setAttribute("appAuthQrCode", qrCode)
+			.setAttribute("appAuthQrCode", createQrCode(actionTokenUrl.toString()))
+			.setAttribute("appAuthActionTokenUrl", actionTokenUrl.toString())
 			.createForm("app-auth-setup.ftl");
 		context.challenge(challenge);
 	}
 
-	private String createActionToken(RequiredActionContext context) {
+	private URI createActionToken(RequiredActionContext context) {
 		int validityInSecs = context.getRealm().getActionTokenGeneratedByUserLifespan();
 		int absoluteExpirationInSecs = Time.currentTime() + validityInSecs;
 		final AuthenticationSessionModel authSession = context.getAuthenticationSession();
@@ -70,15 +71,13 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 			.actionTokenBuilder(context.getUriInfo().getBaseUri(), token, clientId, authSession.getTabId())
 			.build(context.getRealm().getName());
 
-		logger.infov("Action token URI: {0}", submitActionTokenUrl);
-
-		return createQrCode(submitActionTokenUrl.toString());
+		return submitActionTokenUrl;
 	}
 
 	private String createQrCode(String uri) {
 		try {
-			int width = 512;
-			int height = 512;
+			int width = 400;
+			int height = 400;
 
 			QRCodeWriter writer = new QRCodeWriter();
 			final BitMatrix bitMatrix = writer.encode(uri, BarcodeFormat.QR_CODE, width, height);
@@ -97,9 +96,10 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 	public void processAction(RequiredActionContext context) {
 		final AuthenticationSessionModel authSession = context.getAuthenticationSession();
 		if (!Boolean.parseBoolean(authSession.getAuthNote("appSetupSuccessful"))) {
-			String qrCode = createActionToken(context);
+			URI actionTokenUrl = createActionToken(context);
 			Response challenge = context.form()
-				.setAttribute("appAuthQrCode", qrCode)
+				.setAttribute("appAuthQrCode", createQrCode(actionTokenUrl.toString()))
+				.setAttribute("appAuthActionTokenUrl", actionTokenUrl.toString())
 				.setError("appAuthSetupError")
 				.createForm("app-auth-setup.ftl");
 			context.challenge(challenge);
