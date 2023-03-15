@@ -19,7 +19,7 @@
  * @author verdigado eG
  */
 
-package netzbegruenung.keycloak.authenticator;
+package netzbegruenung.keycloak.authenticator.credentials;
 
 import org.keycloak.common.util.Time;
 import org.keycloak.credential.CredentialModel;
@@ -27,25 +27,25 @@ import org.keycloak.util.JsonSerialization;
 
 import java.io.IOException;
 
-public class SmsAuthenticatorModel extends CredentialModel {
+public class SmsAuthCredentialModel extends CredentialModel {
 	public static final String TYPE = "mobile-number";
 
-	private final SmsAuthenticatorData mobileNumber;
+	private final SmsAuthCredentialData mobileNumber;
 
 
-	private SmsAuthenticatorModel(SmsAuthenticatorData mobileNumber) {
+	private SmsAuthCredentialModel(SmsAuthCredentialData mobileNumber) {
 		this.mobileNumber = mobileNumber;
 	}
 
-	private SmsAuthenticatorModel(String mobileNumberString) {
-		mobileNumber = new SmsAuthenticatorData(mobileNumberString);
+	private SmsAuthCredentialModel(String mobileNumberString) {
+		mobileNumber = new SmsAuthCredentialData(mobileNumberString);
 	}
 
-	public static SmsAuthenticatorModel createFromModel(CredentialModel credentialModel){
+	public static SmsAuthCredentialModel createFromModel(CredentialModel credentialModel){
 		try {
-			SmsAuthenticatorData credentialData = JsonSerialization.readValue(credentialModel.getCredentialData(), SmsAuthenticatorData.class);
+			SmsAuthCredentialData credentialData = JsonSerialization.readValue(credentialModel.getCredentialData(), SmsAuthCredentialData.class);
 
-			SmsAuthenticatorModel smsAuthenticatorModel = new SmsAuthenticatorModel(credentialData);
+			SmsAuthCredentialModel smsAuthenticatorModel = new SmsAuthCredentialModel(credentialData);
 			smsAuthenticatorModel.setUserLabel(
 					"Mobile Number: ***" + credentialData.getMobileNumber().substring(
 							Math.max(credentialData.getMobileNumber().length() - 3, 0)
@@ -62,13 +62,13 @@ public class SmsAuthenticatorModel extends CredentialModel {
 	}
 
 
-	public static SmsAuthenticatorModel createSmsAuthenticator(String mobileNumber) {
-		SmsAuthenticatorModel credentialModel = new SmsAuthenticatorModel(mobileNumber);
+	public static SmsAuthCredentialModel createSmsAuthenticator(String mobileNumber) {
+		SmsAuthCredentialModel credentialModel = new SmsAuthCredentialModel(mobileNumber);
 		credentialModel.fillCredentialModelFields();
 		return credentialModel;
 	}
 
-	public SmsAuthenticatorData getSmsAuthenticatorData() {
+	public SmsAuthCredentialData getSmsAuthenticatorData() {
 		return mobileNumber;
 	}
 
