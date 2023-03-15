@@ -18,16 +18,16 @@
  * @version $Revision: 1 $
  */
 
-package netzbegruenung.keycloak.authenticator;
+package netzbegruenung.keycloak.authenticator.credentials;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class SmsAuthenticatorData {
+public class SmsAuthCredentialData {
 
 	private final String mobileNumber;
 
 	//@JsonCreator
-	public SmsAuthenticatorData (@JsonProperty("mobile_number") String mobileNumber) {
+	public SmsAuthCredentialData(@JsonProperty("mobile_number") String mobileNumber) {
 		this.mobileNumber = mobileNumber;
 	}
 

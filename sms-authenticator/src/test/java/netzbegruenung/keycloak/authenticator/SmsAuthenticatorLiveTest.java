@@ -21,7 +21,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeAll;
 
 @ExtendWith(SpringExtension.class)
-@SpringBootTest(classes = { AuthorizationServerApp.class }, webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = { AuthorizationServerApp.class }, webEnvironment = WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("test")
 public class SmsAuthenticatorLiveTest {
 
