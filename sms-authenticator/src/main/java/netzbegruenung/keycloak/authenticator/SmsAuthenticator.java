@@ -22,6 +22,8 @@
 
 package netzbegruenung.keycloak.authenticator;
 
+import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialData;
+import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
 import netzbegruenung.keycloak.authenticator.gateway.SmsServiceFactory;
 import org.keycloak.authentication.CredentialValidator;
 import org.keycloak.authentication.AuthenticationFlowContext;
@@ -48,10 +50,9 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsMobileNumberProvider> {
+public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsAuthCredentialProvider> {
 
 	private static final String TPL_CODE = "login-sms.ftl";
-	private static final String CREDENTIAL_TYPE  = "mobile-number";
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
@@ -59,10 +60,10 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsM
 		KeycloakSession session = context.getSession();
 		UserModel user = context.getUser();
 
-		Optional<CredentialModel> model = context.getUser().credentialManager().getStoredCredentialsByTypeStream(SmsAuthenticatorModel.TYPE).findFirst();
+		Optional<CredentialModel> model = context.getUser().credentialManager().getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
 		String mobileNumber = "";
 		try {
-			mobileNumber = JsonSerialization.readValue(model.get().getCredentialData(), SmsAuthenticatorData.class).getMobileNumber();
+			mobileNumber = JsonSerialization.readValue(model.get().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
 		} catch (IOException e1) {
 			e1.printStackTrace();
 			return;
@@ -153,7 +154,7 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsM
 	}
 
 	@Override
-	public SmsMobileNumberProvider getCredentialProvider(KeycloakSession session) {
-		return (SmsMobileNumberProvider)session.getProvider(CredentialProvider.class, SmsMobileNumberProviderFactory.PROVIDER_ID);
+	public SmsAuthCredentialProvider getCredentialProvider(KeycloakSession session) {
+		return (SmsAuthCredentialProvider)session.getProvider(CredentialProvider.class, SmsAuthCredentialProviderFactory.PROVIDER_ID);
 	}
 }

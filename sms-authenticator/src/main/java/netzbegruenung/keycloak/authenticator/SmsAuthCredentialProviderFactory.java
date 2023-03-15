@@ -26,7 +26,7 @@ import org.keycloak.credential.CredentialProviderFactory;
 import org.keycloak.models.KeycloakSession;
 
 
-public class SmsMobileNumberProviderFactory implements CredentialProviderFactory<SmsMobileNumberProvider> {
+public class SmsAuthCredentialProviderFactory implements CredentialProviderFactory<SmsAuthCredentialProvider> {
 
     public static final String PROVIDER_ID =  "mobile-number";
 
@@ -37,6 +37,6 @@ public class SmsMobileNumberProviderFactory implements CredentialProviderFactory
 
     @Override
     public CredentialProvider create(KeycloakSession session) {
-        return new SmsMobileNumberProvider(session);
+        return new SmsAuthCredentialProvider(session);
     }
 }
