@@ -5,8 +5,7 @@ import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
-import netzbegruenung.keycloak.app.actiontoken.AppActionToken;
-import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
+import netzbegruenung.keycloak.app.actiontoken.AppSetupActionToken;
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.CredentialRegistrator;
 import org.keycloak.authentication.InitiatedActionSupport;
@@ -50,16 +49,13 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 	}
 
 	private URI createActionToken(RequiredActionContext context) {
-		int validityInSecs = context.getRealm().getActionTokenGeneratedByUserLifespan();
-		int absoluteExpirationInSecs = Time.currentTime() + validityInSecs;
 		final AuthenticationSessionModel authSession = context.getAuthenticationSession();
 		final String clientId = authSession.getClient().getClientId();
-		String authSessionEncodedId = AuthenticationSessionCompoundId.fromAuthSession(authSession).getEncodedId();
 
-		String token = new AppActionToken(
+		String token = new AppSetupActionToken(
 			context.getUser().getId(),
-			absoluteExpirationInSecs,
-			authSessionEncodedId,
+			Time.currentTime() + context.getRealm().getActionTokenGeneratedByUserLifespan(),
+			AuthenticationSessionCompoundId.fromAuthSession(authSession).getEncodedId(),
 			clientId
 		).serialize(
 			context.getSession(),
@@ -67,11 +63,9 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 			context.getUriInfo()
 		);
 
-		URI submitActionTokenUrl = Urls
+		return Urls
 			.actionTokenBuilder(context.getUriInfo().getBaseUri(), token, clientId, authSession.getTabId())
 			.build(context.getRealm().getName());
-
-		return submitActionTokenUrl;
 	}
 
 	private String createQrCode(String uri) {
