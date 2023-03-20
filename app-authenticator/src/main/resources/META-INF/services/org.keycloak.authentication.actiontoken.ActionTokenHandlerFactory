@@ -1,1 +1,2 @@
-netzbegruenung.keycloak.app.actiontoken.AppActionTokenHandler
+netzbegruenung.keycloak.app.actiontoken.AppSetupActionTokenHandler
+netzbegruenung.keycloak.app.actiontoken.AppAuthActionTokenHandler

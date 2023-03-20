@@ -13,3 +13,7 @@ keycloak:
       username: admin
       password: admin
     realmImportFile: baeldung-realm.json
+
+logging:
+  level:
+    netzbegruenung.keycloak: debug
