@@ -55,7 +55,15 @@ public class AppAuthenticatorFactory implements AuthenticatorFactory {
 
 	@Override
 	public List<ProviderConfigProperty> getConfigProperties() {
-		return null;
+		return List.of(
+			new ProviderConfigProperty(
+				"simulation",
+				"Simulation Mode",
+				"Logs app push notification instead of sending",
+				ProviderConfigProperty.BOOLEAN_TYPE,
+				false
+			)
+		);
 	}
 
 	@Override

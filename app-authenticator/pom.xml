@@ -31,6 +31,12 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>9.1.1</version>
+        </dependency>
+
         <!-- Embedded Keycloak sample -->
         <dependency>
             <groupId>netzbegruenung</groupId>
