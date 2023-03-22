@@ -1,0 +1,93 @@
+openapi: 3.0.3
+info:
+  title: Keycloak App Authenticator
+  description: |-
+    Keycloak Apo Authentication API
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.0
+servers:
+  - url: https://saml.gruene.de
+paths:
+  /realms/{realmId}/login-actions/action-token:
+    get:
+      summary: Setup Authenticator & Authentication
+      tags:
+        - app-authenticator
+      description: |-
+        Besides the required query params when called for authenticator setup device_id, device_os, public_key and public-key-algorithm are required additionally.
+        When called to authenticate signature, signature-algorithm and granted are additionally required.
+      parameters:
+        - in: path
+          name: realmId
+          description: The realm ID
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: key
+          description: Keycloak Action token (JWT)
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: client_id
+          description: The current requested Client
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: tab_id
+          description: Keycloak tab ID
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: device_id
+          description: Mobile device's friebase registration token
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: device_os
+          description: Device OS
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: public_key
+          description: Base64 encoded public key
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: algorithm
+          description: PublicKey/signature algorithm
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: Signature
+          description: Signature of the decrypted secret, which was send by keycloak
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: granted
+          description: Was access granted?
+          required: false
+          schema:
+            type: boolean
+
+      responses:
+        '201':
+          description: Setup Authenticator successful
+        '204':
+          description: Authentication successfully accepted/denied
+        '400':
+          description: One of the required query params is missing, the device is already registered or invalid/expired JWT
+        '403':
+          description: Signature invalid
+        '500':
+          description: Failed to read user credentials (public key)
