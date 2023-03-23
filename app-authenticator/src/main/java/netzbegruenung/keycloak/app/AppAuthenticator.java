@@ -78,12 +78,12 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 	}
 
 	private String encryptSecretMessage(AppCredentialData credentialData, String secret) throws GeneralSecurityException {
-		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		KeyFactory keyFactory = KeyFactory.getInstance(credentialData.getAlgorithm());
 		byte[] publicKeyBytes = Base64.decodeBase64(credentialData.getPublicKey());
 		EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
 		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
 
-		Cipher encryptCipher = Cipher.getInstance("RSA");
+		Cipher encryptCipher = Cipher.getInstance(credentialData.getAlgorithm());
 		encryptCipher.init(Cipher.ENCRYPT_MODE, publicKey);
 		byte[] encryptedMessage = encryptCipher.doFinal(secret.getBytes(StandardCharsets.UTF_8));
 
