@@ -16,8 +16,8 @@ public class AppCredentialModel extends CredentialModel {
 		this.credentialData = credentialData;
 	}
 
-	private AppCredentialModel(String publicKey, String deviceId, String deviceOs) {
-		credentialData = new AppCredentialData(publicKey, deviceId, deviceOs);
+	private AppCredentialModel(String publicKey, String deviceId, String deviceOs, String algorithm) {
+		credentialData = new AppCredentialData(publicKey, deviceId, deviceOs, algorithm);
 	}
 
 	public static AppCredentialModel createFromCredentialModel(CredentialModel credentialModel) {
@@ -37,8 +37,8 @@ public class AppCredentialModel extends CredentialModel {
 		}
 	}
 
-	public static AppCredentialModel createAppCredential(String publicKey, String deviceId, String deviceOs) {
-		AppCredentialModel appCredentialModel = new AppCredentialModel(publicKey, deviceId, deviceOs);
+	public static AppCredentialModel createAppCredential(String publicKey, String deviceId, String deviceOs, String algorithm) {
+		AppCredentialModel appCredentialModel = new AppCredentialModel(publicKey, deviceId, deviceOs, algorithm);
 		appCredentialModel.fillCredentialModelFields();
 		return appCredentialModel;
 	}
