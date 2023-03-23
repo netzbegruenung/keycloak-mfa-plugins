@@ -93,9 +93,17 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 	@Override
 	public void action(AuthenticationFlowContext context) {
 		final AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		if (!Boolean.parseBoolean(authSession.getAuthNote("appAuthSuccessful"))) {
+		final String granted = authSession.getAuthNote("appAuthGranted");
+		if (granted == null) {
 			Response challenge = context.form()
 				.setError("appAuthError")
+				.createForm("app-login.ftl");
+			context.challenge(challenge);
+			return;
+		}
+		if (!Boolean.parseBoolean(granted)) {
+			Response challenge = context.form()
+				.setError("appAuthRejected")
 				.createForm("app-login.ftl");
 			context.challenge(challenge);
 			return;
