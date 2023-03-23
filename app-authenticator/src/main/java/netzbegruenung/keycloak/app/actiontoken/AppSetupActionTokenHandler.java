@@ -30,11 +30,13 @@ public class AppSetupActionTokenHandler extends AbstractActionTokenHandler<AppSe
 		String deviceId = queryParameters.getFirst("device_id");
 		String deviceOs = queryParameters.getFirst("device_os");
 		String publicKey = queryParameters.getFirst("public_key");
+		String algorithm = queryParameters.getFirst("algorithm");
 
 		if (
 			deviceId == null
 			|| deviceOs == null
 			|| publicKey == null
+			|| algorithm == null
 		) {
 			return Response.status(400).build();
 		}
@@ -46,7 +48,7 @@ public class AppSetupActionTokenHandler extends AbstractActionTokenHandler<AppSe
 		appCredentialProvider.createCredential(
 			tokenContext.getRealm(),
 			tokenContext.getAuthenticationSession().getAuthenticatedUser(),
-			AppCredentialModel.createAppCredential(publicKey, deviceId, deviceOs)
+			AppCredentialModel.createAppCredential(publicKey, deviceId, deviceOs, algorithm)
 		);
 
 		AuthenticationSessionModel authSession = ActionTokenUtil.getOriginalAuthSession(
