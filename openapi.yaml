@@ -16,8 +16,10 @@ paths:
       tags:
         - app-authenticator
       description: |-
-        Besides the required query params when called for authenticator setup device_id, device_os, public_key and public-key-algorithm are required additionally.
-        When called to authenticate signature, signature-algorithm and granted are additionally required.
+        Besides the required query params when called for authenticator setup device_id, device_os, public_key and
+        public-key-algorithm (https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#keyfactory-algorithms) are required additionally.
+        When called to authenticate signature-algorithm (https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#signature-algorithms),
+        signature and granted are additionally required.
       parameters:
         - in: path
           name: realmId
@@ -68,7 +70,7 @@ paths:
           schema:
             type: string
         - in: query
-          name: Signature
+          name: signature
           description: Signature of the decrypted secret, which was send by keycloak
           required: false
           schema:
@@ -90,4 +92,4 @@ paths:
         '403':
           description: Signature invalid
         '500':
-          description: Failed to read user credentials (public key)
+          description: Failed to read user credentials (public key), malformed signature, algorithm not available, etc.

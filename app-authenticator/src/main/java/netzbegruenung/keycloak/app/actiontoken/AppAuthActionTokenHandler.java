@@ -3,11 +3,11 @@ package netzbegruenung.keycloak.app.actiontoken;
 import netzbegruenung.keycloak.app.AppCredentialProvider;
 import netzbegruenung.keycloak.app.AppCredentialProviderFactory;
 import netzbegruenung.keycloak.app.credentials.AppCredentialData;
-import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
 import org.apache.commons.codec.binary.Base64;
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.actiontoken.AbstractActionTokenHandler;
 import org.keycloak.authentication.actiontoken.ActionTokenContext;
+import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventType;
@@ -15,6 +15,7 @@ import org.keycloak.services.messages.Messages;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.util.JsonSerialization;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
@@ -57,8 +58,8 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		AppCredentialProvider appCredentialProvider = (AppCredentialProvider) tokenContext
 			.getSession()
 			.getProvider(CredentialProvider.class, AppCredentialProviderFactory.PROVIDER_ID);
-		AppCredentialModel appCredentialModel = appCredentialProvider
-			.getDefaultCredential(tokenContext.getSession(), tokenContext.getRealm(), authSession.getAuthenticatedUser());
+		CredentialModel appCredentialModel = appCredentialProvider
+			.getCredentialModel(authSession.getAuthenticatedUser(), authSession.getAuthNote("credentialId"));
 
 		try {
 			AppCredentialData appCredentialData = JsonSerialization.readValue(appCredentialModel.getCredentialData(), AppCredentialData.class);
@@ -86,7 +87,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 				"App auth: signature verification failed for user: [%s], probably due to malformed signature or wrong algorithm",
 				authSession.getAuthenticatedUser().getUsername()
 			);
-			return Response.status(Response.Status.BAD_REQUEST).build();
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).type(MediaType.TEXT_PLAIN_TYPE).build();
 		}
 
 		authSession.setAuthNote("appAuthGranted", Boolean.toString(true));

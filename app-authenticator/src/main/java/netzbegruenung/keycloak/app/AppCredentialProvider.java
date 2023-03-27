@@ -8,7 +8,8 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 
-import java.util.stream.Stream;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class AppCredentialProvider implements CredentialProvider<AppCredentialModel>, CredentialInputValidator {
 
@@ -49,6 +50,7 @@ public class AppCredentialProvider implements CredentialProvider<AppCredentialMo
 			.category(CredentialTypeMetadata.Category.TWO_FACTOR)
 			.displayName("appAuthDisplayName")
 			.helpText("appAuthHelpText")
+			.iconCssClass("fa fa-mobile")
 			.createAction(AppRequiredAction.PROVIDER_ID)
 			.removeable(true)
 			.build(session);
@@ -70,6 +72,14 @@ public class AppCredentialProvider implements CredentialProvider<AppCredentialMo
 	@Override
 	public boolean isValid(RealmModel realmModel, UserModel userModel, CredentialInput credentialInput) {
 		return false;
+	}
+
+	public List<CredentialModel> getAllCredentials(UserModel user) {
+		return user.credentialManager().getStoredCredentialsByTypeStream(this.getType()).collect(Collectors.toList());
+	}
+
+	public CredentialModel getCredentialModel(UserModel user, String credentialId) {
+		return user.credentialManager().getStoredCredentialById(credentialId);
 	}
 
 }
