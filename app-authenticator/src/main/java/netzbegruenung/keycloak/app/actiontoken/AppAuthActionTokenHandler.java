@@ -52,7 +52,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		AuthenticationSessionModel authSession = ActionTokenUtil.getOriginalAuthSession(
 			tokenContext.getSession(),
 			tokenContext.getRealm(),
-			token.getOriginalCompoundAuthenticationSessionId()
+			token.getOriginalAuthenticationSessionId()
 		);
 
 		AppCredentialProvider appCredentialProvider = (AppCredentialProvider) tokenContext

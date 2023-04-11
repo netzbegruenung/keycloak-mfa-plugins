@@ -22,11 +22,11 @@ public class AppAuthActionToken extends DefaultActionToken {
 		super();
 	}
 
-	public String getOriginalCompoundAuthenticationSessionId() {
+	public String getOriginalAuthenticationSessionId() {
 		return originalAuthenticationSessionId;
 	}
 
-	public void setOriginalCompoundAuthenticationSessionId(String originalCompoundAuthenticationSessionId) {
+	public void setOriginalAuthenticationSessionId(String originalCompoundAuthenticationSessionId) {
 		this.originalAuthenticationSessionId = originalCompoundAuthenticationSessionId;
 	}
 }
