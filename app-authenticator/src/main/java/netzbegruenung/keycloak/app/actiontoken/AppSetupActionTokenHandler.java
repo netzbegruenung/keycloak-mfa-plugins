@@ -54,7 +54,7 @@ public class AppSetupActionTokenHandler extends AbstractActionTokenHandler<AppSe
 		AuthenticationSessionModel authSession = ActionTokenUtil.getOriginalAuthSession(
 			tokenContext.getSession(),
 			tokenContext.getRealm(),
-			token.getOriginalCompoundAuthenticationSessionId()
+			token.getOriginalAuthenticationSessionId()
 		);
 		authSession.setAuthNote("appSetupSuccessful", Boolean.toString(true));
 

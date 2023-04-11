@@ -12,7 +12,7 @@ public class AppSetupActionToken extends DefaultActionToken {
 	@JsonProperty(value = JSON_FIELD_ORIGINAL_AUTHENTICATION_SESSION_ID)
 	private String originalAuthenticationSessionId;
 
-	public AppSetupActionToken(String userId, int absoluteExpirationInSecs, String compoundAuthenticationSessionId, String clientId) {
+	public AppSetupActionToken(String userId, Integer absoluteExpirationInSecs, String compoundAuthenticationSessionId, String clientId) {
 		super(userId, TOKEN_TYPE, absoluteExpirationInSecs, null);
 		this.issuer = clientId;
 		this.originalAuthenticationSessionId = compoundAuthenticationSessionId;
@@ -23,11 +23,11 @@ public class AppSetupActionToken extends DefaultActionToken {
 		super();
 	}
 
-	public String getOriginalCompoundAuthenticationSessionId() {
+	public String getOriginalAuthenticationSessionId() {
 		return originalAuthenticationSessionId;
 	}
 
-	public void setOriginalCompoundAuthenticationSessionId(String originalCompoundAuthenticationSessionId) {
+	public void setOriginalAuthenticationSessionId(String originalCompoundAuthenticationSessionId) {
 		this.originalAuthenticationSessionId = originalCompoundAuthenticationSessionId;
 	}
 }

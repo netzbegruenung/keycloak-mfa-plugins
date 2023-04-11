@@ -5,6 +5,7 @@ import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import netzbegruenung.keycloak.app.actiontoken.ActionTokenUtil;
 import netzbegruenung.keycloak.app.actiontoken.AppSetupActionToken;
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.CredentialRegistrator;
@@ -12,9 +13,6 @@ import org.keycloak.authentication.InitiatedActionSupport;
 import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.common.util.Base64;
-import org.keycloak.common.util.Time;
-import org.keycloak.services.Urls;
-import org.keycloak.sessions.AuthenticationSessionCompoundId;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 import javax.ws.rs.core.Response;
@@ -40,32 +38,20 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 
 	@Override
 	public void requiredActionChallenge(RequiredActionContext context) {
-		URI actionTokenUrl = createActionToken(context);
+		URI actionTokenUrl = ActionTokenUtil.createActionToken(
+			AppSetupActionToken.class,
+			context.getAuthenticationSession(),
+			context.getSession(),
+			context.getRealm(),
+			context.getUser(),
+			context.getUriInfo()
+		);
+
 		Response challenge = context.form()
 			.setAttribute("appAuthQrCode", createQrCode(actionTokenUrl.toString()))
 			.setAttribute("appAuthActionTokenUrl", actionTokenUrl.toString())
 			.createForm("app-auth-setup.ftl");
 		context.challenge(challenge);
-	}
-
-	private URI createActionToken(RequiredActionContext context) {
-		final AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		final String clientId = authSession.getClient().getClientId();
-
-		String token = new AppSetupActionToken(
-			context.getUser().getId(),
-			Time.currentTime() + context.getRealm().getActionTokenGeneratedByUserLifespan(),
-			AuthenticationSessionCompoundId.fromAuthSession(authSession).getEncodedId(),
-			clientId
-		).serialize(
-			context.getSession(),
-			context.getRealm(),
-			context.getUriInfo()
-		);
-
-		return Urls
-			.actionTokenBuilder(context.getUriInfo().getBaseUri(), token, clientId, authSession.getTabId())
-			.build(context.getRealm().getName());
 	}
 
 	private String createQrCode(String uri) {
@@ -89,8 +75,17 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 	@Override
 	public void processAction(RequiredActionContext context) {
 		final AuthenticationSessionModel authSession = context.getAuthenticationSession();
+
 		if (!Boolean.parseBoolean(authSession.getAuthNote("appSetupSuccessful"))) {
-			URI actionTokenUrl = createActionToken(context);
+			URI actionTokenUrl = ActionTokenUtil.createActionToken(
+				AppSetupActionToken.class,
+				context.getAuthenticationSession(),
+				context.getSession(),
+				context.getRealm(),
+				context.getUser(),
+				context.getUriInfo()
+			);
+
 			Response challenge = context.form()
 				.setAttribute("appAuthQrCode", createQrCode(actionTokenUrl.toString()))
 				.setAttribute("appAuthActionTokenUrl", actionTokenUrl.toString())
