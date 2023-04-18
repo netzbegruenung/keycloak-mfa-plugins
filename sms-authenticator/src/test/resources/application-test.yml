@@ -4,4 +4,4 @@ server:
 spring:
   datasource:
     username: sa
-    url: jdbc:h2:file:~/h2db/smsauthdb
+    url: jdbc:h2:file:~/dev/h2db/smsauthdb;AUTO_SERVER=TRUE
