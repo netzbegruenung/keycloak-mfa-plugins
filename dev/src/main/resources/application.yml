@@ -8,7 +8,6 @@ spring:
 
 keycloak:
   server:
-    contextPath: /auth
     adminUser:
       username: admin
       password: admin
