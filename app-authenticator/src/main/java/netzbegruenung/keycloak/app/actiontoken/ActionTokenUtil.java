@@ -1,6 +1,6 @@
 package netzbegruenung.keycloak.app.actiontoken;
 
-import org.keycloak.authentication.AuthenticationFlowContext;
+import org.jboss.logging.Logger;
 import org.keycloak.authentication.actiontoken.DefaultActionToken;
 import org.keycloak.common.util.Time;
 import org.keycloak.models.*;
@@ -10,11 +10,13 @@ import org.keycloak.sessions.AuthenticationSessionCompoundId;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 import javax.ws.rs.core.UriInfo;
-import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 
 public class ActionTokenUtil {
+
+	final static private Logger logger = Logger.getLogger(ActionTokenUtil.class);
+
 	public static AuthenticationSessionModel getOriginalAuthSession(KeycloakSession session, RealmModel realm, String originalAuthSessionId) {
 		AuthenticationSessionManager asm = new AuthenticationSessionManager(session);
 		AuthenticationSessionCompoundId compoundId = AuthenticationSessionCompoundId.encoded(originalAuthSessionId);

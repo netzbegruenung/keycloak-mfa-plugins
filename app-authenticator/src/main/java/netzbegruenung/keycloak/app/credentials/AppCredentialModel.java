@@ -16,8 +16,8 @@ public class AppCredentialModel extends CredentialModel {
 		this.credentialData = credentialData;
 	}
 
-	private AppCredentialModel(String publicKey, String deviceId, String deviceOs, String algorithm) {
-		credentialData = new AppCredentialData(publicKey, deviceId, deviceOs, algorithm);
+	private AppCredentialModel(String publicKey, String deviceId, String deviceOs, String keyAlgorithm, String signatureAlgorithm, String registrationToken) {
+		credentialData = new AppCredentialData(publicKey, deviceId, deviceOs, keyAlgorithm, signatureAlgorithm, registrationToken);
 	}
 
 	public static AppCredentialModel createFromCredentialModel(CredentialModel credentialModel) {
@@ -37,8 +37,8 @@ public class AppCredentialModel extends CredentialModel {
 		}
 	}
 
-	public static AppCredentialModel createAppCredential(String publicKey, String deviceId, String deviceOs, String algorithm) {
-		AppCredentialModel appCredentialModel = new AppCredentialModel(publicKey, deviceId, deviceOs, algorithm);
+	public static AppCredentialModel createAppCredential(String publicKey, String deviceId, String deviceOs, String keyAlgorithm, String signatureAlgorithm, String registrationToken) {
+		AppCredentialModel appCredentialModel = new AppCredentialModel(publicKey, deviceId, deviceOs, keyAlgorithm, signatureAlgorithm, registrationToken);
 		appCredentialModel.fillCredentialModelFields();
 		return appCredentialModel;
 	}
@@ -51,5 +51,9 @@ public class AppCredentialModel extends CredentialModel {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	public AppCredentialData getAppCredentialData() {
+		return credentialData;
 	}
 }
