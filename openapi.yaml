@@ -3,6 +3,10 @@ info:
   title: Keycloak App Authenticator
   description: |-
     Keycloak Apo Authentication API
+    All end points with required "Signature" header expect a comma seperated key-value string.
+    Required keys are "signature", "keyId" (device ID) and "created" (unix time in milliseconds).
+    e.g. keyId:device_id,created:1680253758079,signature:base64encodedSignature
+    see https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -16,10 +20,17 @@ paths:
       tags:
         - app-authenticator
       description: |-
-        Besides the required query params when called for authenticator setup device_id, device_os, public_key and
-        public-key-algorithm (https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#keyfactory-algorithms) are required additionally.
-        When called to authenticate signature-algorithm (https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#signature-algorithms),
-        signature and granted are additionally required.
+        Besides the required query params when called for authenticator setup device_id, device_os, public_key,
+        key_algorithm and signature_algorithm are required additionally.
+        If firebase push notifications are allowed, then registration_token is required, too.
+        For available "key_algorithm" see:
+        https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#keyfactory-algorithms
+        For available "signature_algorithm" see:
+        https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#signature-algorithms
+        
+        When called to authenticate Signature header and granted query param are additionally required.
+        The "signature" key inside Signature header should be computed on:
+        created:1680253758079,secret:randomString,granted=true|false
       parameters:
         - in: path
           name: realmId
@@ -47,7 +58,13 @@ paths:
             type: string
         - in: query
           name: device_id
-          description: Mobile device's friebase registration token
+          description: Mobile device ID
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: registration_token
+          description: Mobile device firebase registration token
           required: false
           schema:
             type: string
@@ -64,14 +81,14 @@ paths:
           schema:
             type: string
         - in: query
-          name: algorithm
-          description: PublicKey/signature algorithm
+          name: key_algorithm
+          description: PublicKey algorithm
           required: false
           schema:
             type: string
         - in: query
-          name: signature
-          description: Signature of the decrypted secret, which was send by keycloak
+          name: signature_algorithm
+          description: PublicKey algorithm
           required: false
           schema:
             type: string
@@ -81,6 +98,12 @@ paths:
           required: false
           schema:
             type: boolean
+        - in: header
+          name: Signature
+          description: Signature of the decrypted secret, which was send by keycloak + algorithm
+          required: false
+          schema:
+            type: string
 
       responses:
         '201':
@@ -88,8 +111,96 @@ paths:
         '204':
           description: Authentication successfully accepted/denied
         '400':
-          description: One of the required query params is missing, the device is already registered or invalid/expired JWT
+          description: One of the required query params/headers is missing/incomplete, the device is already registered or invalid/expired JWT
         '403':
           description: Signature invalid
         '500':
           description: Failed to read user credentials (public key), malformed signature, algorithm not available, etc.
+
+
+  /realms/{realmId}/challenge-resource/{deviceId}:
+    get:
+      summary: Get current authentication challenge for this device
+      tags:
+        - app-authenticator-challenge
+      description: |-
+        The Signature header is expected as comma seperated key-value string value.
+        The "signature" key inside Signature header should be computed on:
+        request-target:get_/realms/realmName/challenge-resource/deviceId,created:1680253758079
+      parameters:
+        - in: path
+          name: realmId
+          description: The realm ID
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: deviceId
+          description: The device ID
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: Signature
+          description: signature of the device ID + algorithm
+          required: true
+          schema:
+            type: string
+
+
+      responses:
+        '200':
+          description: Setup Authenticator successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Challenge'
+        '400':
+          description: Signature header is missing or incomplete
+        '403':
+          description: Signature is invalid, challenge expired
+        '404':
+          description: Challenge for requested device ID not found
+        '409':
+          description: Device ID is not registered as second factor
+        '500':
+          description: Failed to read user credentials (public key), malformed signature, algorithm not available, etc.
+
+components:
+  schemas:
+    Challenge:
+      type: object
+      properties:
+        userName:
+          type: string
+          description: User who is requesting authentication
+        userFirstName:
+          type: string
+          description: User frist name
+        userLastName:
+          type: string
+          description: User last name
+        targetUrl:
+          type: string
+          description: URL containing JWT to send challenge to
+        secret:
+          type: string
+          description: Encrypted secret
+        updatedTimestamp:
+          type: string
+          description: Unix timestamp in milliseconds the user requested authentication (login)
+        ipAddress:
+          type: string
+          description: IP address of the requesting device
+        device:
+          type: string
+          description: The requesting device, e.g. iPhone
+        browser:
+          type: string
+          description: Browser of the requesting device
+        os:
+          type: string
+          description: OS of the requesting device
+        osVersion:
+          type: string
+          description: OS version of the requesting device

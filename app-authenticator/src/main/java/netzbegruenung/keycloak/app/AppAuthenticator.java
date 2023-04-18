@@ -3,23 +3,35 @@ package netzbegruenung.keycloak.app;
 import netzbegruenung.keycloak.app.actiontoken.ActionTokenUtil;
 import netzbegruenung.keycloak.app.actiontoken.AppAuthActionToken;
 import netzbegruenung.keycloak.app.credentials.AppCredentialData;
+import netzbegruenung.keycloak.app.dto.ChallengeConverter;
+import netzbegruenung.keycloak.app.jpa.Challenge;
 import netzbegruenung.keycloak.app.messaging.MessagingServiceFactory;
-import org.apache.commons.codec.binary.Base64;
 import org.jboss.logging.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.CredentialValidator;
+import org.keycloak.common.util.Base64;
 import org.keycloak.common.util.SecretGenerator;
+import org.keycloak.common.util.Time;
+import org.keycloak.connections.jpa.JpaConnectionProvider;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
+import org.keycloak.device.DeviceRepresentationProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
+import org.keycloak.models.jpa.entities.RealmEntity;
+import org.keycloak.models.jpa.entities.UserEntity;
+import org.keycloak.representations.account.DeviceRepresentation;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.util.JsonSerialization;
 
 import javax.crypto.Cipher;
+import javax.persistence.EntityManager;
+import javax.persistence.NoResultException;
+import javax.persistence.NonUniqueResultException;
+import javax.persistence.TypedQuery;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.net.URI;
@@ -28,6 +40,7 @@ import java.security.*;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -49,14 +62,12 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 		try {
 			AppCredentialData appCredentialData = JsonSerialization.readValue(appCredentialModel.getCredentialData(), AppCredentialData.class);
 			String secret = SecretGenerator.getInstance().randomString(SECRET_LENGTH, SecretGenerator.ALPHANUM);
-			context.getAuthenticationSession().setAuthNote("secret", secret);
-			context.getAuthenticationSession().setAuthNote("credentialId", appCredentialModel.getId());
-
-			String encryptedSecret = encryptSecretMessage(appCredentialData, secret);
+			AuthenticationSessionModel authSession = context.getAuthenticationSession();
+			authSession.setAuthNote("credentialId", appCredentialModel.getId());
 
 			URI actionTokenUri = ActionTokenUtil.createActionToken(
 				AppAuthActionToken.class,
-				context.getAuthenticationSession(),
+				authSession,
 				context.getSession(),
 				context.getRealm(),
 				context.getUser(),
@@ -64,25 +75,91 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 			);
 
 			Map<String, String> authConfig = context.getAuthenticatorConfig() != null ? context.getAuthenticatorConfig().getConfig() : Collections.emptyMap();
-			if (Boolean.parseBoolean(authConfig.getOrDefault("simulation", "false"))) {
-				logger.infov("App authentication secret {0}", secret);
-			}
-			MessagingServiceFactory.get(authConfig).send(
-				appCredentialData.getDevicedId(),
-				encryptedSecret,
-				actionTokenUri
+
+			DeviceRepresentation deviceRepresentation = context
+				.getSession()
+				.getProvider(DeviceRepresentationProvider.class)
+				.deviceRepresentation();
+
+			Challenge challenge = addAppChallengeEntity(
+				context,
+				actionTokenUri,
+				deviceRepresentation,
+				appCredentialData.getDeviceId(),
+				secret
 			);
 
-			Response challenge = context.form()
+			authSession.setAuthNote("secret", secret);
+			authSession.setAuthNote("timestamp", String.valueOf(challenge.getUpdatedTimestamp()));
+
+			if (Boolean.parseBoolean(authConfig.getOrDefault("simulation", "false"))) {
+				Map<String, String> signatureStringMap = new HashMap<>();
+				signatureStringMap.put("created", authSession.getAuthNote("timestamp"));
+				signatureStringMap.put("secret", authSession.getAuthNote("secret"));
+				signatureStringMap.put("granted", String.valueOf(true));
+
+				logger.infov("App authentication signature string\n\n{0}\n", AuthenticationUtil.getSignatureString(signatureStringMap));
+			}
+
+			MessagingServiceFactory.get(authConfig).send(appCredentialData.getRegistrationToken(), ChallengeConverter.getChallengeDto(challenge));
+
+			Response response = context.form()
 				.createForm("app-login.ftl");
-			context.challenge(challenge);
-		} catch (IOException | GeneralSecurityException e) {
+			context.challenge(response);
+		} catch (IOException|NonUniqueResultException e) {
 			logger.error("App authentication init failed", e);
 			Response challenge = context.form()
-				.setError("appAuthError")
+				.setError("appAuthCriticalError")
 				.createForm("app-login.ftl");
 			context.challenge(challenge);
 		}
+	}
+
+	private Challenge addAppChallengeEntity(AuthenticationFlowContext context, URI actionTokenUri, DeviceRepresentation deviceRepresentation, String deviceId, String encryptedSecret) throws NonUniqueResultException {
+		Challenge challenge;
+		EntityManager em = getEntityManager(context.getSession());
+		RealmEntity realm = em.getReference(RealmEntity.class, context.getRealm().getId());
+		UserEntity user = em.getReference(UserEntity.class, context.getUser().getId());
+
+		try {
+			TypedQuery<Challenge> query = em.createNamedQuery("Challenge.findByRealmAndDeviceId", Challenge.class);
+			query.setParameter("realm", realm);
+			query.setParameter("deviceId", deviceId);
+			challenge = query.getSingleResult();
+
+		} catch (NoResultException e) {
+			challenge = new Challenge();
+			challenge.setRealm(realm);
+			challenge.setDeviceId(deviceId);
+
+		} catch (NonUniqueResultException e) {
+			logger.errorf(
+				e,
+				"Failed to add app authenticator challenge for user [%s] device ID [%s]: duplicate challenge detected",
+				context.getUser(),
+				deviceId
+			);
+			throw e;
+		}
+
+		challenge.setUser(user);
+		challenge.setSecret(encryptedSecret);
+		challenge.setTargetUrl(actionTokenUri.toString());
+		challenge.setDevice(deviceRepresentation.getDevice());
+		challenge.setBrowser(deviceRepresentation.getBrowser());
+		challenge.setOs(deviceRepresentation.getOs());
+		challenge.setOsVersion(deviceRepresentation.getOsVersion());
+		challenge.setIpAddress(deviceRepresentation.getIpAddress());
+		challenge.setUpdatedTimestamp(Time.currentTimeMillis());
+
+		em.persist(challenge);
+		em.flush();
+
+		return challenge;
+	}
+
+	private EntityManager getEntityManager(KeycloakSession session) {
+		return session.getProvider(JpaConnectionProvider.class).getEntityManager();
 	}
 
 	@Nullable
@@ -111,17 +188,17 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 		return appCredentialModel;
 	}
 
-	private String encryptSecretMessage(AppCredentialData credentialData, String secret) throws GeneralSecurityException {
-		KeyFactory keyFactory = KeyFactory.getInstance(credentialData.getAlgorithm());
-		byte[] publicKeyBytes = Base64.decodeBase64(credentialData.getPublicKey());
+	private String encryptSecretMessage(AppCredentialData credentialData, String secret) throws GeneralSecurityException, IOException {
+		KeyFactory keyFactory = KeyFactory.getInstance(credentialData.getKeyAlgorithm());
+		byte[] publicKeyBytes = Base64.decode(credentialData.getPublicKey());
 		EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
 		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
 
-		Cipher encryptCipher = Cipher.getInstance(credentialData.getAlgorithm());
+		Cipher encryptCipher = Cipher.getInstance(credentialData.getKeyAlgorithm());
 		encryptCipher.init(Cipher.ENCRYPT_MODE, publicKey);
 		byte[] encryptedMessage = encryptCipher.doFinal(secret.getBytes(StandardCharsets.UTF_8));
 
-		return Base64.encodeBase64String(encryptedMessage);
+		return Base64.encodeBytes(encryptedMessage);
 	}
 
 	@Override

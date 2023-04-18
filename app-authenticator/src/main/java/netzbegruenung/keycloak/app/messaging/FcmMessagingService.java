@@ -1,20 +1,29 @@
 package netzbegruenung.keycloak.app.messaging;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
+import netzbegruenung.keycloak.app.dto.ChallengeDto;
 import org.jboss.logging.Logger;
 
 import java.net.URI;
+import java.util.Map;
 
 public class FcmMessagingService implements MessagingService {
 
 	private final Logger logger = Logger.getLogger(FcmMessagingService.class);
 
-	public void send(String registrationToken, String challenge, URI targetUrl) {
+	private final ObjectMapper objectMapper = new ObjectMapper();
+
+	public void send(String registrationToken, ChallengeDto challenge) {
+		if (registrationToken == null) {
+			logger.infof("Skip sending firebase notification: missing registration token user [%s]", challenge.getUserName());
+			return;
+		}
+		Map<String, String> challengeMap = objectMapper.convertValue(challenge, Map.class);
 		Message message = Message.builder()
-			.putData("challenge", challenge)
-			.putData("targetUrl", targetUrl.toString())
+			.putAllData(challengeMap)
 			.setToken(registrationToken)
 			.build();
 
@@ -22,7 +31,7 @@ public class FcmMessagingService implements MessagingService {
 			String response = FirebaseMessaging.getInstance().send(message);
 			logger.debugv("Successfully sent message: ", response);
 		} catch (FirebaseMessagingException e) {
-			throw new RuntimeException(e);
+			logger.error("Failed to send firebase app notification", e);
 		}
 	}
 

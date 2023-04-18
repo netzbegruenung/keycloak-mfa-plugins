@@ -10,8 +10,14 @@ public class MessagingServiceFactory {
 
 	public static MessagingService get(Map<String, String> config) {
 		if (Boolean.parseBoolean(config.getOrDefault("simulation", "false"))) {
-			return (deviceId, challenge, actionUrl) ->
-				logger.infov("Send authentication request: action Url {0}, challenge {1}, device ID {2}", actionUrl, challenge, deviceId);
+			return (registrationToken, challengeDto) ->
+				logger.infov(
+					"Simulation mode - send authentication request: action Url {0}, challenge {1}, registration token {2}, user {3}",
+					challengeDto.getTargetUrl(),
+					challengeDto.getSecret(),
+					registrationToken,
+					challengeDto.getUserName()
+				);
 		} else {
 			return new FcmMessagingService();
 		}
