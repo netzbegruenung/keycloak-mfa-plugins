@@ -16,7 +16,7 @@
     </modules>
 
 	<properties>
-		<revision>21.4.0</revision>
+		<revision>21.5.0</revision>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<keycloak.version>21.0.1</keycloak.version>
 		<json.version>20230227</json.version>
@@ -29,6 +29,7 @@
 		<!-- check keycloak-dependencies-server-all effective pom -->
 		<resteasy.version>4.7.7.Final</resteasy.version>
 		<infinispan.common.version>14.0.4.Final</infinispan.common.version>
+		<h2.version>1.4.200</h2.version>
 	</properties>
 
 	<dependencyManagement>
@@ -95,7 +96,7 @@
 			<dependency>
 				<groupId>com.h2database</groupId>
 				<artifactId>h2</artifactId>
-				<version>1.4.200</version>
+				<version>${h2.version}</version>
 			</dependency>
 
 			<dependency>

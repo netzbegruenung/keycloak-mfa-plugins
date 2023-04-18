@@ -1,8 +1,8 @@
 package netzbegruenung.keycloak.app.messaging;
 
-import java.net.URI;
+import netzbegruenung.keycloak.app.dto.ChallengeDto;
 
 public interface MessagingService {
 
-	void send(String deviceId, String challenge, URI targetUrl);
+	void send(String registrationToken, ChallengeDto challenge);
 }

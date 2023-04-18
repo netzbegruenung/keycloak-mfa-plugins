@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.16.xsd">
+
+    <changeSet author="giuliano.mele@verdigado.com" id="app-auth-challenge">
+
+        <createTable tableName="app_auth_challenge">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_app_auth_challenge"/>
+            </column>
+            <column name="realm_id" type="VARCHAR(36)"/>
+            <column name="user_id" type="VARCHAR(36)"/>
+            <column name="target_url" type="VARCHAR(1023)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="device_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="secret" type="VARCHAR(1023)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_timestamp" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ip_address" type="VARCHAR(63)"/>
+            <column name="device" type="VARCHAR(63)"/>
+            <column name="browser" type="VARCHAR(63)"/>
+            <column name="os" type="VARCHAR(63)"/>
+            <column name="os_version" type="VARCHAR(63)"/>
+        </createTable>
+        <addUniqueConstraint columnNames="realm_id, device_id" constraintName="uc_challenge_realm_id" tableName="app_auth_challenge"/>
+        <createIndex indexName="idx_challenge_realm_id" tableName="app_auth_challenge">
+            <column name="realm_id"/>
+            <column name="device_id"/>
+        </createIndex>
+        <addForeignKeyConstraint baseColumnNames="realm_id" baseTableName="app_auth_challenge" constraintName="FK_APP_AUTH_CHALLENGE_ON_REALM" onDelete="CASCADE" referencedColumnNames="id" referencedTableName="realm"/>
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="app_auth_challenge" constraintName="FK_APP_AUTH_CHALLENGE_ON_USER" onDelete="CASCADE" referencedColumnNames="id" referencedTableName="user_entity"/>
+    </changeSet>
+
+</databaseChangeLog>

@@ -2,8 +2,9 @@ package netzbegruenung.keycloak.app.actiontoken;
 
 import netzbegruenung.keycloak.app.AppCredentialProvider;
 import netzbegruenung.keycloak.app.AppCredentialProviderFactory;
+import netzbegruenung.keycloak.app.AuthenticationUtil;
 import netzbegruenung.keycloak.app.credentials.AppCredentialData;
-import org.apache.commons.codec.binary.Base64;
+import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.actiontoken.AbstractActionTokenHandler;
 import org.keycloak.authentication.actiontoken.ActionTokenContext;
@@ -13,16 +14,11 @@ import org.keycloak.events.Errors;
 import org.keycloak.events.EventType;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.sessions.AuthenticationSessionModel;
-import org.keycloak.util.JsonSerialization;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
-import java.security.*;
-import java.security.spec.EncodedKeySpec;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAuthActionToken> {
 
@@ -41,11 +37,16 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 	@Override
 	public Response handleToken(AppAuthActionToken token, ActionTokenContext<AppAuthActionToken> tokenContext) {
 		MultivaluedMap<String, String> queryParameters = tokenContext.getRequest().getUri().getQueryParameters();
-		String signature = queryParameters.getFirst("signature");
-		String algorithm = queryParameters.getFirst("algorithm");
 		String granted = queryParameters.getFirst("granted");
 
-		if (signature == null || algorithm == null || granted == null) {
+		if (granted == null) {
+			logger.warnf("App authentication rejected: missing query param \"granted\" for user ID [%s]", token.getUserId());
+			return Response.status(Response.Status.BAD_REQUEST).build();
+		}
+
+		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(tokenContext.getRequest().getHttpHeaders().getRequestHeader("Signature"));
+		if (signatureMap == null) {
+			logger.warnf("App authentication rejected: missing or incomplete signature header for user ID [%s]", token.getUserId());
 			return Response.status(Response.Status.BAD_REQUEST).build();
 		}
 
@@ -55,42 +56,41 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 			token.getOriginalAuthenticationSessionId()
 		);
 
+		if (authSession == null) {
+			logger.warnf("App Authentication rejected: Auth session not found for user [%s]", token.getUserId());
+			return Response.status(Response.Status.FORBIDDEN).build();
+		}
+
 		AppCredentialProvider appCredentialProvider = (AppCredentialProvider) tokenContext
 			.getSession()
 			.getProvider(CredentialProvider.class, AppCredentialProviderFactory.PROVIDER_ID);
 		CredentialModel appCredentialModel = appCredentialProvider
 			.getCredentialModel(authSession.getAuthenticatedUser(), authSession.getAuthNote("credentialId"));
 
-		try {
-			AppCredentialData appCredentialData = JsonSerialization.readValue(appCredentialModel.getCredentialData(), AppCredentialData.class);
+		AppCredentialData appCredentialData = AppCredentialModel.createFromCredentialModel(appCredentialModel).getAppCredentialData();
 
-			KeyFactory keyFactory = KeyFactory.getInstance(appCredentialData.getAlgorithm());
-			byte[] publicKeyBytes = Base64.decodeBase64(appCredentialData.getPublicKey());
-			EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
-			PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+		Map<String, String> signatureStringMap = new HashMap<>();
+		signatureStringMap.put("created", authSession.getAuthNote("timestamp"));
+		signatureStringMap.put("secret", authSession.getAuthNote("secret"));
+		signatureStringMap.put("granted", granted);
 
-			Signature sign = Signature.getInstance(algorithm);
-			sign.initVerify(publicKey);
-			sign.update(authSession.getAuthNote("secret").getBytes());
+		boolean verified = AuthenticationUtil.verifyChallenge(
+			authSession.getAuthenticatedUser(),
+			appCredentialData,
+			AuthenticationUtil.getSignatureString(signatureStringMap).getBytes(),
+			signatureMap.get("signature")
+		);
 
-			if (!sign.verify(Base64.decodeBase64(signature))) {
-				logger.errorv("App auth: invalid signature for user: {0}", authSession.getAuthenticatedUser().getUsername());
-				return Response.status(Response.Status.FORBIDDEN).build();
-			}
-			if (!Boolean.parseBoolean(granted)) {
-				authSession.setAuthNote("appAuthGranted", Boolean.toString(false));
-				return Response.status(Response.Status.NO_CONTENT).build();
-			}
-		} catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException | SignatureException | InvalidKeyException e) {
-			logger.errorf(
-				e,
-				"App auth: signature verification failed for user: [%s], probably due to malformed signature or wrong algorithm",
-				authSession.getAuthenticatedUser().getUsername()
-			);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).type(MediaType.TEXT_PLAIN_TYPE).build();
+		if (!verified) {
+			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 
-		authSession.setAuthNote("appAuthGranted", Boolean.toString(true));
+		if (!Boolean.parseBoolean(granted)) {
+			authSession.setAuthNote("appAuthGranted", Boolean.toString(false));
+		} else {
+			authSession.setAuthNote("appAuthGranted", Boolean.toString(true));
+		}
+
 		return Response.status(Response.Status.NO_CONTENT).build();
 	}
 
