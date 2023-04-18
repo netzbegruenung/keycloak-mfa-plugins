@@ -38,8 +38,8 @@ public class AppAuthenticatorLiveTest {
 
 		String baseUrl = "http://localhost:" + serverPort;
 
-		log.info("Keycloak test server available at {}/auth", baseUrl);
-		log.info("To test a custom provider user login, go to {}/auth/realms/baeldung/account",baseUrl);
+		log.info("Keycloak test server available at {}", baseUrl);
+		log.info("To test a custom provider user login, go to {}/realms/baeldung/account",baseUrl);
 
 		Thread.sleep(3*60*60*1000);
 
