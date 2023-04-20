@@ -39,6 +39,7 @@ public class AppSetupActionTokenHandler extends AbstractActionTokenHandler<AppSe
 			|| deviceOs == null
 			|| publicKey == null
 			|| keyAlgorithm == null
+			|| signatureAlgorithm == null
 		) {
 			return Response.status(400).build();
 		}
