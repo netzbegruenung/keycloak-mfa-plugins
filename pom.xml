@@ -16,7 +16,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<keycloak.version>21.0.1</keycloak.version>
+		<keycloak.version>21.1.2</keycloak.version>
 		<json.version>20230227</json.version>
 		<maven.compiler.release>11</maven.compiler.release>
 		<maven.compiler.version>3.8.1</maven.compiler.version>
@@ -26,7 +26,8 @@
 		<!-- these should be updated together with Keycloak -->
 		<!-- check keycloak-dependencies-server-all effective pom -->
 		<resteasy.version>4.7.7.Final</resteasy.version>
-		<infinispan.common.version>14.0.4.Final</infinispan.common.version>
+		<infinispan.common.version>14.0.7.Final</infinispan.common.version>
+		<h2.version>1.4.200</h2.version>
 	</properties>
 
 	<dependencyManagement>
@@ -93,7 +94,7 @@
 			<dependency>
 				<groupId>com.h2database</groupId>
 				<artifactId>h2</artifactId>
-				<version>1.4.200</version>
+				<version>${h2.version}</version>
 			</dependency>
 
 			<dependency>
