@@ -38,7 +38,7 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 
 import java.util.Locale;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response;
 
 public class PhoneValidationRequiredAction implements RequiredActionProvider, CredentialRegistrator {
 	private static final Logger logger = Logger.getLogger(PhoneValidationRequiredAction.class);

@@ -15,7 +15,7 @@ import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.common.util.Base64;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
