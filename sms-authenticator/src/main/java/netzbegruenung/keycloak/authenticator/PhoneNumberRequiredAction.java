@@ -38,7 +38,7 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import java.util.*;
 import java.util.stream.Stream;
 
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response;
 
 import org.jboss.logging.Logger;
 
