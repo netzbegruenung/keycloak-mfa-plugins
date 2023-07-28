@@ -11,6 +11,7 @@ import javax.naming.NamingException;
 import javax.naming.spi.NamingManager;
 import javax.sql.DataSource;
 
+import org.jboss.resteasy.plugins.server.servlet.HttpServlet30Dispatcher;
 import org.jboss.resteasy.plugins.server.servlet.ResteasyContextParameters;
 import org.keycloak.platform.Platform;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -23,13 +24,13 @@ import org.springframework.context.annotation.Configuration;
 public class EmbeddedKeycloakConfig {
 
     @Bean
-    ServletRegistrationBean keycloakJaxRsApplication(KeycloakServerProperties keycloakServerProperties, DataSource dataSource) throws Exception {
+    ServletRegistrationBean<HttpServlet30Dispatcher> keycloakJaxRsApplication(KeycloakServerProperties keycloakServerProperties, DataSource dataSource) throws Exception {
 
         mockJndiEnvironment(dataSource);
         EmbeddedKeycloakApplication.keycloakServerProperties = keycloakServerProperties;
 
-        ServletRegistrationBean servlet = new ServletRegistrationBean<>();
-        servlet.addInitParameter("javax.ws.rs.Application", EmbeddedKeycloakApplication.class.getName());
+        ServletRegistrationBean<HttpServlet30Dispatcher> servlet = new ServletRegistrationBean<>(new HttpServlet30Dispatcher());
+        servlet.addInitParameter("jakarta.ws.rs.Application", EmbeddedKeycloakApplication.class.getName());
         servlet.addInitParameter(ResteasyContextParameters.RESTEASY_SERVLET_MAPPING_PREFIX, keycloakServerProperties.getContextPath());
         servlet.addInitParameter(ResteasyContextParameters.RESTEASY_USE_CONTAINER_FORM_PARAMS, "true");
         servlet.addUrlMappings(keycloakServerProperties.getContextPath() + "/*");
@@ -81,7 +82,7 @@ public class EmbeddedKeycloakConfig {
             }
         });
     }
-    
+
     @Bean("fixedThreadPool")
 	public ExecutorService fixedThreadPool() {
 		return Executors.newFixedThreadPool(5);

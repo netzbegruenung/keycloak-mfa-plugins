@@ -5,18 +5,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.common.Profile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import netzbegruenung.keycloak.dev.AuthorizationServerApp;
-
-import javax.sql.DataSource;
 
 import org.junit.jupiter.api.BeforeAll;
 
