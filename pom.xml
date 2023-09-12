@@ -16,9 +16,9 @@
     </modules>
 
 	<properties>
-		<revision>22.0.1</revision>
+		<revision>22.0.2</revision>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<keycloak.version>22.0.1</keycloak.version>
+		<keycloak.version>22.0.2</keycloak.version>
 		<json.version>20230227</json.version>
 		<maven.compiler.release>17</maven.compiler.release>
 		<maven.compiler.version>3.8.1</maven.compiler.version>

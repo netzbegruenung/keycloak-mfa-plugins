@@ -7,7 +7,6 @@ import netzbegruenung.keycloak.app.dto.ChallengeConverter;
 import netzbegruenung.keycloak.app.jpa.Challenge;
 import netzbegruenung.keycloak.app.messaging.MessagingServiceFactory;
 import org.jboss.logging.Logger;
-import org.jetbrains.annotations.Nullable;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.CredentialValidator;
@@ -162,7 +161,6 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 		return session.getProvider(JpaConnectionProvider.class).getEntityManager();
 	}
 
-	@Nullable
 	private CredentialModel getSelectedAppCredential(AuthenticationFlowContext context) {
 		CredentialModel appCredentialModel;
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
