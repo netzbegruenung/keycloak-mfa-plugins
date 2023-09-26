@@ -1,6 +1,7 @@
 package netzbegruenung.keycloak.app.actiontoken;
 
 import org.jboss.logging.Logger;
+import org.json.JSONObject;
 import org.keycloak.authentication.actiontoken.DefaultActionToken;
 import org.keycloak.common.util.Time;
 import org.keycloak.models.*;
@@ -44,6 +45,15 @@ public class ActionTokenUtil {
 		} catch (NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
 			throw new RuntimeException(e);
 		}
+	}
 
+	public static JSONObject uriToJson(URI actionTokenUri) {
+		JSONObject actionTokenJson = new JSONObject();
+		actionTokenJson.put("host", actionTokenUri.getHost());
+		actionTokenJson.put("port", actionTokenUri.getPort());
+		actionTokenJson.put("scheme", actionTokenUri.getScheme());
+		actionTokenJson.put("path", actionTokenUri.getPath());
+		actionTokenJson.put("query", actionTokenUri.getQuery());
+		return actionTokenJson;
 	}
 }
