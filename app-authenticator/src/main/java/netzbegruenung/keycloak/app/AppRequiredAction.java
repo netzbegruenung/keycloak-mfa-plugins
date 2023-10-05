@@ -48,24 +48,19 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 		);
 
 		Response challenge = context.form()
-			.setAttribute("appAuthQrCode", createQrCode(actionTokenUrl))
+			.setAttribute("appAuthQrCode", createQrCode(actionTokenUrl.toString()))
 			.setAttribute("appAuthActionTokenUrl", actionTokenUrl.toString())
 			.createForm("app-auth-setup.ftl");
 		context.challenge(challenge);
 	}
 
-	private String createQrCode(URI uri) {
+	private String createQrCode(String uri) {
 		try {
 			int width = 400;
 			int height = 400;
 
 			QRCodeWriter writer = new QRCodeWriter();
-			final BitMatrix bitMatrix = writer.encode(
-				ActionTokenUtil.uriToJson(uri).toString(),
-				BarcodeFormat.QR_CODE,
-				width,
-				height
-			);
+			final BitMatrix bitMatrix = writer.encode(uri, BarcodeFormat.QR_CODE, width, height);
 
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
 			MatrixToImageWriter.writeToStream(bitMatrix, "png", bos);
@@ -92,7 +87,7 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 			);
 
 			Response challenge = context.form()
-				.setAttribute("appAuthQrCode", createQrCode(actionTokenUrl))
+				.setAttribute("appAuthQrCode", createQrCode(actionTokenUrl.toString()))
 				.setAttribute("appAuthActionTokenUrl", actionTokenUrl.toString())
 				.setError("appAuthSetupError")
 				.createForm("app-auth-setup.ftl");

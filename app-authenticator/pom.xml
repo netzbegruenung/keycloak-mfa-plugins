@@ -43,11 +43,6 @@
             <version>9.1.1</version>
         </dependency>
 
-		<dependency>
-			<groupId>org.json</groupId>
-			<artifactId>json</artifactId>
-		</dependency>
-
         <!-- Embedded Keycloak sample -->
         <dependency>
             <groupId>netzbegruenung</groupId>
