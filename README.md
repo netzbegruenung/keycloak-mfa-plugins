@@ -64,11 +64,13 @@ OpenAPI spec (just for reference, API is managed by keycloak itself): https://gi
 ```
 device_id: device ID
 device_os: OS
-public_key: base64 encoded public key
+public_key: base64 encoded public key (encoded according to the X.509)
 device_push_id: device push ID (optional)
 key_algorithm: public key algorithm e.g. "RSA" (case sensitive)
 signature_algorithm: e.g. "SHA512withRSA"
 ```
+Public Key is assumed to be encoded according to the X.509 standard: https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/security/spec/X509EncodedKeySpec.html
+
 Valid Key Algorithms: https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html#keyfactory-algorithms
 
 Valid Signature Algorithms: https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html#signature-algorithms
@@ -95,12 +97,12 @@ The proposed Signature header format is based on this RFC draft: https://datatra
 
 String of comma separated key-values:
 ```
-Signature: keyId:deviceId,created:unixTimestampInMilliseconds,signature:base64encodedSignature
+Signature: keyId:deviceId,created:unixTimestampInMilliseconds,secret:sendByFirebaseOrByChallengeEndPoint,granted:true,signature:base64encodedSignature
 ```
 
-Here an example how to create the signature value inside the "Signature" header, which has to be signed:
+To create the signature value inside the "Signature" header, a comma seperated key-value string must be signed and base64 encoded:
 ```
-"created:1681897832436,secret:sendByFirebaseOrByChallengeEndPoint,granted:true"
+"keyId:deviceId,created:1681897832436,secret:sendByFirebaseOrByChallengeEndPoint,granted:true"
 ```
 
 ### Response
@@ -109,3 +111,39 @@ Here an example how to create the signature value inside the "Signature" header,
 - 403: signature invalid
 
 The firebase message or the challenge endpoint response contains a secret, which the app is supposed to send its signature back to keycloak for verification.
+
+## How to test with openssl
+
+1. Generate private key `openssl genpkey -algorithm ed25519 -out private.pem`
+2. Generate public key `openssl pkey -in private.pem -pubout -out public.pem`
+3. Use this script for signing:
+```bash
+#!/bin/bash
+
+if [ -z "$1" ]; then
+  echo "No message supplied to be signed"
+  exit 1
+fi
+
+echo -n "$1" > ./.message.bin
+openssl pkeyutl -sign -inkey private.pem -out .signature.bin -rawin -in .message.bin
+echo ""
+echo "${1},signature:$(base64 .signature.bin | tr -d '\n')"
+```
+
+The script must be called with a string parameter containing comma seperated key-values
+and will return the signature header as described (here)[#signatur-header]
+
+Example usage:
+```wrap
+./sign.sh created:1696594860241,\
+keyId:device_id,\
+secret:LG7mVUUtsPmonuCIDEe59BAAVpU9SQgoBzjtteKs31ltdGdKg2h0ywT8mBorxhYG97afSZugF0654y3kMTTWh2exC5JzekVSbJ32jcoUGveMTUFGtOl1yALxDOM2pvOvgzL0WnKBsiQbQS2u6wzL8ShCO8vbmWVxTjuD9ARaiLyP438vTVhqwmgXjd2l8Ungs78n8El2CFABahfGlKfzbfVOPk5kKgtu8iUDxhhiEawGZCBg1PmlQmaa5Lu7ecn1ZKbr5YXfBZQUcM7aSFjx8TyZeIw5yury3NiTJLl3Tr1wmb9ZwSwtusIeFB5TEx86PCw6CAZZm7wqKawW7E8sEPZUtZJxZ1CkA6M87RkedutylxjAOKvpkHfO9KdizN8OvX2G21nngFwITpnvfh3PMmZRZKvO8TD7Pvt1moXuS975ooLC51uslxvVm64YMLqWspfYTpwqEUZSVekctUWSa0DJC1859H47VKYDPS9JFOeXjd1GPGdWP,\
+granted:true
+
+created:1696594860241,\
+keyId:device_id,\
+secret:LG7mVUUtsPmonuCIDEe59BAAVpU9SQgoBzjtteKs31ltdGdKg2h0ywT8mBorxhYG97afSZugF0654y3kMTTWh2exC5JzekVSbJ32jcoUGveMTUFGtOl1yALxDOM2pvOvgzL0WnKBsiQbQS2u6wzL8ShCO8vbmWVxTjuD9ARaiLyP438vTVhqwmgXjd2l8Ungs78n8El2CFABahfGlKfzbfVOPk5kKgtu8iUDxhhiEawGZCBg1PmlQmaa5Lu7ecn1ZKbr5YXfBZQUcM7aSFjx8TyZeIw5yury3NiTJLl3Tr1wmb9ZwSwtusIeFB5TEx86PCw6CAZZm7wqKawW7E8sEPZUtZJxZ1CkA6M87RkedutylxjAOKvpkHfO9KdizN8OvX2G21nngFwITpnvfh3PMmZRZKvO8TD7Pvt1moXuS975ooLC51uslxvVm64YMLqWspfYTpwqEUZSVekctUWSa0DJC1859H47VKYDPS9JFOeXjd1GPGdWP,\
+granted:true,\
+signature:hgMHPxnpj9aQCD6p9KjeEr1wzqXR7eFEfRQRa0BrMzD9vFv5/+jFbLsYilQvisOajZORk9ygl32ZmvYfZ8OzBA==
+```
