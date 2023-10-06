@@ -84,16 +84,13 @@ public class ChallengeResource {
 				.collect(toSingleton());
 
 			Map<String, String> signatureStringMap = new HashMap<>();
-			String requestTarget = request.getMethod().toLowerCase()
-					.concat("_")
-					.concat(uriInfo.getPath());
-			signatureStringMap.put("request-target", requestTarget);
+			signatureStringMap.put("keyId", deviceId);
 			signatureStringMap.put("created", signatureMap.get("created"));
 
 			boolean verified = AuthenticationUtil.verifyChallenge(
 				user,
 				appCredential.getAppCredentialData(),
-				AuthenticationUtil.getSignatureString(signatureStringMap).getBytes(),
+				AuthenticationUtil.getSignatureString(signatureStringMap),
 				signatureMap.get("signature")
 			);
 
