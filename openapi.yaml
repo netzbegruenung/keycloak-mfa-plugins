@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Keycloak App Authenticator
   description: |-
-    Keycloak Apo Authentication API
+    Keycloak Authentication API
     All end points with required "Signature" header expect a comma seperated key-value string.
     Required keys are "signature", "keyId" (device ID) and "created" (unix time in milliseconds).
     e.g. keyId:device_id,created:1680253758079,signature:base64encodedSignature
@@ -22,15 +22,15 @@ paths:
       description: |-
         Besides the required query params when called for authenticator setup device_id, device_os, public_key,
         key_algorithm and signature_algorithm are required additionally.
-        If firebase push notifications are allowed, then device_push_id is required, too.
+        If push notifications are allowed, then device_push_id is required, too.
         For available "key_algorithm" see:
-        https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#keyfactory-algorithms
+        https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html#keyfactory-algorithms
         For available "signature_algorithm" see:
-        https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#signature-algorithms
+        https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html#signature-algorithms
 
         When called to authenticate Signature header and granted query param are additionally required.
         The "signature" key inside Signature header should be computed on:
-        created:1680253758079,secret:randomString,granted=true|false
+        keyId:device_id,created:1680253758079,secret:randomString,granted=true|false
       parameters:
         - in: path
           name: realmId
@@ -126,7 +126,7 @@ paths:
       description: |-
         The Signature header is expected as comma seperated key-value string value.
         The "signature" key inside Signature header should be computed on:
-        request-target:get_/realms/realmName/challenge-resource/deviceId,created:1680253758079
+        keyId:deviceId,created:1680253758079
       parameters:
         - in: path
           name: realmId
@@ -185,7 +185,7 @@ components:
           description: URL containing JWT to send challenge to
         secret:
           type: string
-          description: Encrypted secret
+          description: random string to be signed
         updatedTimestamp:
           type: string
           description: Unix timestamp in milliseconds the user requested authentication (login)
