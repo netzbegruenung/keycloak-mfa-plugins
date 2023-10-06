@@ -100,7 +100,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 				logger.infov("App authentication signature string\n\n{0}\n", AuthenticationUtil.getSignatureString(signatureStringMap));
 			}
 
-			MessagingServiceFactory.get(authConfig).send(appCredentialData.getRegistrationToken(), ChallengeConverter.getChallengeDto(challenge));
+			MessagingServiceFactory.get(authConfig).send(appCredentialData.getDevicePushId(), ChallengeConverter.getChallengeDto(challenge));
 
 			Response response = context.form()
 				.createForm("app-login.ftl");

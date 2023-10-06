@@ -22,12 +22,12 @@ paths:
       description: |-
         Besides the required query params when called for authenticator setup device_id, device_os, public_key,
         key_algorithm and signature_algorithm are required additionally.
-        If firebase push notifications are allowed, then registration_token is required, too.
+        If firebase push notifications are allowed, then device_push_id is required, too.
         For available "key_algorithm" see:
         https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#keyfactory-algorithms
         For available "signature_algorithm" see:
         https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#signature-algorithms
-        
+
         When called to authenticate Signature header and granted query param are additionally required.
         The "signature" key inside Signature header should be computed on:
         created:1680253758079,secret:randomString,granted=true|false
@@ -63,8 +63,8 @@ paths:
           schema:
             type: string
         - in: query
-          name: registration_token
-          description: Mobile device firebase registration token
+          name: device_push_id
+          description: Mobile device device push ID
           required: false
           schema:
             type: string
