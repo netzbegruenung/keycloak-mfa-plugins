@@ -16,15 +16,15 @@ public class FcmMessagingService implements MessagingService {
 
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
-	public void send(String registrationToken, ChallengeDto challenge) {
-		if (registrationToken == null) {
-			logger.infof("Skip sending firebase notification: missing registration token user [%s]", challenge.getUserName());
+	public void send(String devicePushId, ChallengeDto challenge) {
+		if (devicePushId == null) {
+			logger.infof("Skip sending firebase notification: missing device push ID user [%s]", challenge.getUserName());
 			return;
 		}
 		Map<String, String> challengeMap = objectMapper.convertValue(challenge, Map.class);
 		Message message = Message.builder()
 			.putAllData(challengeMap)
-			.setToken(registrationToken)
+			.setToken(devicePushId)
 			.build();
 
 		try {

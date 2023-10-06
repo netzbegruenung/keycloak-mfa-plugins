@@ -13,7 +13,7 @@ public class AppCredentialData {
 
 	private final String signatureAlgorithm;
 
-	private final String registrationToken;
+	private final String devicePushId;
 
 
 	@JsonCreator
@@ -23,14 +23,14 @@ public class AppCredentialData {
 		@JsonProperty("deviceOs") String deviceOs,
 		@JsonProperty("keyAlgorithm") String keyAlgorithm,
 		@JsonProperty("signatureAlgorithm") String signatureAlgorithm,
-		@JsonProperty("registrationToken") String registrationToken
+		@JsonProperty("devicePushId") String devicePushId
 	) {
 		this.publicKey = publicKey;
 		this.deviceId = deviceId;
 		this.deviceOs = deviceOs;
 		this.keyAlgorithm = keyAlgorithm;
 		this.signatureAlgorithm = signatureAlgorithm;
-		this.registrationToken = registrationToken;
+		this.devicePushId = devicePushId;
 	}
 
 	public String getPublicKey() {
@@ -49,8 +49,8 @@ public class AppCredentialData {
 		return keyAlgorithm;
 	}
 
-	public String getRegistrationToken() {
-		return registrationToken;
+	public String getDevicePushId() {
+		return devicePushId;
 	}
 
 	public String getSignatureAlgorithm() {

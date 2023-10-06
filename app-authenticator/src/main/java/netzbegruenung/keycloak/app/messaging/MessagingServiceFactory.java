@@ -10,12 +10,12 @@ public class MessagingServiceFactory {
 
 	public static MessagingService get(Map<String, String> config) {
 		if (Boolean.parseBoolean(config.getOrDefault("simulation", "false"))) {
-			return (registrationToken, challengeDto) ->
+			return (devicePushId, challengeDto) ->
 				logger.infov(
-					"Simulation mode - send authentication request: action Url {0}, challenge {1}, registration token {2}, user {3}",
+					"Simulation mode - send authentication request: action Url {0}, challenge {1}, device push ID {2}, user {3}",
 					challengeDto.getTargetUrl(),
 					challengeDto.getSecret(),
-					registrationToken,
+					devicePushId,
 					challengeDto.getUserName()
 				);
 		} else {
