@@ -80,7 +80,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 				.getProvider(DeviceRepresentationProvider.class)
 				.deviceRepresentation();
 
-			Challenge challenge = addAppChallengeEntity(
+			Challenge challenge = upsertAppChallengeEntity(
 				context,
 				actionTokenUri,
 				deviceRepresentation,
@@ -114,7 +114,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 		}
 	}
 
-	private Challenge addAppChallengeEntity(AuthenticationFlowContext context, URI actionTokenUri, DeviceRepresentation deviceRepresentation, String deviceId, String encryptedSecret) throws NonUniqueResultException {
+	private Challenge upsertAppChallengeEntity(AuthenticationFlowContext context, URI actionTokenUri, DeviceRepresentation deviceRepresentation, String deviceId, String encryptedSecret) throws NonUniqueResultException {
 		Challenge challenge;
 		EntityManager em = getEntityManager(context.getSession());
 		RealmEntity realm = em.getReference(RealmEntity.class, context.getRealm().getId());
