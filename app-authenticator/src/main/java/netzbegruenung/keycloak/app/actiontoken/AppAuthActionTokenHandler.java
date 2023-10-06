@@ -70,6 +70,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		AppCredentialData appCredentialData = AppCredentialModel.createFromCredentialModel(appCredentialModel).getAppCredentialData();
 
 		Map<String, String> signatureStringMap = new HashMap<>();
+		signatureStringMap.put("keyId", appCredentialData.getDeviceId());
 		signatureStringMap.put("created", authSession.getAuthNote("timestamp"));
 		signatureStringMap.put("secret", authSession.getAuthNote("secret"));
 		signatureStringMap.put("granted", granted);
@@ -77,7 +78,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		boolean verified = AuthenticationUtil.verifyChallenge(
 			authSession.getAuthenticatedUser(),
 			appCredentialData,
-			AuthenticationUtil.getSignatureString(signatureStringMap).getBytes(),
+			AuthenticationUtil.getSignatureString(signatureStringMap),
 			signatureMap.get("signature")
 		);
 

@@ -34,6 +34,7 @@ public class AuthenticationUtil {
 			|| !signatureMap.containsKey("keyId")
 			|| !signatureMap.containsKey("created")
 		) {
+			logger.warnf("Failed to parse signature header: header must at least contain keys: signature, keyId, created");
 			return null;
 		}
 
@@ -54,7 +55,7 @@ public class AuthenticationUtil {
 		return Joiner.on(",").withKeyValueSeparator(":").join(signedData);
 	}
 
-	public static boolean verifyChallenge(UserModel user, AppCredentialData appCredentialData, byte[] signedData, String signature) {
+	public static boolean verifyChallenge(UserModel user, AppCredentialData appCredentialData, String signedData, String signature) {
 		try {
 			KeyFactory keyFactory = KeyFactory.getInstance(appCredentialData.getKeyAlgorithm());
 			byte[] publicKeyBytes = Base64.decodeBase64(appCredentialData.getPublicKey());
@@ -63,7 +64,7 @@ public class AuthenticationUtil {
 
 			Signature sign = Signature.getInstance(appCredentialData.getSignatureAlgorithm());
 			sign.initVerify(publicKey);
-			sign.update(signedData);
+			sign.update(signedData.getBytes());
 
 			if (!sign.verify(Base64.decodeBase64(signature))) {
 				logger.warnv("App authentication rejected: invalid signature for user [{0}]", user.getUsername());
