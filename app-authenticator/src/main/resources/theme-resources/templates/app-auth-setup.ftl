@@ -27,11 +27,21 @@
                     <p>${msg("appConfigStep3")}</p>
                 </li>
             </ol>
-            <div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
-                <div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
-                    <input name="confirm" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("appConfigClose")}"/>
-                </div>
-            </div>
+            <#if isAppInitiatedAction??>
+				<input type="submit"
+					   class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonLargeClass!}"
+					   value="${msg("appConfigSubmit")}"
+				/>
+				<button type="submit"
+						class="${properties.kcButtonClass!} ${properties.kcButtonDefaultClass!} ${properties.kcButtonLargeClass!} ${properties.kcButtonLargeClass!}"
+						name="cancel-aia" value="true" />${msg("doCancel")}
+				</button>
+            <#else>
+				<input type="submit"
+					   class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}"
+					   value="${msg("appConfigSubmit")}"
+				/>
+            </#if>
         </form>
     </#if>
 </@layout.registrationLayout>
