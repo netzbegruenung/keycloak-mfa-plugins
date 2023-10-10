@@ -30,7 +30,7 @@ paths:
 
         When called to authenticate Signature header and granted query param are additionally required.
         The "signature" key inside Signature header should be computed on:
-        keyId:device_id,created:1680253758079,secret:randomString,granted=true|false
+        created:1680253758079,secret:randomString,granted=true|false
       parameters:
         - in: path
           name: realmId
@@ -126,7 +126,7 @@ paths:
       description: |-
         The Signature header is expected as comma seperated key-value string value.
         The "signature" key inside Signature header should be computed on:
-        keyId:deviceId,created:1680253758079
+        created:1680253758079
       parameters:
         - in: path
           name: realmId
@@ -142,7 +142,7 @@ paths:
             type: string
         - in: header
           name: Signature
-          description: Header containing signature of the device ID + timestamp
+          description: Signature of timestamp
           required: true
           schema:
             type: string

@@ -66,7 +66,10 @@ public class ChallengeResource {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).type(MediaType.APPLICATION_JSON_TYPE).build();
 		}
 
-		if (Time.currentTimeMillis() > challenge.getUpdatedTimestamp() + (long) session.getContext().getRealm().getActionTokenGeneratedByUserLifespan() * 1000L) {
+		Long actionTokenLifespan = (long) session.getContext().getRealm().getActionTokenGeneratedByUserLifespan() * 1000L;
+
+		if (Time.currentTimeMillis() > challenge.getUpdatedTimestamp() + actionTokenLifespan
+				|| Time.currentTimeMillis() > Long.parseLong(signatureMap.get("created")) + actionTokenLifespan) {
 			logger.warnf(
 				"Failed to get app authenticator challenge: challenge expired user [%s] device [%s]",
 				challenge.getUser().getUsername(),
@@ -84,7 +87,6 @@ public class ChallengeResource {
 				.collect(toSingleton());
 
 			Map<String, String> signatureStringMap = new LinkedHashMap<>();
-			signatureStringMap.put("keyId", deviceId);
 			signatureStringMap.put("created", signatureMap.get("created"));
 
 			boolean verified = AuthenticationUtil.verifyChallenge(
