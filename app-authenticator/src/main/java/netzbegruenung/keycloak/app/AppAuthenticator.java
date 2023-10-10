@@ -38,10 +38,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class AppAuthenticator implements Authenticator, CredentialValidator<AppCredentialProvider> {
 	private final Logger logger = Logger.getLogger(AppAuthenticator.class);
@@ -62,7 +59,6 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 			AppCredentialData appCredentialData = JsonSerialization.readValue(appCredentialModel.getCredentialData(), AppCredentialData.class);
 			String secret = SecretGenerator.getInstance().randomString(SECRET_LENGTH, SecretGenerator.ALPHANUM);
 			AuthenticationSessionModel authSession = context.getAuthenticationSession();
-			authSession.setAuthNote("credentialId", appCredentialModel.getId());
 
 			URI actionTokenUri = ActionTokenUtil.createActionToken(
 				AppAuthActionToken.class,
@@ -88,11 +84,12 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 				secret
 			);
 
+			authSession.setAuthNote("credentialId", appCredentialModel.getId());
 			authSession.setAuthNote("secret", secret);
 			authSession.setAuthNote("timestamp", String.valueOf(challenge.getUpdatedTimestamp()));
 
 			if (Boolean.parseBoolean(authConfig.getOrDefault("simulation", "false"))) {
-				Map<String, String> signatureStringMap = new HashMap<>();
+				Map<String, String> signatureStringMap = new LinkedHashMap<>();
 				signatureStringMap.put("keyId", appCredentialData.getDeviceId());
 				signatureStringMap.put("created", authSession.getAuthNote("timestamp"));
 				signatureStringMap.put("secret", authSession.getAuthNote("secret"));
