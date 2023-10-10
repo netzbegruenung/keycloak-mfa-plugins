@@ -7,6 +7,7 @@ import org.keycloak.authentication.actiontoken.ActionTokenContext;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventType;
+import org.keycloak.models.UserModel;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
@@ -44,21 +45,34 @@ public class AppSetupActionTokenHandler extends AbstractActionTokenHandler<AppSe
 			return Response.status(400).build();
 		}
 
-		CredentialProvider appCredentialProvider = tokenContext.getSession().getProvider(
-			CredentialProvider.class,
-			AppCredentialProviderFactory.PROVIDER_ID
-		);
-		appCredentialProvider.createCredential(
-			tokenContext.getRealm(),
-			tokenContext.getAuthenticationSession().getAuthenticatedUser(),
-			AppCredentialModel.createAppCredential(publicKey, deviceId, deviceOs, keyAlgorithm, signatureAlgorithm, devicePushId)
-		);
+		UserModel user = tokenContext.getAuthenticationSession().getAuthenticatedUser();
+		long count = user.credentialManager()
+			.getStoredCredentialsByTypeStream(AppCredentialModel.TYPE)
+			.map(AppCredentialModel::createFromCredentialModel)
+			.filter(c -> c.getAppCredentialData().getDeviceId().equals(deviceId))
+			.count();
 
 		AuthenticationSessionModel authSession = ActionTokenUtil.getOriginalAuthSession(
 			tokenContext.getSession(),
 			tokenContext.getRealm(),
 			token.getOriginalAuthenticationSessionId()
 		);
+
+		if (count > 0) {
+			authSession.setAuthNote("duplicateDeviceId", Boolean.toString(true));
+			return Response.status(400).build();
+		}
+
+		CredentialProvider appCredentialProvider = tokenContext.getSession().getProvider(
+			CredentialProvider.class,
+			AppCredentialProviderFactory.PROVIDER_ID
+		);
+		appCredentialProvider.createCredential(
+			tokenContext.getRealm(),
+			user,
+			AppCredentialModel.createAppCredential(publicKey, deviceId, deviceOs, keyAlgorithm, signatureAlgorithm, devicePushId)
+		);
+
 		authSession.setAuthNote("appSetupSuccessful", Boolean.toString(true));
 
 		return Response.status(201).build();

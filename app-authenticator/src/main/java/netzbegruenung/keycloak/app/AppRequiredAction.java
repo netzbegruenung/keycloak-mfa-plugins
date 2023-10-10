@@ -86,10 +86,12 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 				context.getUriInfo()
 			);
 
+			String errorMessage = Boolean.parseBoolean(authSession.getAuthNote("duplicateDeviceId")) ? "appAuthSetupDuplicate" : "appAuthSetupError";
+
 			Response challenge = context.form()
 				.setAttribute("appAuthQrCode", createQrCode(actionTokenUrl.toString()))
 				.setAttribute("appAuthActionTokenUrl", actionTokenUrl.toString())
-				.setError("appAuthSetupError")
+				.setError(errorMessage)
 				.createForm("app-auth-setup.ftl");
 			context.challenge(challenge);
 			return;
