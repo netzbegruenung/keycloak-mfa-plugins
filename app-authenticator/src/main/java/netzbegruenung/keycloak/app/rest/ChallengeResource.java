@@ -17,7 +17,8 @@ import jakarta.persistence.NonUniqueResultException;
 import jakarta.persistence.TypedQuery;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -33,10 +34,9 @@ public class ChallengeResource {
 	}
 
 	@GET
-	@Path("{deviceId}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getChallenges(@Context Request request, @Context HttpHeaders headers, final @Context UriInfo uriInfo, final @PathParam("deviceId") String deviceId) {
-		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(headers.getRequestHeader("Signature"));
+	public Response getChallenges(@HeaderParam("Signature") List<String> signatureHeader, @QueryParam("device_id") String deviceId) {
+		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(signatureHeader);
 		if (signatureMap == null) {
 			logger.warnf("GET app authentication challenge rejected: missing, incomplete or invalid signature header for device ID [%s]", deviceId);
 			return Response.status(Response.Status.BAD_REQUEST).build();
@@ -83,7 +83,7 @@ public class ChallengeResource {
 				.filter(c -> c.getAppCredentialData().getDeviceId().equals(deviceId))
 				.collect(toSingleton());
 
-			Map<String, String> signatureStringMap = new HashMap<>();
+			Map<String, String> signatureStringMap = new LinkedHashMap<>();
 			signatureStringMap.put("keyId", deviceId);
 			signatureStringMap.put("created", signatureMap.get("created"));
 

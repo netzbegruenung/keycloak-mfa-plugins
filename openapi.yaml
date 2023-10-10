@@ -118,7 +118,7 @@ paths:
           description: Failed to read user credentials (public key), malformed signature, algorithm not available, etc.
 
 
-  /realms/{realmId}/challenge-resource/{deviceId}:
+  /realms/{realmId}/challenges:
     get:
       summary: Get current authentication challenge for this device
       tags:
@@ -134,7 +134,7 @@ paths:
           required: true
           schema:
             type: string
-        - in: path
+        - in: query
           name: deviceId
           description: The device ID
           required: true
@@ -142,7 +142,7 @@ paths:
             type: string
         - in: header
           name: Signature
-          description: signature of the device ID + algorithm
+          description: Header containing signature of the device ID + timestamp
           required: true
           schema:
             type: string
