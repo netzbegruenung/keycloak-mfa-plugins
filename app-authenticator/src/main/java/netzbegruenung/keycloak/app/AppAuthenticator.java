@@ -90,7 +90,6 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 
 			if (Boolean.parseBoolean(authConfig.getOrDefault("simulation", "false"))) {
 				Map<String, String> signatureStringMap = new LinkedHashMap<>();
-				signatureStringMap.put("keyId", appCredentialData.getDeviceId());
 				signatureStringMap.put("created", authSession.getAuthNote("timestamp"));
 				signatureStringMap.put("secret", authSession.getAuthNote("secret"));
 				signatureStringMap.put("granted", String.valueOf(true));
