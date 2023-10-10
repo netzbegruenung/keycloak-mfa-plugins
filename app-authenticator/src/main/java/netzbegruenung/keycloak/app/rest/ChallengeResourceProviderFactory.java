@@ -8,7 +8,7 @@ import org.keycloak.services.resource.RealmResourceProviderFactory;
 
 public class ChallengeResourceProviderFactory implements RealmResourceProviderFactory {
 
-	public static final String ID = "challenge-resource";
+	public static final String ID = "challenges";
 
 	@Override
 	public RealmResourceProvider create(KeycloakSession session) {
