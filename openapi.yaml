@@ -154,7 +154,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Challenge'
+                $ref: '#/components/schemas/ChallengeList'
         '400':
           description: Signature header is missing or incomplete
         '403':
@@ -168,6 +168,10 @@ paths:
 
 components:
   schemas:
+    ChallengeList:
+      type: array
+      items:
+        $ref: '#/components/schemas/Challenge'
     Challenge:
       type: object
       properties:

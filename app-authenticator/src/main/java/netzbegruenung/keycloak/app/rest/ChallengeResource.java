@@ -17,9 +17,8 @@ import jakarta.persistence.NonUniqueResultException;
 import jakarta.persistence.TypedQuery;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -28,6 +27,10 @@ public class ChallengeResource {
 	private final KeycloakSession session;
 
 	private final Logger logger = Logger.getLogger(ChallengeResource.class);
+
+	public final static String CHALLENGE_REJECTED = "challenge_rejected";
+
+	public final static String INTERNAL_ERROR = "internal_error";
 
 	public ChallengeResource(KeycloakSession session) {
 		this.session = session;
@@ -38,8 +41,10 @@ public class ChallengeResource {
 	public Response getChallenges(@HeaderParam("Signature") List<String> signatureHeader, @QueryParam("device_id") String deviceId) {
 		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(signatureHeader);
 		if (signatureMap == null) {
-			logger.warnf("GET app authentication challenge rejected: missing, incomplete or invalid signature header for device ID [%s]", deviceId);
-			return Response.status(Response.Status.BAD_REQUEST).build();
+			return Response
+				.status(Response.Status.BAD_REQUEST)
+				.entity(new Message(CHALLENGE_REJECTED, "Missing, incomplete or invalid signature header"))
+				.build();
 		}
 
 		EntityManager em = session.getProvider(JpaConnectionProvider.class).getEntityManager();
@@ -47,35 +52,43 @@ public class ChallengeResource {
 
 		TypedQuery<Challenge> query = em.createNamedQuery("Challenge.findByRealmAndDeviceId", Challenge.class);
 		query.setParameter("realm", realm);
-		query.setParameter("deviceId", signatureMap.get("keyId"));
+		query.setParameter("deviceId", deviceId);
 		Challenge challenge;
 
 		try {
 			challenge = query.getSingleResult();
 
 		} catch (NoResultException e) {
-			logger.warn("No challenge found for device ID " + deviceId, e);
-			return Response.status(Response.Status.NOT_FOUND).build();
+			return Response
+				.status(Response.Status.OK)
+				.entity(Collections.emptyList())
+				.build();
 
 		} catch (NonUniqueResultException e) {
 			logger.error("Failed to get app authenticator challenge: duplicate challenge detected for device ID: " + deviceId, e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).type(MediaType.APPLICATION_JSON_TYPE).build();
+			return Response
+				.status(Response.Status.INTERNAL_SERVER_ERROR)
+				.type(MediaType.APPLICATION_JSON_TYPE)
+				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
+				.build();
 
 		} catch (Throwable e) {
 			logger.error("Failed to get app authenticator challenge for device ID: " + deviceId, e);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).type(MediaType.APPLICATION_JSON_TYPE).build();
+			return Response
+				.status(Response.Status.INTERNAL_SERVER_ERROR)
+				.type(MediaType.APPLICATION_JSON_TYPE)
+				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
+				.build();
 		}
 
 		Long actionTokenLifespan = (long) session.getContext().getRealm().getActionTokenGeneratedByUserLifespan() * 1000L;
 
 		if (Time.currentTimeMillis() > challenge.getUpdatedTimestamp() + actionTokenLifespan
 				|| Time.currentTimeMillis() > Long.parseLong(signatureMap.get("created")) + actionTokenLifespan) {
-			logger.warnf(
-				"Failed to get app authenticator challenge: challenge expired user [%s] device [%s]",
-				challenge.getUser().getUsername(),
-				challenge.getDeviceId()
-			);
-			return Response.status(Response.Status.FORBIDDEN).build();
+			return Response
+				.status(Response.Status.FORBIDDEN)
+				.entity(new Message(CHALLENGE_REJECTED, "Challenge expired"))
+				.build();
 		}
 
 		try {
@@ -97,10 +110,15 @@ public class ChallengeResource {
 			);
 
 			if (!verified) {
-				return Response.status(Response.Status.FORBIDDEN).build();
+				return Response
+					.status(Response.Status.FORBIDDEN)
+					.entity(new Message(CHALLENGE_REJECTED, "Invalid signature"))
+					.build();
 			}
 
-			return Response.ok(ChallengeConverter.getChallengeDto(challenge)).build();
+			return Response
+				.ok(Arrays.asList(ChallengeConverter.getChallengeDto(challenge)))
+				.build();
 
 		} catch (IllegalStateException e) {
 			logger.error(
@@ -111,9 +129,13 @@ public class ChallengeResource {
 				),
 				e
 			);
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).type(MediaType.APPLICATION_JSON_TYPE).build();
+			return Response
+				.status(Response.Status.INTERNAL_SERVER_ERROR)
+				.type(MediaType.APPLICATION_JSON_TYPE)
+				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
+				.build();
 		} catch (IndexOutOfBoundsException e) {
-			logger.warn(
+			logger.error(
 				String.format(
 					"Failed to get app authenticator challenge: no app credentials found for device ID [%s] user [%s]",
 					deviceId,
@@ -121,7 +143,11 @@ public class ChallengeResource {
 				),
 				e
 			);
-			return Response.status(Response.Status.CONFLICT).type(MediaType.APPLICATION_JSON_TYPE).build();
+			return Response
+				.status(Response.Status.INTERNAL_SERVER_ERROR)
+				.type(MediaType.APPLICATION_JSON_TYPE)
+				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
+				.build();
 		}
 	}
 
