@@ -1,7 +1,6 @@
 package netzbegruenung.keycloak.app;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.common.Profile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,15 +8,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import netzbegruenung.keycloak.dev.AuthorizationServerApp;
 
 import org.junit.jupiter.api.BeforeAll;
 
-@ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = { AuthorizationServerApp.class }, webEnvironment = WebEnvironment.DEFINED_PORT)
-@ActiveProfiles("test")
+@ActiveProfiles("livetest")
 public class AppAuthenticatorLiveTest {
 
 	private static final Logger log = LoggerFactory.getLogger(AppAuthenticatorLiveTest.class);
