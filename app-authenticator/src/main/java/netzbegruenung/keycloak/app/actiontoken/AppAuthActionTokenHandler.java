@@ -1,5 +1,7 @@
 package netzbegruenung.keycloak.app.actiontoken;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceException;
 import netzbegruenung.keycloak.app.AppCredentialProvider;
 import netzbegruenung.keycloak.app.AppCredentialProviderFactory;
 import netzbegruenung.keycloak.app.AuthenticationUtil;
@@ -9,10 +11,12 @@ import netzbegruenung.keycloak.app.rest.StatusResourceProvider;
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.actiontoken.AbstractActionTokenHandler;
 import org.keycloak.authentication.actiontoken.ActionTokenContext;
+import org.keycloak.connections.jpa.JpaConnectionProvider;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventType;
+import org.keycloak.models.jpa.entities.RealmEntity;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
@@ -96,6 +100,18 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		}
 
 		authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
+
+		try {
+			EntityManager em = tokenContext.getSession().getProvider(JpaConnectionProvider.class).getEntityManager();
+			RealmEntity realm = em.getReference(RealmEntity.class, tokenContext.getRealm().getId());
+			em.createNamedQuery("Challenge.deleteByRealmAndDeviceId")
+				.setParameter("realm", realm)
+				.setParameter("deviceId", appCredentialData.getDeviceId())
+				.executeUpdate();
+		} catch (PersistenceException e) {
+			logger.error(String.format("Failed to delete challenge for device ID %s", appCredentialData.getDeviceId()), e);
+		}
+
 		return Response.status(Response.Status.NO_CONTENT).build();
 	}
 

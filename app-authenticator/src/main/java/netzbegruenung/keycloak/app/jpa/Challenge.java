@@ -15,7 +15,8 @@ import java.util.UUID;
 	@UniqueConstraint(name = "uc_challenge_realm_id", columnNames = {"realm_id", "device_id"})
 })
 @NamedQueries({
-	@NamedQuery(name = "Challenge.findByRealmAndDeviceId", query = "select c from Challenge c where c.realm = :realm and c.deviceId = :deviceId")
+	@NamedQuery(name = "Challenge.findByRealmAndDeviceId", query = "select c from Challenge c where c.realm = :realm and c.deviceId = :deviceId"),
+	@NamedQuery(name = "Challenge.deleteByRealmAndDeviceId", query = "delete from Challenge c where c.realm = :realm and c.deviceId = :deviceId")
 })
 public class Challenge {
 
