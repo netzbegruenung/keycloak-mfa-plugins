@@ -135,7 +135,7 @@ paths:
           schema:
             type: string
         - in: query
-          name: deviceId
+          name: device_id
           description: The device ID
           required: true
           schema:
@@ -191,7 +191,7 @@ components:
           type: string
           description: random string to be signed
         updatedTimestamp:
-          type: string
+          type: integer
           description: Unix timestamp in milliseconds the user requested authentication (login)
         ipAddress:
           type: string
