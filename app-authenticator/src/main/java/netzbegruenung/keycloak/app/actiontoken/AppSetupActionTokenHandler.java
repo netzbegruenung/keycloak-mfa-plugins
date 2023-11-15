@@ -2,6 +2,7 @@ package netzbegruenung.keycloak.app.actiontoken;
 
 import netzbegruenung.keycloak.app.AppCredentialProviderFactory;
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
+import netzbegruenung.keycloak.app.rest.StatusResourceProvider;
 import org.keycloak.authentication.actiontoken.AbstractActionTokenHandler;
 import org.keycloak.authentication.actiontoken.ActionTokenContext;
 import org.keycloak.credential.CredentialProvider;
@@ -60,6 +61,7 @@ public class AppSetupActionTokenHandler extends AbstractActionTokenHandler<AppSe
 
 		if (count > 0) {
 			authSession.setAuthNote("duplicateDeviceId", Boolean.toString(true));
+			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
 			return Response.status(400).build();
 		}
 
@@ -74,6 +76,7 @@ public class AppSetupActionTokenHandler extends AbstractActionTokenHandler<AppSe
 		);
 
 		authSession.setAuthNote("appSetupSuccessful", Boolean.toString(true));
+		authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
 
 		return Response.status(201).build();
 	}

@@ -6,6 +6,7 @@ import netzbegruenung.keycloak.app.credentials.AppCredentialData;
 import netzbegruenung.keycloak.app.dto.ChallengeConverter;
 import netzbegruenung.keycloak.app.jpa.Challenge;
 import netzbegruenung.keycloak.app.messaging.MessagingServiceFactory;
+import netzbegruenung.keycloak.app.rest.StatusResourceProviderFactory;
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.Authenticator;
@@ -100,6 +101,12 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 			MessagingServiceFactory.get(authConfig).send(appCredentialData.getDevicePushId(), ChallengeConverter.getChallengeDto(challenge));
 
 			Response response = context.form()
+				.setAttribute("appAuthStatusUrl", String.format(
+					"/realms/%s/%s?%s",
+					context.getRealm().getName(),
+					StatusResourceProviderFactory.ID,
+					context.getRefreshExecutionUrl().getQuery()
+				))
 				.createForm("app-login.ftl");
 			context.challenge(response);
 		} catch (IOException|NonUniqueResultException e) {
@@ -211,8 +218,16 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 		}
 
 		final String granted = authSession.getAuthNote("appAuthGranted");
+		String appAuthStatusUrl = String.format(
+			"/realms/%s/%s?%s",
+			context.getRealm().getName(),
+			StatusResourceProviderFactory.ID,
+			context.getRefreshExecutionUrl().getQuery()
+		);
+
 		if (granted == null) {
 			Response challenge = context.form()
+				.setAttribute("appAuthStatusUrl", appAuthStatusUrl)
 				.setError("appAuthError")
 				.createForm("app-login.ftl");
 			context.challenge(challenge);
@@ -220,6 +235,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 		}
 		if (!Boolean.parseBoolean(granted)) {
 			Response challenge = context.form()
+				.setAttribute("appAuthStatusUrl", appAuthStatusUrl)
 				.setError("appAuthRejected")
 				.createForm("app-login.ftl");
 			context.challenge(challenge);

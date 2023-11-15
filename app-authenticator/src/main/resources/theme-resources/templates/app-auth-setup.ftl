@@ -3,7 +3,7 @@
     <#if section = "header">
         ${msg("appConfigTitle")}
     <#elseif section = "form">
-        <form onsubmit="confirm.disabled = true; return true;" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
+        <form id="kc-app-setup-form" onsubmit="confirm.disabled = true; return true;" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
             <ol id="kc-app-setup">
                 <li>
                     <p>${msg("appConfigStep1")}</p>
@@ -28,20 +28,18 @@
                 </li>
             </ol>
             <#if isAppInitiatedAction??>
-				<input type="submit"
-					   class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonLargeClass!}"
-					   value="${msg("appConfigSubmit")}"
-				/>
 				<button type="submit"
-						class="${properties.kcButtonClass!} ${properties.kcButtonDefaultClass!} ${properties.kcButtonLargeClass!} ${properties.kcButtonLargeClass!}"
+						class="${properties.kcButtonClass!} ${properties.kcButtonDefaultClass!} ${properties.kcButtonLargeClass!}"
 						name="cancel-aia" value="true" />${msg("doCancel")}
 				</button>
-            <#else>
-				<input type="submit"
-					   class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}"
-					   value="${msg("appConfigSubmit")}"
-				/>
             </#if>
         </form>
+		<script type="text/javascript">
+			const source = new EventSource("${appAuthStatusUrl?no_esc}");
+			source.onmessage = () => {
+				source.close();
+				document.getElementById('kc-app-setup-form').submit();
+			};
+		</script>
     </#if>
 </@layout.registrationLayout>

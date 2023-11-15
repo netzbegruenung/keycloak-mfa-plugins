@@ -3,13 +3,17 @@
     <#if section = "header">
         ${msg("appAuthTitle")}
     <#elseif section = "form">
-        <form onsubmit="confirm.disabled = true; return true;" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
-            <div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
-                <div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
-                    <input name="confirm" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("appAuthConfirm")}"/>
-                </div>
-            </div>
+        <form id="kc-app-authentication" onsubmit="confirm.disabled = true; return true;" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
         </form>
+		<#if appAuthStatusUrl??>
+			<script type="text/javascript">
+				const source = new EventSource("${appAuthStatusUrl?no_esc}");
+				source.onmessage = () => {
+					source.close();
+					document.getElementById('kc-app-authentication').submit();
+				};
+			</script>
+		</#if>
     <#elseif section = "info" >
         ${msg("appAuthInstructions")}
     </#if>

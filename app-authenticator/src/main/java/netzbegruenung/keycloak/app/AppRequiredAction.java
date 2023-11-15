@@ -7,6 +7,7 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import netzbegruenung.keycloak.app.actiontoken.ActionTokenUtil;
 import netzbegruenung.keycloak.app.actiontoken.AppSetupActionToken;
+import netzbegruenung.keycloak.app.rest.StatusResourceProviderFactory;
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.CredentialRegistrator;
 import org.keycloak.authentication.InitiatedActionSupport;
@@ -50,6 +51,12 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 		Response challenge = context.form()
 			.setAttribute("appAuthQrCode", createQrCode(actionTokenUrl.toString()))
 			.setAttribute("appAuthActionTokenUrl", actionTokenUrl.toString())
+			.setAttribute("appAuthStatusUrl", String.format(
+				"/realms/%s/%s?%s",
+				context.getRealm().getName(),
+				StatusResourceProviderFactory.ID,
+				context.getActionUrl().getQuery()
+			))
 			.createForm("app-auth-setup.ftl");
 		context.challenge(challenge);
 	}
