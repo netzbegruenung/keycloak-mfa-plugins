@@ -5,6 +5,7 @@ import netzbegruenung.keycloak.app.AppCredentialProviderFactory;
 import netzbegruenung.keycloak.app.AuthenticationUtil;
 import netzbegruenung.keycloak.app.credentials.AppCredentialData;
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
+import netzbegruenung.keycloak.app.rest.StatusResourceProvider;
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.actiontoken.AbstractActionTokenHandler;
 import org.keycloak.authentication.actiontoken.ActionTokenContext;
@@ -39,17 +40,6 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		MultivaluedMap<String, String> queryParameters = tokenContext.getRequest().getUri().getQueryParameters();
 		String granted = queryParameters.getFirst("granted");
 
-		if (granted == null) {
-			logger.warnf("App authentication rejected: missing query param \"granted\" for user ID [%s]", token.getUserId());
-			return Response.status(Response.Status.BAD_REQUEST).build();
-		}
-
-		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(tokenContext.getRequest().getHttpHeaders().getRequestHeader("Signature"));
-		if (signatureMap == null) {
-			logger.warnf("App authentication rejected: missing or incomplete signature header for user ID [%s]", token.getUserId());
-			return Response.status(Response.Status.BAD_REQUEST).build();
-		}
-
 		AuthenticationSessionModel authSession = ActionTokenUtil.getOriginalAuthSession(
 			tokenContext.getSession(),
 			tokenContext.getRealm(),
@@ -57,8 +47,21 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		);
 
 		if (authSession == null) {
-			logger.warnf("App Authentication rejected: Auth session not found for user [%s]", token.getUserId());
+			logger.errorf("App Authentication rejected: Auth session not found for user [%s]", token.getUserId());
 			return Response.status(Response.Status.FORBIDDEN).build();
+		}
+
+		if (granted == null) {
+			logger.warnf("App authentication rejected: missing query param \"granted\" for user ID [%s]", token.getUserId());
+			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
+			return Response.status(Response.Status.BAD_REQUEST).build();
+		}
+
+		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(tokenContext.getRequest().getHttpHeaders().getRequestHeader("Signature"));
+		if (signatureMap == null) {
+			logger.warnf("App authentication rejected: missing or incomplete signature header for user ID [%s]", token.getUserId());
+			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
+			return Response.status(Response.Status.BAD_REQUEST).build();
 		}
 
 		AppCredentialProvider appCredentialProvider = (AppCredentialProvider) tokenContext
@@ -82,6 +85,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		);
 
 		if (!verified) {
+			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 
@@ -91,6 +95,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 			authSession.setAuthNote("appAuthGranted", Boolean.toString(true));
 		}
 
+		authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
 		return Response.status(Response.Status.NO_CONTENT).build();
 	}
 
