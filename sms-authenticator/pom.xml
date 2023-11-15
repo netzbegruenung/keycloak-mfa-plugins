@@ -73,7 +73,7 @@
         <dependency>
             <groupId>netzbegruenung</groupId>
             <artifactId>dev</artifactId>
-            <version>22.0.6</version>
+            <version>${revision}</version>
             <scope>test</scope>
         </dependency>
 
