@@ -70,6 +70,12 @@
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>netzbegruenung</groupId>
+            <artifactId>dev</artifactId>
+            <version>22.0.6</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 
