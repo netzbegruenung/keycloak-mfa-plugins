@@ -38,12 +38,10 @@ public class StatusResourceProvider implements RealmResourceProvider {
 
 	@GET
 	@Produces(MediaType.SERVER_SENT_EVENTS)
-	public void getSetupState(@Context SseEventSink sseEventSink,
+	public void getAppAuthStatus(@Context SseEventSink sseEventSink,
 							  @Context Sse sse,
-							  @CookieParam(AuthenticationSessionManager.AUTH_SESSION_ID) String authSessionId,
 							  @QueryParam(Constants.CLIENT_ID) String clientId,
-							  @QueryParam(Constants.TAB_ID) String tabId,
-							  @QueryParam(Constants.EXECUTION) String action) throws InterruptedException {
+							  @QueryParam(Constants.TAB_ID) String tabId) throws InterruptedException {
 		RealmModel realm = session.getContext().getRealm();
 		ClientModel client = null;
 		if (clientId != null)
@@ -53,11 +51,8 @@ public class StatusResourceProvider implements RealmResourceProvider {
 		AuthenticationSessionManager authSessionManager = new AuthenticationSessionManager(session);
 		AuthenticationSessionModel authSession;
 
-		if (authSessionId == null)
-			throw new NotAuthorizedException(UNAUTHORIZED);
-
 		while (true) {
-			authSession = authSessionManager.getAuthenticationSessionByIdAndClient(realm, authSessionId, client, tabId);
+			authSession = authSessionManager.getCurrentAuthenticationSession(realm, client, tabId);
 
 			if (authSession == null)
 				throw new NotAuthorizedException(UNAUTHORIZED);
