@@ -59,6 +59,10 @@ public class AppSetupActionTokenHandler extends AbstractActionTokenHandler<AppSe
 			token.getOriginalAuthenticationSessionId()
 		);
 
+		if (authSession == null) {
+			return Response.status(Response.Status.FORBIDDEN).build();
+		}
+
 		if (count > 0) {
 			authSession.setAuthNote("duplicateDeviceId", Boolean.toString(true));
 			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
