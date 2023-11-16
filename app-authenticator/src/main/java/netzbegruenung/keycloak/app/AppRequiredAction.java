@@ -98,6 +98,12 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 			Response challenge = context.form()
 				.setAttribute("appAuthQrCode", createQrCode(actionTokenUrl.toString()))
 				.setAttribute("appAuthActionTokenUrl", actionTokenUrl.toString())
+				.setAttribute("appAuthStatusUrl", String.format(
+					"/realms/%s/%s?%s",
+					context.getRealm().getName(),
+					StatusResourceProviderFactory.ID,
+					context.getActionUrl().getQuery()
+				))
 				.setError(errorMessage)
 				.createForm("app-auth-setup.ftl");
 			context.challenge(challenge);
