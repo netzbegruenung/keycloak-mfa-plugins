@@ -39,7 +39,7 @@ public class AuthenticationUtil {
 		}
 
 		try {
-			if (Long.parseLong(signatureMap.get("created")) > Time.currentTimeMillis()) {
+			if (Long.parseLong(signatureMap.get("created")) > Time.currentTimeMillis() + 1000) {
 				logger.warnf("Failed to parse signature header: created is in the future device ID [%s]", signatureMap.get("keyId"));
 				return null;
 			}
