@@ -2,6 +2,7 @@ package netzbegruenung.keycloak.app.actiontoken;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
+import netzbegruenung.keycloak.app.AppAuthenticator;
 import netzbegruenung.keycloak.app.AppCredentialProvider;
 import netzbegruenung.keycloak.app.AppCredentialProviderFactory;
 import netzbegruenung.keycloak.app.AuthenticationUtil;
@@ -55,6 +56,12 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 
+		String authSessionGranted = authSession.getAuthNote(AppAuthenticator.APP_AUTH_GRANTED_NOTE);
+
+		if (authSessionGranted != null && !Boolean.parseBoolean(authSessionGranted)) {
+			return Response.status(Response.Status.FORBIDDEN).build();
+		}
+
 		if (granted == null) {
 			logger.warnf("App authentication rejected: missing query param \"granted\" for user ID [%s]", token.getUserId());
 			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
@@ -94,9 +101,9 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		}
 
 		if (!Boolean.parseBoolean(granted)) {
-			authSession.setAuthNote("appAuthGranted", Boolean.toString(false));
+			authSession.setAuthNote(AppAuthenticator.APP_AUTH_GRANTED_NOTE, Boolean.toString(false));
 		} else {
-			authSession.setAuthNote("appAuthGranted", Boolean.toString(true));
+			authSession.setAuthNote(AppAuthenticator.APP_AUTH_GRANTED_NOTE, Boolean.toString(true));
 		}
 
 		authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));

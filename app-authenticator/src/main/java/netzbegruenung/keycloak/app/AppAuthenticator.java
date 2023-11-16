@@ -46,6 +46,8 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 
 	private static final int SECRET_LENGTH = 512 - 11;
 
+	public static final String APP_AUTH_GRANTED_NOTE = "appAuthGranted";
+
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
 		CredentialModel appCredentialModel;
@@ -217,7 +219,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 			return;
 		}
 
-		final String granted = authSession.getAuthNote("appAuthGranted");
+		final String granted = authSession.getAuthNote(APP_AUTH_GRANTED_NOTE);
 		String appAuthStatusUrl = String.format(
 			"/realms/%s/%s?%s",
 			context.getRealm().getName(),
@@ -235,7 +237,6 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 		}
 		if (!Boolean.parseBoolean(granted)) {
 			Response challenge = context.form()
-				.setAttribute("appAuthStatusUrl", appAuthStatusUrl)
 				.setError("appAuthRejected")
 				.createForm("app-login.ftl");
 			context.challenge(challenge);

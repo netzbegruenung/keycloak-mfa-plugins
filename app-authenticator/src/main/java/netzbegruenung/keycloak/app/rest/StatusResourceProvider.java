@@ -59,6 +59,7 @@ public class StatusResourceProvider implements RealmResourceProvider {
 
 
 			if (authSession.getAuthNote(READY) != null) {
+				authSession.setAuthNote(READY, null);
 				OutboundSseEvent sseEvent = sse.newEventBuilder()
 					.mediaType(MediaType.APPLICATION_JSON_TYPE)
 					.data("Ready")
