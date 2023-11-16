@@ -67,12 +67,15 @@ public class StatusResourceProvider implements RealmResourceProvider {
 
 				UserModel user = authSession.getAuthenticatedUser();
 
-				sseEventSink.send(sseEvent)
-					.exceptionally(e -> {
-						logger.error(String.format("Failed to send authentication status for user %s", user == null ? "null" : user.getId()), e);
-						return null;
-					});
-				break;
+				try {
+					sseEventSink.send(sseEvent)
+						.toCompletableFuture()
+						.get();
+				} catch (Exception e) {
+					logger.error(String.format("Failed to send authentication status for user %s", user == null ? "null" : user.getId()), e);
+				} finally {
+					break;
+				}
 			}
 
 			Thread.sleep(1000);
