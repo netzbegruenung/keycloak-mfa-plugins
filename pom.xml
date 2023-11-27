@@ -13,7 +13,8 @@
 		<module>dev</module>
 		<module>sms-authenticator</module>
         <module>app-authenticator</module>
-    </modules>
+		<module>enforce-mfa</module>
+	</modules>
 
 	<properties>
 		<revision>22.0.10</revision>
