@@ -8,9 +8,7 @@ import netzbegruenung.keycloak.app.jpa.Challenge;
 import netzbegruenung.keycloak.app.messaging.MessagingServiceFactory;
 import netzbegruenung.keycloak.app.rest.StatusResourceProviderFactory;
 import org.jboss.logging.Logger;
-import org.keycloak.authentication.AuthenticationFlowContext;
-import org.keycloak.authentication.Authenticator;
-import org.keycloak.authentication.CredentialValidator;
+import org.keycloak.authentication.*;
 import org.keycloak.common.util.Base64;
 import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.common.util.Time;
@@ -247,7 +245,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 
 	@Override
 	public boolean requiresUser() {
-		return false;
+		return true;
 	}
 
 	@Override
@@ -268,5 +266,10 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 	@Override
 	public AppCredentialProvider getCredentialProvider(KeycloakSession session) {
 		return (AppCredentialProvider)session.getProvider(CredentialProvider.class, AppCredentialProviderFactory.PROVIDER_ID);
+	}
+
+	@Override
+	public List<RequiredActionFactory> getRequiredActions(KeycloakSession session) {
+		return Collections.singletonList((AppRequiredActionFactory)session.getKeycloakSessionFactory().getProviderFactory(RequiredActionProvider.class, AppRequiredAction.PROVIDER_ID));
 	}
 }
