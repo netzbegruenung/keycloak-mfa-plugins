@@ -11,7 +11,7 @@ public class ChallengeDto implements Serializable {
 	private final String userFirstName;
 	private final String userLastName;
 	private final String targetUrl;
-	private final String secret;
+	private final String codeChallenge;
 	private final Long updatedTimestamp;
 	private final String ipAddress;
 	private final String device;
@@ -19,12 +19,12 @@ public class ChallengeDto implements Serializable {
 	private final String os;
 	private final String osVersion;
 
-	public ChallengeDto(String userName, String userFirstName, String userLastName, String targetUrl, String secret, Long updatedTimestamp, String ipAddress, String device, String browser, String os, String osVersion) {
+	public ChallengeDto(String userName, String userFirstName, String userLastName, String targetUrl, String codeChallenge, Long updatedTimestamp, String ipAddress, String device, String browser, String os, String osVersion) {
 		this.userName = userName;
 		this.userFirstName = userFirstName;
 		this.userLastName = userLastName;
 		this.targetUrl = targetUrl;
-		this.secret = secret;
+		this.codeChallenge = codeChallenge;
 		this.updatedTimestamp = updatedTimestamp;
 		this.ipAddress = ipAddress;
 		this.device = device;
@@ -49,8 +49,8 @@ public class ChallengeDto implements Serializable {
 		return targetUrl;
 	}
 
-	public String getSecret() {
-		return secret;
+	public String getCodeChallenge() {
+		return codeChallenge;
 	}
 
 	public Long getUpdatedTimestamp() {
@@ -86,7 +86,7 @@ public class ChallengeDto implements Serializable {
 			Objects.equals(this.userFirstName, entity.userFirstName) &&
 			Objects.equals(this.userLastName, entity.userLastName) &&
 			Objects.equals(this.targetUrl, entity.targetUrl) &&
-			Objects.equals(this.secret, entity.secret) &&
+			Objects.equals(this.codeChallenge, entity.codeChallenge) &&
 			Objects.equals(this.updatedTimestamp, entity.updatedTimestamp) &&
 			Objects.equals(this.ipAddress, entity.ipAddress) &&
 			Objects.equals(this.device, entity.device) &&
@@ -97,6 +97,6 @@ public class ChallengeDto implements Serializable {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(userName, userFirstName, userLastName, targetUrl, secret, updatedTimestamp, ipAddress, device, browser, os, osVersion);
+		return Objects.hash(userName, userFirstName, userLastName, targetUrl, codeChallenge, updatedTimestamp, ipAddress, device, browser, os, osVersion);
 	}
 }
