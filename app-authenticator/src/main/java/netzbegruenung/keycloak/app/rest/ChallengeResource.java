@@ -38,7 +38,7 @@ public class ChallengeResource {
 
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getChallenges(@HeaderParam("Signature") List<String> signatureHeader, @QueryParam("device_id") String deviceId) {
+	public Response getChallenges(@HeaderParam("Signature") List<String> signatureHeader) {
 		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(signatureHeader);
 		if (signatureMap == null) {
 			return Response
@@ -47,6 +47,7 @@ public class ChallengeResource {
 				.build();
 		}
 
+		String deviceId = signatureMap.get("keyId");
 		EntityManager em = session.getProvider(JpaConnectionProvider.class).getEntityManager();
 		RealmEntity realm = em.getReference(RealmEntity.class, session.getContext().getRealm().getId());
 
