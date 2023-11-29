@@ -14,7 +14,7 @@ public class MessagingServiceFactory {
 				logger.infov(
 					"Simulation mode - send authentication request: action Url {0}, challenge {1}, device push ID {2}, user {3}",
 					challengeDto.getTargetUrl(),
-					challengeDto.getSecret(),
+					challengeDto.getCodeChallenge(),
 					devicePushId,
 					challengeDto.getUserName()
 				);
