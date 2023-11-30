@@ -6,3 +6,4 @@ dependency-reduced-pom.xml
 .classpath
 .project
 .settings
+.jpb

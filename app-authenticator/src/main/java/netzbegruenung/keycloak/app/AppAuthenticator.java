@@ -19,6 +19,7 @@ import org.keycloak.device.DeviceRepresentationProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
+import org.keycloak.models.jpa.entities.ClientEntity;
 import org.keycloak.models.jpa.entities.RealmEntity;
 import org.keycloak.models.jpa.entities.UserEntity;
 import org.keycloak.representations.account.DeviceRepresentation;
@@ -98,7 +99,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 				logger.infov("App authentication signature string\n\n{0}\n", AuthenticationUtil.getSignatureString(signatureStringMap));
 			}
 
-			MessagingServiceFactory.get(authConfig).send(appCredentialData.getDevicePushId(), ChallengeConverter.getChallengeDto(challenge));
+			MessagingServiceFactory.get(authConfig).send(appCredentialData.getDevicePushId(), ChallengeConverter.getChallengeDto(challenge, context.getSession()));
 
 			Response response = context.form()
 				.setAttribute("appAuthStatusUrl", String.format(
@@ -123,6 +124,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 		EntityManager em = getEntityManager(context.getSession());
 		RealmEntity realm = em.getReference(RealmEntity.class, context.getRealm().getId());
 		UserEntity user = em.getReference(UserEntity.class, context.getUser().getId());
+		ClientEntity client = em.getReference(ClientEntity.class, context.getAuthenticationSession().getClient().getId());
 
 		try {
 			TypedQuery<Challenge> query = em.createNamedQuery("Challenge.findByRealmAndDeviceId", Challenge.class);
@@ -154,6 +156,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 		challenge.setOsVersion(deviceRepresentation.getOsVersion());
 		challenge.setIpAddress(deviceRepresentation.getIpAddress());
 		challenge.setUpdatedTimestamp(Time.currentTimeMillis());
+		challenge.setClient(client);
 
 		em.persist(challenge);
 		em.flush();
