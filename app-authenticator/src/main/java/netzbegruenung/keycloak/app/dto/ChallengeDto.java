@@ -18,8 +18,10 @@ public class ChallengeDto implements Serializable {
 	private final String browser;
 	private final String os;
 	private final String osVersion;
+	private final String clientName;
+	private final String clientUrl;
 
-	public ChallengeDto(String userName, String userFirstName, String userLastName, String targetUrl, String codeChallenge, Long updatedTimestamp, String ipAddress, String device, String browser, String os, String osVersion) {
+	public ChallengeDto(String userName, String userFirstName, String userLastName, String targetUrl, String codeChallenge, Long updatedTimestamp, String ipAddress, String device, String browser, String os, String osVersion, String clientName, String clientUrl) {
 		this.userName = userName;
 		this.userFirstName = userFirstName;
 		this.userLastName = userLastName;
@@ -31,6 +33,8 @@ public class ChallengeDto implements Serializable {
 		this.browser = browser;
 		this.os = os;
 		this.osVersion = osVersion;
+		this.clientName = clientName;
+		this.clientUrl = clientUrl;
 	}
 
 	public String getUserName() {
@@ -77,6 +81,14 @@ public class ChallengeDto implements Serializable {
 		return osVersion;
 	}
 
+	public String getClientName() {
+		return clientName;
+	}
+
+	public String getClientUrl() {
+		return clientUrl;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
@@ -92,11 +104,13 @@ public class ChallengeDto implements Serializable {
 			Objects.equals(this.device, entity.device) &&
 			Objects.equals(this.browser, entity.browser) &&
 			Objects.equals(this.os, entity.os) &&
-			Objects.equals(this.osVersion, entity.osVersion);
+			Objects.equals(this.osVersion, entity.osVersion) &&
+			Objects.equals(this.clientName, entity.clientName) &&
+			Objects.equals(this.clientUrl, entity.clientUrl);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(userName, userFirstName, userLastName, targetUrl, codeChallenge, updatedTimestamp, ipAddress, device, browser, os, osVersion);
+		return Objects.hash(userName, userFirstName, userLastName, targetUrl, codeChallenge, updatedTimestamp, ipAddress, device, browser, os, osVersion, clientName, clientUrl);
 	}
 }

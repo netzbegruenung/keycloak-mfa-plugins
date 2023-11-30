@@ -118,7 +118,7 @@ public class ChallengeResource {
 			}
 
 			return Response
-				.ok(Arrays.asList(ChallengeConverter.getChallengeDto(challenge)))
+				.ok(Arrays.asList(ChallengeConverter.getChallengeDto(challenge, session)))
 				.build();
 
 		} catch (IllegalStateException e) {

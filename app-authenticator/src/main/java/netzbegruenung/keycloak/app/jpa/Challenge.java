@@ -2,6 +2,7 @@ package netzbegruenung.keycloak.app.jpa;
 
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
+import org.keycloak.models.jpa.entities.ClientEntity;
 import org.keycloak.models.jpa.entities.RealmEntity;
 import org.keycloak.models.jpa.entities.UserEntity;
 
@@ -34,6 +35,11 @@ public class Challenge {
 	@JoinColumn(name = "user_id", nullable = false)
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	private UserEntity user;
+
+	@ManyToOne(optional = false)
+	@JoinColumn(name = "client_id", nullable = false)
+	@OnDelete(action = OnDeleteAction.CASCADE)
+	private ClientEntity client;
 
 	@Column(name = "target_url", nullable = false, length = 1023)
 	private String targetUrl;
@@ -154,4 +160,11 @@ public class Challenge {
 		this.osVersion = osVersion;
 	}
 
+	public ClientEntity getClient() {
+		return client;
+	}
+
+	public void setClient(ClientEntity client) {
+		this.client = client;
+	}
 }
