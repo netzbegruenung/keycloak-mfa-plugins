@@ -1,14 +1,20 @@
 package netzbegruenung.keycloak.app.rest;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import netzbegruenung.keycloak.app.AuthenticationUtil;
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
 import netzbegruenung.keycloak.app.dto.ChallengeConverter;
 import netzbegruenung.keycloak.app.jpa.Challenge;
 import org.jboss.logging.Logger;
+import org.keycloak.common.util.Base64;
 import org.keycloak.common.util.Time;
 import org.keycloak.connections.jpa.JpaConnectionProvider;
+import org.keycloak.credential.CredentialModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.UserModel;
+import org.keycloak.models.jpa.entities.CredentialEntity;
 import org.keycloak.models.jpa.entities.RealmEntity;
 
 import jakarta.persistence.EntityManager;
@@ -19,12 +25,12 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 
 import java.util.*;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 public class ChallengeResource {
 
 	private final KeycloakSession session;
+
+	private final EntityManager em;
 
 	private final Logger logger = Logger.getLogger(ChallengeResource.class);
 
@@ -32,8 +38,11 @@ public class ChallengeResource {
 
 	public final static String INTERNAL_ERROR = "internal_error";
 
+	public final static String NO_CREDENTIAL = "no_credential";
+
 	public ChallengeResource(KeycloakSession session) {
 		this.session = session;
+		this.em = session.getProvider(JpaConnectionProvider.class).getEntityManager();
 	}
 
 	@GET
@@ -49,9 +58,56 @@ public class ChallengeResource {
 
 		String deviceId = signatureMap.get("keyId");
 		EntityManager em = session.getProvider(JpaConnectionProvider.class).getEntityManager();
-		RealmEntity realm = em.getReference(RealmEntity.class, session.getContext().getRealm().getId());
+
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<CredentialEntity> criteria = cb.createQuery(CredentialEntity.class);
+		Root<CredentialEntity> root = criteria.from(CredentialEntity.class);
+		criteria.where(
+			cb.equal(root.get("type"), AppCredentialModel.TYPE),
+			cb.like(root.get("credentialData"), String.format("%%\"deviceId\":\"%s\"%%", deviceId))
+		);
+
+		TypedQuery<CredentialEntity> criteriaQuery = em.createQuery(criteria);
+		CredentialEntity credentialEntity;
+
+		try {
+			credentialEntity = criteriaQuery.getSingleResult();
+		} catch (NoResultException e) {
+			return Response
+				.status(Response.Status.CONFLICT)
+				.entity(new Message(NO_CREDENTIAL, "App credential does not exist"))
+				.build();
+		} catch (NonUniqueResultException e) {
+			logger.error("Failed to get app credentials: duplicate credentials detected for device ID: " + deviceId, e);
+			return Response
+				.status(Response.Status.INTERNAL_SERVER_ERROR)
+				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
+				.build();
+		}
+
+		AppCredentialModel appCredential = AppCredentialModel.createFromCredentialModel(toModel(credentialEntity));
+		UserModel user = session.users().getUserById(session.getContext().getRealm(), credentialEntity.getUser().getId());
+
+		Map<String, String> signatureStringMap = new LinkedHashMap<>();
+		signatureStringMap.put("created", signatureMap.get("created"));
+
+		boolean verified = AuthenticationUtil.verifyChallenge(
+			user,
+			appCredential.getAppCredentialData(),
+			AuthenticationUtil.getSignatureString(signatureStringMap),
+			signatureMap.get("signature")
+		);
+
+		if (!verified) {
+			return Response
+				.status(Response.Status.FORBIDDEN)
+				.entity(new Message(CHALLENGE_REJECTED, "Invalid signature"))
+				.build();
+		}
+
 
 		TypedQuery<Challenge> query = em.createNamedQuery("Challenge.findByRealmAndDeviceId", Challenge.class);
+		RealmEntity realm = em.getReference(RealmEntity.class, session.getContext().getRealm().getId());
 		query.setParameter("realm", realm);
 		query.setParameter("deviceId", deviceId);
 		Challenge challenge;
@@ -69,7 +125,6 @@ public class ChallengeResource {
 			logger.error("Failed to get app authenticator challenge: duplicate challenge detected for device ID: " + deviceId, e);
 			return Response
 				.status(Response.Status.INTERNAL_SERVER_ERROR)
-				.type(MediaType.APPLICATION_JSON_TYPE)
 				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
 				.build();
 
@@ -77,7 +132,6 @@ public class ChallengeResource {
 			logger.error("Failed to get app authenticator challenge for device ID: " + deviceId, e);
 			return Response
 				.status(Response.Status.INTERNAL_SERVER_ERROR)
-				.type(MediaType.APPLICATION_JSON_TYPE)
 				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
 				.build();
 		}
@@ -92,75 +146,28 @@ public class ChallengeResource {
 				.build();
 		}
 
-		try {
-			UserModel user = session.users().getUserById(session.getContext().getRealm(), challenge.getUser().getId());
-			AppCredentialModel appCredential = user.credentialManager()
-				.getStoredCredentialsByTypeStream(AppCredentialModel.TYPE)
-				.map(AppCredentialModel::createFromCredentialModel)
-				.filter(c -> c.getAppCredentialData().getDeviceId().equals(deviceId))
-				.collect(toSingleton());
-
-			Map<String, String> signatureStringMap = new LinkedHashMap<>();
-			signatureStringMap.put("created", signatureMap.get("created"));
-
-			boolean verified = AuthenticationUtil.verifyChallenge(
-				user,
-				appCredential.getAppCredentialData(),
-				AuthenticationUtil.getSignatureString(signatureStringMap),
-				signatureMap.get("signature")
-			);
-
-			if (!verified) {
-				return Response
-					.status(Response.Status.FORBIDDEN)
-					.entity(new Message(CHALLENGE_REJECTED, "Invalid signature"))
-					.build();
-			}
-
-			return Response
-				.ok(Arrays.asList(ChallengeConverter.getChallengeDto(challenge, session)))
-				.build();
-
-		} catch (IllegalStateException e) {
-			logger.error(
-				String.format(
-					"Failed to get app authenticator challenge: duplicate app credentials detected for device ID [%s] user [%s]",
-					deviceId,
-					challenge.getUser().getUsername()
-				),
-				e
-			);
-			return Response
-				.status(Response.Status.INTERNAL_SERVER_ERROR)
-				.type(MediaType.APPLICATION_JSON_TYPE)
-				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
-				.build();
-		} catch (IndexOutOfBoundsException e) {
-			logger.error(
-				String.format(
-					"Failed to get app authenticator challenge: no app credentials found for device ID [%s] user [%s]",
-					deviceId,
-					challenge.getUser().getUsername()
-				),
-				e
-			);
-			return Response
-				.status(Response.Status.INTERNAL_SERVER_ERROR)
-				.type(MediaType.APPLICATION_JSON_TYPE)
-				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
-				.build();
-		}
+		return Response
+			.ok(List.of(ChallengeConverter.getChallengeDto(challenge, session)))
+			.build();
 	}
 
-	private <T> Collector<T, ?, T> toSingleton() throws IllegalStateException, IndexOutOfBoundsException {
-		return Collectors.collectingAndThen(
-			Collectors.toList(),
-			list -> {
-				if (list.size() > 1) {
-					throw new IllegalStateException();
-				}
-				return list.get(0);
-			}
-		);
+	CredentialModel toModel(CredentialEntity entity) {
+		CredentialModel model = new CredentialModel();
+		model.setId(entity.getId());
+		model.setType(entity.getType());
+		model.setCreatedDate(entity.getCreatedDate());
+		model.setUserLabel(entity.getUserLabel());
+
+		// Backwards compatibility - users from previous version still have "salt" in the DB filled.
+		// We migrate it to new secretData format on-the-fly
+		if (entity.getSalt() != null) {
+			String newSecretData = entity.getSecretData().replace("__SALT__", Base64.encodeBytes(entity.getSalt()));
+			entity.setSecretData(newSecretData);
+			entity.setSalt(null);
+		}
+
+		model.setSecretData(entity.getSecretData());
+		model.setCredentialData(entity.getCredentialData());
+		return model;
 	}
 }

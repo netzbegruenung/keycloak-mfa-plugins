@@ -18,10 +18,11 @@ import static org.springframework.test.context.jdbc.SqlConfig.TransactionMode.IS
 @SpringBootTest(classes = {AuthorizationServerApp.class}, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestEntityManager
 @ActiveProfiles("test")
-@Sql(scripts = {"/import-challenges.sql"},
-	config = @SqlConfig(transactionMode = ISOLATED))
+@Sql(scripts = {"/import-test-data.sql"},
+	config = @SqlConfig(transactionMode = ISOLATED)
+)
 @Sql(
-	scripts = "/delete-challenges.sql",
+	scripts = "/delete-test-data.sql",
 	config = @SqlConfig(transactionMode = ISOLATED),
 	executionPhase = AFTER_TEST_METHOD
 )
@@ -34,8 +35,6 @@ public class ChallengeResourceTest {
 	private final static String VALID_SIGNATURE_HEADER_VALUE = "keyId:test_device_id,created:%d,signature:base64encodedSignature";
 
 	private final static String INVALID_SIGNATURE_HEADER_VALUE = "keyId:not_existing,created:%d,signature:base64encodedSignature";
-
-	private final static Long HALF_HOUR_MILLIS = 1800000L;
 
 	@Autowired
 	private WebTestClient webClient;
@@ -58,25 +57,13 @@ public class ChallengeResourceTest {
 	}
 
 	@Test
-	void testEmptyChallenges() {
-		webClient
-			.get().uri(CHALLENGE_URI)
-			.header(SIGNATURE_HEADER_NAME, String.format(INVALID_SIGNATURE_HEADER_VALUE, System.currentTimeMillis()))
-			.exchange()
-			.expectStatus().isOk()
-			.expectBody()
-			.json("[]");
-	}
-
-	@Test
-	void testChallengeExpired() {
-		Long expiredTimestamp = System.currentTimeMillis() - HALF_HOUR_MILLIS;
+	void testInvalidSignature() {
 		webClient
 			.get().uri(uriBuilder -> uriBuilder
 				.path(CHALLENGE_URI)
 				.build()
 			)
-			.header(SIGNATURE_HEADER_NAME, String.format(VALID_SIGNATURE_HEADER_VALUE, expiredTimestamp))
+			.header(SIGNATURE_HEADER_NAME, String.format(VALID_SIGNATURE_HEADER_VALUE, System.currentTimeMillis()))
 			.exchange()
 			.expectStatus().isForbidden()
 			.expectBody()
@@ -91,11 +78,11 @@ public class ChallengeResourceTest {
 				.path(CHALLENGE_URI)
 				.build()
 			)
-			.header(SIGNATURE_HEADER_NAME, String.format(VALID_SIGNATURE_HEADER_VALUE, System.currentTimeMillis()))
+			.header(SIGNATURE_HEADER_NAME, String.format(INVALID_SIGNATURE_HEADER_VALUE, System.currentTimeMillis()))
 			.exchange()
-			.expectStatus().is5xxServerError()
+			.expectStatus().is4xxClientError()
 			.expectBody()
-			.jsonPath("$['error']").isEqualTo(ChallengeResource.INTERNAL_ERROR)
+			.jsonPath("$['error']").isEqualTo(ChallengeResource.NO_CREDENTIAL)
 			.jsonPath("$['message']").hasJsonPath();
 	}
 

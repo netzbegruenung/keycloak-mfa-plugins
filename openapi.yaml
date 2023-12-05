@@ -159,8 +159,6 @@ paths:
           description: Signature header is missing or incomplete
         '403':
           description: Signature is invalid, challenge expired
-        '404':
-          description: Challenge for requested device ID not found
         '409':
           description: Device ID is not registered as second factor
         '500':
