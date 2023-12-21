@@ -1,6 +1,6 @@
 package netzbegruenung.keycloak.app;
 
-import netzbegruenung.keycloak.app.actiontoken.ActionTokenUtil;
+import jakarta.ws.rs.core.UriBuilder;
 import netzbegruenung.keycloak.app.actiontoken.AppAuthActionToken;
 import netzbegruenung.keycloak.app.credentials.AppCredentialData;
 import netzbegruenung.keycloak.app.dto.ChallengeConverter;
@@ -23,6 +23,8 @@ import org.keycloak.models.jpa.entities.ClientEntity;
 import org.keycloak.models.jpa.entities.RealmEntity;
 import org.keycloak.models.jpa.entities.UserEntity;
 import org.keycloak.representations.account.DeviceRepresentation;
+import org.keycloak.services.Urls;
+import org.keycloak.sessions.AuthenticationSessionCompoundId;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.util.JsonSerialization;
 
@@ -57,30 +59,53 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 	}
 
 	private void createAppChallenge(AuthenticationFlowContext context, CredentialModel appCredentialModel) {
+		AppCredentialData appCredentialData = null;
 		try {
-			AppCredentialData appCredentialData = JsonSerialization.readValue(appCredentialModel.getCredentialData(), AppCredentialData.class);
-			String secret = SecretGenerator.getInstance().randomString(SECRET_LENGTH, SecretGenerator.ALPHANUM);
-			AuthenticationSessionModel authSession = context.getAuthenticationSession();
+			appCredentialData = JsonSerialization.readValue(appCredentialModel.getCredentialData(), AppCredentialData.class);
+		} catch (IOException e) {
+			logger.error("App credential deserialization failed", e);
+			Response challenge = context.form()
+				.setError("appAuthCriticalError")
+				.createForm("app-login.ftl");
+			context.challenge(challenge);
+			return;
+		}
+		String secret = SecretGenerator.getInstance().randomString(SECRET_LENGTH, SecretGenerator.ALPHANUM);
+		AuthenticationSessionModel authSession = context.getAuthenticationSession();
 
-			URI actionTokenUri = ActionTokenUtil.createActionToken(
-				AppAuthActionToken.class,
-				authSession,
-				context.getSession(),
-				context.getRealm(),
-				context.getUser(),
-				context.getUriInfo()
-			);
+		Map<String, String> authConfig = context.getAuthenticatorConfig() != null ? context.getAuthenticatorConfig().getConfig() : Collections.emptyMap();
 
-			Map<String, String> authConfig = context.getAuthenticatorConfig() != null ? context.getAuthenticatorConfig().getConfig() : Collections.emptyMap();
+		Integer tokenExpiration = 60;
 
-			DeviceRepresentation deviceRepresentation = context
-				.getSession()
-				.getProvider(DeviceRepresentationProvider.class)
-				.deviceRepresentation();
+		try {
+			tokenExpiration = Integer.valueOf(authConfig.getOrDefault("appAuthActionTokenExpiration", "60"));
+		} catch (NumberFormatException e) {
+			logger.warn("Invalid config for app auth action token expiration, falling back to default");
+		}
 
+		AppAuthActionToken token = new AppAuthActionToken(
+			context.getUser().getId(),
+			Time.currentTime() + tokenExpiration,
+			AuthenticationSessionCompoundId.fromAuthSession(authSession).getEncodedId(),
+			authSession.getClient().getClientId()
+		);
+
+		UriBuilder builder = Urls.actionTokenBuilder(
+			context.getUriInfo().getBaseUri(),
+			token.serialize(context.getSession(), context.getRealm(), context.getUriInfo()),
+			authSession.getClient().getClientId(),
+			authSession.getTabId()
+		);
+
+		DeviceRepresentation deviceRepresentation = context
+			.getSession()
+			.getProvider(DeviceRepresentationProvider.class)
+			.deviceRepresentation();
+
+		try {
 			Challenge challenge = upsertAppChallengeEntity(
 				context,
-				actionTokenUri,
+				builder.build(context.getRealm().getName()),
 				deviceRepresentation,
 				appCredentialData.getDeviceId(),
 				secret
@@ -110,7 +135,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 				))
 				.createForm("app-login.ftl");
 			context.challenge(response);
-		} catch (IOException|NonUniqueResultException e) {
+		} catch (NonUniqueResultException e) {
 			logger.error("App authentication init failed", e);
 			Response challenge = context.form()
 				.setError("appAuthCriticalError")
