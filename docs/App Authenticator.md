@@ -133,20 +133,17 @@ The signature token is not used for authentication here but rather for a **consi
 
 ##### Parameters
 
-| Name                        | In    | Description                                                                                                                                                          |
-| --------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `realmId`                   | path  | The Keycloak realm ID                                                                                                                                                |
-| `client_id`                 | query | The Keycloak client id. This should always be `account-console` for the setup step. Client receives this value from the activation token URL.                        |
-| `tab_id`                    | query | The Keycloak tab ID in the browser session where the user is setting up the authenticator. Client receives this value from the activation token URL.                 |
-| `key`                       | query | The from Keycloak generated action token in form of a JWT. Client receives this value from the activation token URL.                                                 |
-| `authenticator_id`          | query | A unique ID to identify the authenticator.                                                                                                                           |
-| `device_os`                 | query | The platform on which the authenticator app is running on. Supported values are: `android` and `ios`                                                                 |
-| `public_key`                | query | The X.509 public key (e.g. as PKCS#8 base64 encoded) used to verify signatures                                                                                       |
-| `key_algorithm`             | query | Key algorithm of the public key. See [Valid Key Algorithms](https://docs.oracle.com/en/java/javase/17/docs/specs/security/standard-names.html#keyfactory-algorithms) |
-| `device_push_id (optional)` | query | The platform specific ID to receive push notifications. For android this is the Firebase ID                                                                          |
-
-Public Key is assumed to be encoded according to the X.509 standard: https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/security/spec/X509EncodedKeySpec.html
-
+| Name                        | In    | Description                                                                                                                                          |
+| --------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `realmId`                   | path  | The Keycloak realm ID                                                                                                                                |
+| `client_id`                 | query | The Keycloak client id. This should always be `account-console` for the setup step. Client receives this value from the activation token URL.        |
+| `tab_id`                    | query | The Keycloak tab ID in the browser session where the user is setting up the authenticator. Client receives this value from the activation token URL. |
+| `key`                       | query | The from Keycloak generated action token in form of a JWT. Client receives this value from the activation token URL.                                 |
+| `authenticator_id`          | query | A unique ID to identify the authenticator.                                                                                                           |
+| `device_os`                 | query | The platform on which the authenticator app is running on. Supported values are: `android` and `ios`                                                 |
+| `public_key`                | query | The X.509 public key (e.g. as PKCS#8 base64 encoded) used to verify signatures                                                                       |
+| `key_algorithm`             | query | Key algorithm of the public key                                                                                                                      |
+| `device_push_id (optional)` | query | The platform specific ID to receive push notifications. For android this is the Firebase ID                                                          |
 
 ##### Responses
 
@@ -155,9 +152,9 @@ Public Key is assumed to be encoded according to the X.509 standard: https://doc
     -   parsing of the JWT failed (invalid format)
     -   request parameters are invalid (e.g. the signature or key algorithm is not supported)
 -   `401 Unauthorized` Verification of the JWT from the `key` query parameter failed in any form (expired, missing claims, invalid signature)
--   `409 Precondition Failed` The device ID is already registered
+-   `409 Precondition Failed` The authenticator ID is already registered
 -   `422 Unprocessable Entity`
-    Verification of the signature token failed failed with the give `public_key` and `key_algorithm` sent by the client.
+    Verification of the signature token failed with the given `public_key` and `key_algorithm` sent by the client.
 
 #### Get Challenges
 
@@ -171,7 +168,7 @@ Public Key is assumed to be encoded according to the X.509 standard: https://doc
 
 ##### Parameters
 
-**Note:** The device id is retrieved from the `kid` header of the JWT.
+**Note:** The authenticator id is retrieved from the `kid` header of the JWT.
 
 | Name      | In   | Description           |
 | --------- | ---- | --------------------- |
@@ -180,8 +177,8 @@ Public Key is assumed to be encoded according to the X.509 standard: https://doc
 ##### Responses
 
 -   `2xx` Login challenge dtos as array
--   `400 Bad Request` the `signature` header has a wrong format
--   `401 Unauthorized` The `x-signature` header is missing or signature verification failed
+-   `400 Bad Request` the `x-signature` header has a wrong format
+-   `401 Unauthorized` The `x-signature` header is missing or verification failed
 -   `409 Precondition Failed` The referenced `kid` (authenticator ID) in the signature token does not exist
 
 ##### ChallengeDTO
@@ -262,8 +259,8 @@ GET /realms/{realmId}/login-actions/action-token
 
 -   The JWT generated by Keycloak in the `key`query parameter. It was given to the client via the challenges endpoint or push notification.
 -   The signature token (JWT) generated by the client in the `x-signature` header with claims:
-	- `typ`: `app-auth-signature-token`
-	- `codeChallenge`: The challenge value to sign
+    -   `typ`: `app-auth-signature-token`
+    -   `codeChallenge`: The challenge value to sign
 
 #### Parameters
 
@@ -281,11 +278,11 @@ GET /realms/{realmId}/login-actions/action-token
 
 -   `400 Bad Request` Missing or invalid request parameters. This includes:
     -   parsing of the JWT failed (invalid format)
-    -   the `signature`header has a wrong format
+    -   the `x-signature` header has a wrong format
 -   `401 Unauthorized`
-    -   The `signature`header is missing or signature verification failed
+    -   The `x-signature` header is missing or signature verification failed
     -   The required JWT in query parameter `key` is expired or verification of the JWT failed in any other form (missing claims, invalid signature)
--   `409 Precondition Failed` The referenced key (device ID) in the request signature does not exist
+-   `409 Precondition Failed` The referenced key (authenticator ID) in the request signature does not exist
 
 ## Development Notes
 
