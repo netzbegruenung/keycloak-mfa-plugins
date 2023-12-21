@@ -9,6 +9,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.provider.ProviderConfigProperty;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class AppAuthenticatorFactory implements AuthenticatorFactory {
@@ -55,15 +56,21 @@ public class AppAuthenticatorFactory implements AuthenticatorFactory {
 
 	@Override
 	public List<ProviderConfigProperty> getConfigProperties() {
-		return List.of(
-			new ProviderConfigProperty(
-				"simulation",
-				"Simulation Mode",
-				"Logs app push notification instead of sending",
-				ProviderConfigProperty.BOOLEAN_TYPE,
-				false
-			)
+		ProviderConfigProperty simulationMode = new ProviderConfigProperty(
+			"simulation",
+			"Simulation Mode",
+			"Logs app push notification instead of sending",
+			ProviderConfigProperty.BOOLEAN_TYPE,
+			false
 		);
+		ProviderConfigProperty appAuthActionTokenExpiration = new ProviderConfigProperty(
+			"appAuthActionTokenExpiration",
+			"App Auth Action Token expiration",
+			"App Auth Action Token expiration time in seconds",
+			ProviderConfigProperty.STRING_TYPE,
+			60
+		);
+		return Arrays.asList(simulationMode, appAuthActionTokenExpiration);
 	}
 
 	@Override
