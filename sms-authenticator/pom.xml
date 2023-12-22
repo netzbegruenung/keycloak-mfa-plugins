@@ -65,12 +65,6 @@
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>netzbegruenung</groupId>
-            <artifactId>dev</artifactId>
-            <version>${revision}</version>
-            <scope>test</scope>
-        </dependency>
 
     </dependencies>
 
