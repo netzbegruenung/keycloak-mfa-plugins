@@ -152,7 +152,7 @@ The signature token is not used for authentication here but rather for a **consi
     -   parsing of the JWT failed (invalid format)
     -   request parameters are invalid (e.g. the signature or key algorithm is not supported)
 -   `401 Unauthorized` Verification of the JWT from the `key` query parameter failed in any form (expired, missing claims, invalid signature)
--   `409 Precondition Failed` The authenticator ID is already registered
+-   `409 Conflict` The authenticator ID is already registered
 -   `422 Unprocessable Entity`
     Verification of the signature token failed with the given `public_key` and `key_algorithm` sent by the client.
 
@@ -179,7 +179,7 @@ The signature token is not used for authentication here but rather for a **consi
 -   `2xx` Login challenge dtos as array
 -   `400 Bad Request` the `x-signature` header has a wrong format
 -   `401 Unauthorized` The `x-signature` header is missing or verification failed
--   `409 Precondition Failed` The referenced `kid` (authenticator ID) in the signature token does not exist
+-   `412 Precondition Failed` The referenced `kid` (authenticator ID) in the signature token does not exist
 
 ##### ChallengeDTO
 
@@ -189,7 +189,7 @@ The signature token is not used for authentication here but rather for a **consi
 	"userFirstName": "John",
 	"userLastName": "Doe",
 	"targetUrl": "http://192.168.2.127:8080/realms/dev/login-actions/action-token?key=eyJh...",
-	"secret": "FlJj9I4WoezeR3MN...",
+	"codeChallenge": "FlJj9I4WoezeR3MN...",
 	"updatedTimestamp": 1701426908708,
 	"ipAddress": "192.168.2.127",
 	"device": "Other",
@@ -282,7 +282,7 @@ GET /realms/{realmId}/login-actions/action-token
 -   `401 Unauthorized`
     -   The `x-signature` header is missing or signature verification failed
     -   The required JWT in query parameter `key` is expired or verification of the JWT failed in any other form (missing claims, invalid signature)
--   `409 Precondition Failed` The referenced key (authenticator ID) in the request signature does not exist
+-   `412 Precondition Failed` The referenced key (authenticator ID) in the request signature does not exist
 
 ## Development Notes
 
