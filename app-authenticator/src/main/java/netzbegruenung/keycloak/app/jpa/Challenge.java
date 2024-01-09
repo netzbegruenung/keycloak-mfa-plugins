@@ -68,6 +68,9 @@ public class Challenge {
 	@Column(name = "os_version", length = 63)
 	private String osVersion;
 
+	@Column(name = "expires_at", nullable = false)
+	private Long expiresAt;
+
 	public UUID getId() {
 		return id;
 	}
@@ -166,5 +169,13 @@ public class Challenge {
 
 	public void setClient(ClientEntity client) {
 		this.client = client;
+	}
+
+	public Long getExpiresAt() {
+		return expiresAt;
+	}
+
+	public void setExpiresAt(Long expiresAt) {
+		this.expiresAt = expiresAt;
 	}
 }

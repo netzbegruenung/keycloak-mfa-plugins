@@ -52,4 +52,17 @@
 								 referencedTableName="client" referencedColumnNames="ID" constraintName="FK_APP_AUTH_CHALLENGE_ON_CLIENT"/>
 	</changeSet>
 
+	<changeSet id="app-auth-challenge-23.0.4" author="giuliano.mele@verdigado.com">
+		<delete tableName="app_auth_challenge">
+		</delete>
+		<addColumn tableName="app_auth_challenge">
+			<column name="expires_at" type="BIGINT" defaultValueNumeric="0">
+				<constraints nullable="false"/>
+			</column>
+		</addColumn>
+		<createIndex tableName="app_auth_challenge" indexName="idx_challenge_device_id">
+			<column name="device_id"></column>
+		</createIndex>
+	</changeSet>
+
 </databaseChangeLog>
