@@ -136,10 +136,8 @@ public class ChallengeResource {
 				.build();
 		}
 
-		Long actionTokenLifespan = (long) session.getContext().getRealm().getActionTokenGeneratedByUserLifespan() * 1000L;
-
-		if (Time.currentTimeMillis() > challenge.getUpdatedTimestamp() + actionTokenLifespan
-				|| Time.currentTimeMillis() > Long.parseLong(signatureMap.get("created")) + actionTokenLifespan) {
+		if (Time.currentTime() > challenge.getExpiresAt()
+				|| Long.parseLong(signatureMap.get("created")) < challenge.getUpdatedTimestamp() - 1000) {
 			return Response
 				.status(Response.Status.FORBIDDEN)
 				.entity(new Message(CHALLENGE_REJECTED, "Challenge expired"))

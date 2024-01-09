@@ -12,7 +12,8 @@ VALUES (
         'browser',
         'os',
         'os_version',
-		'12eebf0b-a3eb-49f8-9ecf-173cf8a00145'
+		'12eebf0b-a3eb-49f8-9ecf-173cf8a00145',
+        0
 		);
 
 INSERT INTO CREDENTIAL

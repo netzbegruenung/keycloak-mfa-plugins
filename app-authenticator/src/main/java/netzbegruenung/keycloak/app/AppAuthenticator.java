@@ -75,17 +75,18 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 
 		Map<String, String> authConfig = context.getAuthenticatorConfig() != null ? context.getAuthenticatorConfig().getConfig() : Collections.emptyMap();
 
-		Integer tokenExpiration = 60;
+		long tokenExpiration = 60;
 
 		try {
-			tokenExpiration = Integer.valueOf(authConfig.getOrDefault("appAuthActionTokenExpiration", "60"));
+			tokenExpiration = Long.parseLong(authConfig.getOrDefault("appAuthActionTokenExpiration", "60"));
 		} catch (NumberFormatException e) {
 			logger.warn("Invalid config for app auth action token expiration, falling back to default");
 		}
 
+		long expiresAt = Time.currentTime() + tokenExpiration;
 		AppAuthActionToken token = new AppAuthActionToken(
 			context.getUser().getId(),
-			Time.currentTime() + tokenExpiration,
+			(int) expiresAt,
 			AuthenticationSessionCompoundId.fromAuthSession(authSession).getEncodedId(),
 			authSession.getClient().getClientId()
 		);
@@ -108,7 +109,8 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 				builder.build(context.getRealm().getName()),
 				deviceRepresentation,
 				appCredentialData.getDeviceId(),
-				secret
+				secret,
+				expiresAt
 			);
 
 			authSession.setAuthNote("credentialId", appCredentialModel.getId());
@@ -144,7 +146,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 		}
 	}
 
-	private Challenge upsertAppChallengeEntity(AuthenticationFlowContext context, URI actionTokenUri, DeviceRepresentation deviceRepresentation, String deviceId, String encryptedSecret) throws NonUniqueResultException {
+	private Challenge upsertAppChallengeEntity(AuthenticationFlowContext context, URI actionTokenUri, DeviceRepresentation deviceRepresentation, String deviceId, String encryptedSecret, long expiresAt) throws NonUniqueResultException {
 		Challenge challenge;
 		EntityManager em = getEntityManager(context.getSession());
 		RealmEntity realm = em.getReference(RealmEntity.class, context.getRealm().getId());
@@ -182,6 +184,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 		challenge.setIpAddress(deviceRepresentation.getIpAddress());
 		challenge.setUpdatedTimestamp(Time.currentTimeMillis());
 		challenge.setClient(client);
+		challenge.setExpiresAt(expiresAt);
 
 		em.persist(challenge);
 		em.flush();
