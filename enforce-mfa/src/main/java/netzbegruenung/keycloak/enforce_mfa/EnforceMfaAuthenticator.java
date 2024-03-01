@@ -38,12 +38,18 @@ public class EnforceMfaAuthenticator implements Authenticator {
 			context.failure(AuthenticationFlowError.INTERNAL_ERROR, errorResponse);
 		} else {
 			Response challenge = context.form()
-				.setAttribute("mfa", getAllRequiredActions(context))
+				.setAttribute("mfa", requiredActions)
 				.createForm("enforce-mfa.ftl");
 			context.challenge(challenge);
 		}
 	}
 
+	/**
+	 * Get available required actions for 2FA setup
+	 *
+	 * @param context
+	 * @return available required actions
+	 */
 	private List<RequiredActionProviderModel> getAllRequiredActions(AuthenticationFlowContext context) {
 		List<RequiredActionProviderModel> alternativeRequiredActions = new LinkedList<>();
 
@@ -56,20 +62,55 @@ public class EnforceMfaAuthenticator implements Authenticator {
 		return alternativeRequiredActions;
 	}
 
+	/**
+	 * Collect executions of the current flow beneath base execution
+	 * e.g. with base execution MFA-Authenticate-subflow will return OTP and WebAuthn
+	 *
+	 * - MFA-Authenticate-subflow CONDITIONAL
+	 * -- Condition - user configured REQUIRED
+	 * -- OTP ALTERNATIVE
+	 * -- WebAuthn ALTERNATIVE
+	 *
+	 * @param session
+	 * @param realm
+	 * @param execution
+	 * @return
+	 */
 	private Stream<AuthenticationExecutionModel> getExecutions(KeycloakSession session, RealmModel realm, AuthenticationExecutionModel execution) {
+		AuthenticationExecutionModel baseExecution = getBaseExecution(realm, execution);
+
+		return realm.getAuthenticationExecutionsStream(baseExecution.getFlowId())
+			.filter(e -> !isConditionalExecution(session, e))
+			.filter(e -> !Objects.equals(execution.getId(), e.getId()) && !e.isAuthenticatorFlow());
+	}
+
+	/**
+	 * Given that execution is set to Enforce-MFA, then this function will return MFA-Authenticate-subflow
+	 *
+	 * - MFA-Authenticate-subflow CONDITIONAL
+	 * -- Condition - user configured REQUIRED
+	 * -- OTP ALTERNATIVE
+	 * -- WebAuthn ALTERNATIVE
+	 *
+	 * - Register-MFA-subflow CONDITIONAL
+	 * -- Condition - user configured REQUIRED
+	 * -- Enforce-MFA REQUIRED
+	 *
+	 * @param realm
+	 * @param execution
+	 * @return base execution
+	 */
+	private AuthenticationExecutionModel getBaseExecution(RealmModel realm, AuthenticationExecutionModel execution) {
 		AuthenticationExecutionModel parentExecution = realm.getAuthenticationExecutionByFlowId(execution.getParentFlow());
 
-		Optional<AuthenticationExecutionModel> firstExecution = realm.getAuthenticationExecutionsStream(parentExecution.getParentFlow())
+		Optional<AuthenticationExecutionModel> baseExecution = realm.getAuthenticationExecutionsStream(parentExecution.getParentFlow())
 			.filter(e -> e.isAuthenticatorFlow())
 			.findFirst();
 
-		if (!firstExecution.isPresent()) {
+		if (!baseExecution.isPresent()) {
 			throw new IllegalStateException("This authenticator is only valid in combination with 2FA subflow");
 		}
-
-		return realm.getAuthenticationExecutionsStream(firstExecution.get().getFlowId())
-			.filter(e -> !isConditionalExecution(session, e))
-			.filter(e -> !Objects.equals(execution.getId(), e.getId()) && !e.isAuthenticatorFlow());
+		return baseExecution.get();
 	}
 
 	private boolean isConditionalExecution(KeycloakSession session, AuthenticationExecutionModel e) {
@@ -82,6 +123,13 @@ public class EnforceMfaAuthenticator implements Authenticator {
 		return false;
 	}
 
+	/**
+	 * Get required action provider for execution in flow
+	 *
+	 * @param context
+	 * @param e
+	 * @return
+	 */
 	private List<RequiredActionProviderModel> getRequiredActions(AuthenticationFlowContext context, AuthenticationExecutionModel e) {
 		AuthenticatorFactory factory = (AuthenticatorFactory) context.getSession().getKeycloakSessionFactory()
 			.getProviderFactory(Authenticator.class, e.getAuthenticator());
@@ -145,10 +193,8 @@ public class EnforceMfaAuthenticator implements Authenticator {
 				executions.addAll(realm
 					.getAuthenticationExecutionsStream(execution.getFlowId())
 					.toList());
-			} else {
-				if (EnforceMfaAuthenticatorFactory.PROVIDER_ID.equals(execution.getAuthenticator())) {
-					break;
-				}
+			} else if (EnforceMfaAuthenticatorFactory.PROVIDER_ID.equals(execution.getAuthenticator())) {
+				break;
 			}
 		}
 
