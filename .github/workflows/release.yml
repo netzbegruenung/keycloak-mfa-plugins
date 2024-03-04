@@ -2,7 +2,7 @@
 # For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
 # https://github.com/actions/create-release
 
-name: Build Release
+name: Build & release
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
       - v**
 jobs:
   create-release:
-    name: "Create Release"
+    name: "Build & release"
 
     runs-on: ubuntu-latest
 
@@ -41,9 +41,7 @@ jobs:
         with:
           name: Package
           path: staging
-      - uses: marvinpinto/action-automatic-releases@latest
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: false
-          files: |
-            staging/*
+      - name: "Create release"
+        run: gh release create ${GITHUB_REF_NAME} staging/* --generate-notes --verify-tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
