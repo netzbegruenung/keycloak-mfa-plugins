@@ -1,0 +1,8 @@
+server:
+  port: 8083
+
+spring:
+  datasource:
+    username: sa
+    password: sa
+    url: jdbc:h2:file:~/dev/h2db/enforcemfadb;AUTO_SERVER=TRUE

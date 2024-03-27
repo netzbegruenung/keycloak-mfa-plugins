@@ -21,6 +21,7 @@
 
 package netzbegruenung.keycloak.authenticator;
 
+import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
 import org.keycloak.authentication.CredentialRegistrator;
 import org.keycloak.authentication.InitiatedActionSupport;
 import org.keycloak.authentication.RequiredActionContext;
@@ -37,7 +38,7 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import java.util.*;
 import java.util.stream.Stream;
 
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response;
 
 import org.jboss.logging.Logger;
 
@@ -76,7 +77,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 
 			// list of accepted 2FA alternatives
 			List<String> secondFactors = Arrays.asList(
-				SmsAuthenticatorModel.TYPE,
+				SmsAuthCredentialModel.TYPE,
 				WebAuthnCredentialModel.TYPE_TWOFACTOR,
 				OTPCredentialModel.TYPE
 			);

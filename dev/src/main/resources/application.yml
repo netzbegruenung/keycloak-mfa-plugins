@@ -4,12 +4,15 @@ server:
 spring:
   datasource:
     username: sa
-    url: jdbc:h2:mem:testdb;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:file:~/h2db/testdb;DB_CLOSE_ON_EXIT=FALSE
 
 keycloak:
   server:
-    contextPath: /auth
     adminUser:
-      username: bael-admin
-      password: pass
+      username: admin
+      password: admin
     realmImportFile: baeldung-realm.json
+
+logging:
+  level:
+    netzbegruenung.keycloak: debug

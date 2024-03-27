@@ -5,13 +5,7 @@ This repository contains the source code for a collection of Keycloak MFA plugin
 * Force MFA & Selection dialog (work in progress)
 * Native App MFA integration (work in progress)
 
-The different plugins are documented below.
-
-# Keycloak 2FA SMS Authenticator
-
-Keycloak Authentication Provider implementation to get a 2nd-factor authentication with a OTP/code/token send via SMS with a configurable HTTPS API. It should be possible to interact with most SMS providers. Issues and pull requests to support more SMS providers are welcome.
-
-This is a fork of a great demo implementation by [@dasniko](https://github.com/dasniko/keycloak-2fa-sms-authenticator), and also takes huge chunks of code from the original authenticator provider [documentation](https://www.keycloak.org/docs/latest/server_development/index.html#_auth_spi) and [example](https://github.com/keycloak/keycloak/tree/main/examples/providers/authenticator) from Keycloak itself.
+The different plugins are documented in the submodules README or in docs folder.
 
 # License
 The code of this project is Apache 2.0 licensed. Parts of the original code are MIT licensed.
@@ -22,24 +16,19 @@ The code of this project is Apache 2.0 licensed. Parts of the original code are 
 1. Install Apache Maven
 1. Change into the cloned directory and run
    ```shell
-   mvn package
+   mvn clean install
    ```
    A file `target/netzbegruenung.keycloak-2fa-sms-authenticator.jar` should be created.
 
-# Installing
-1. Go to https://github.com/netzbegruenung/keycloak-2fa-sms-authenticator/releases and download
-   the latest .jar file.
-1. Copy the created jar file into the `providers` directory of your Keycloak:
-   ```shell
-   cp netzbegruenung.keycloak-2fa-sms-authenticator.jar /path/to/keycloak/providers
-   ```
-1. Run the `build` command and restart Keycloak:
-   ```shell
-   /path/to/keycloak/bin/kc.sh build [your-additional-flags]
-   systemctl restart keycloak.service
-   ```
+If building fails and the problem is caused or related to the dev module or tests, try to run `mvn clean install -DskipTests`.
 
-# Usage
-1. Add a new execution to the 2FA flow of your Browser flow, choose "SMS Authentication (2FA)".
-1. Make sure that you name it "sms-2fa". This is currently a hack that will hopefully be fixed. Additional executions with other names can be added. But this first execution will be used for the confirmation SMS when setting up a new phone number.
-1. Go into the config of the execution and configure the plugin so that it works with the API of your SMS proivder.
+## Deployment
+Deployment is done by github actions: `.github/workflows/release.yml`
+To trigger the release workflow be sure to have proper access rights and follow the steps below.
+https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/configuring-tag-protection-rules#about-tag-protection-rules
+
+1. Update revision property in parent POM file `pom.xml`
+1. `git tag -a v1.2.3 -m "Bump version 1.2.3"`
+1. `git push --tags`
+
+After building completes the new release is available on github containing the jar files for each module.

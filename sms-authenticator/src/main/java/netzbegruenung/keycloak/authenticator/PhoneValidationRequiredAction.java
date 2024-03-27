@@ -22,6 +22,7 @@
 
 package netzbegruenung.keycloak.authenticator;
 
+import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
 import netzbegruenung.keycloak.authenticator.gateway.SmsServiceFactory;
 
 import org.jboss.logging.Logger;
@@ -37,7 +38,7 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 
 import java.util.Locale;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response;
 
 public class PhoneValidationRequiredAction implements RequiredActionProvider, CredentialRegistrator {
 	private static final Logger logger = Logger.getLogger(PhoneValidationRequiredAction.class);
@@ -103,9 +104,9 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 		boolean isValid = enteredCode.equals(code);
 		if (isValid && Long.parseLong(ttl) > System.currentTimeMillis()) {
 			// valid
-			SmsMobileNumberProvider smnp = (SmsMobileNumberProvider) context.getSession().getProvider(CredentialProvider.class, "mobile-number");
-			if (!smnp.isConfiguredFor(context.getRealm(), context.getUser(), SmsAuthenticatorModel.TYPE)) {
-				smnp.createCredential(context.getRealm(), context.getUser(), SmsAuthenticatorModel.createSmsAuthenticator(mobileNumber));
+			SmsAuthCredentialProvider smnp = (SmsAuthCredentialProvider) context.getSession().getProvider(CredentialProvider.class, "mobile-number");
+			if (!smnp.isConfiguredFor(context.getRealm(), context.getUser(), SmsAuthCredentialModel.TYPE)) {
+				smnp.createCredential(context.getRealm(), context.getUser(), SmsAuthCredentialModel.createSmsAuthenticator(mobileNumber));
 			} else {
 				smnp.updateCredential(
 					context.getRealm(),

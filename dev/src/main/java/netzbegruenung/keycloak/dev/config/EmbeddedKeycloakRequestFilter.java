@@ -2,13 +2,14 @@ package netzbegruenung.keycloak.dev.config;
 
 import java.io.UnsupportedEncodingException;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.keycloak.common.ClientConnection;
+import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.services.filters.AbstractRequestFilter;
 
 public class EmbeddedKeycloakRequestFilter extends AbstractRequestFilter implements Filter {
@@ -55,4 +56,8 @@ public class EmbeddedKeycloakRequestFilter extends AbstractRequestFilter impleme
             }
         };
     }
+
+	protected KeycloakSessionFactory getSessionFactory() {
+		return EmbeddedKeycloakApplication.getSessionFactory();
+	}
 }

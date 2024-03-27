@@ -1,5 +1,6 @@
 package netzbegruenung.keycloak.dev.config;
 
+import org.jboss.logging.Logger;
 import org.keycloak.Config;
 import org.keycloak.provider.*;
 import org.keycloak.services.DefaultKeycloakSessionFactory;
@@ -10,6 +11,8 @@ import java.net.URL;
 import java.util.*;
 
 public class EmbeddedKeycloakSessionFactory extends DefaultKeycloakSessionFactory {
+
+	private static final Logger logger = Logger.getLogger(EmbeddedKeycloakSessionFactory.class);
 
 	@Override
 	protected Map<Class<? extends Provider>, Map<String, ProviderFactory>> loadFactories(ProviderManager pm) {
@@ -39,7 +42,7 @@ public class EmbeddedKeycloakSessionFactory extends DefaultKeycloakSessionFactor
 
 					factories.put(factory.getId(), factory);
 
-//					logger.debugv("Loaded SPI {0} (provider = {1})", spi.getName(), provider);
+					logger.debugv("Loaded SPI {0} (provider = {1})", spi.getName(), provider);
 				}
 
 			} else {
@@ -53,7 +56,7 @@ public class EmbeddedKeycloakSessionFactory extends DefaultKeycloakSessionFactor
 						}
 						factories.put(factory.getId(), factory);
 					} else {
-//						logger.debugv("SPI {0} provider {1} disabled", spi.getName(), factory.getId());
+						logger.debugv("SPI {0} provider {1} disabled", spi.getName(), factory.getId());
 					}
 				}
 			}
