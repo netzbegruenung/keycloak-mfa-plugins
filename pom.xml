@@ -17,7 +17,7 @@
 	</modules>
 
 	<properties>
-		<revision>23.0.7</revision>
+		<revision>24.0.2</revision>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<keycloak.version>24.0.2</keycloak.version>
 		<json.version>20230227</json.version>
