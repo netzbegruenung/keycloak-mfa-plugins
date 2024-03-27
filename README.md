@@ -27,8 +27,9 @@ Deployment is done by github actions: `.github/workflows/release.yml`
 To trigger the release workflow be sure to have proper access rights and follow the steps below.
 https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/configuring-tag-protection-rules#about-tag-protection-rules
 
-1. Update revision property in parent POM file `pom.xml`
-1. `git tag -a v1.2.3 -m "Bump version 1.2.3"`
-1. `git push --tags`
+1. Update project and submodules version `mvn versions:set -DnewVersion=1.2.3; mvn versions:commit`
+1. Commit your changes
+1. Add tag to your commit `git tag -a v1.2.3 -m "Bump version 1.2.3"`
+1. Trigger the release by `git push --tags`
 
 After building completes the new release is available on github containing the jar files for each module.

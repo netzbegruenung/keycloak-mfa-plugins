@@ -9,7 +9,7 @@
 	<parent>
 		<groupId>netzbegruenung</groupId>
 		<artifactId>keycloak-mfa-tools</artifactId>
-		<version>${revision}</version>
+		<version>24.0.2</version>
 	</parent>
 
 	<properties>
