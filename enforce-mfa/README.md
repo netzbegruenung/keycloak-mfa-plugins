@@ -27,15 +27,20 @@ See: https://github.com/keycloak/keycloak/discussions/19548
 This authenticator **must always** be used with an authentication flow like the following:
 
 ```
-- MFA-Authenticate-subflow CONDITIONAL
--- Condition - user configured REQUIRED
--- OTP ALTERNATIVE
--- WebAuthn ALTERNATIVE
+- MFA Wrapper Flow
+-- MFA-Authenticate-subflow CONDITIONAL
+--- Condition - user configured REQUIRED
+--- OTP ALTERNATIVE
+--- WebAuthn ALTERNATIVE
 
-- Register-MFA-subflow CONDITIONAL
--- Condition - user configured REQUIRED
--- Enforce-MFA REQUIRED
+-- Register-MFA-subflow CONDITIONAL
+--- Condition - user configured REQUIRED
+--- Enforce-MFA REQUIRED
 ```
 
 The expected flow must contain at least two subflows. The subflow, which contains the alternatives for MFA
 **must be the first subflow in its wrapper flow**.
+
+Example:
+
+![Example Configuration](../docs/Enforce-MFA.png)

@@ -10,7 +10,9 @@ The different plugins are documented in the submodules README or in docs folder.
 # License
 The code of this project is Apache 2.0 licensed. Parts of the original code are MIT licensed.
 
-# Building
+# Development
+
+## Building
 
 1. Clone this repository
 1. Install Apache Maven
@@ -22,7 +24,7 @@ The code of this project is Apache 2.0 licensed. Parts of the original code are 
 
 If building fails and the problem is caused or related to the dev module or tests, try to run `mvn clean install -DskipTests`.
 
-## Deployment
+## Releases
 Deployment is done by github actions: `.github/workflows/release.yml`
 To trigger the release workflow be sure to have proper access rights and follow the steps below.
 https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/configuring-tag-protection-rules#about-tag-protection-rules
