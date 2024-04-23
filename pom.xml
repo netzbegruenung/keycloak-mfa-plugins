@@ -7,7 +7,7 @@
 	<groupId>netzbegruenung</groupId>
 	<artifactId>keycloak-mfa-tools</artifactId>
 	<packaging>pom</packaging>
-	<version>24.0.3</version>
+	<version>24.0.5</version>
 
 	<modules>
 		<module>dev</module>
