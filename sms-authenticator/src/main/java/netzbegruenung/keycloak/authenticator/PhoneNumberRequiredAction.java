@@ -29,6 +29,7 @@ import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.authentication.requiredactions.WebAuthnRegisterFactory;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.models.AuthenticatorConfigModel;
+import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.credential.OTPCredentialModel;
@@ -134,4 +135,8 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 	@Override
 	public void close() {}
 
+	@Override
+	public String getCredentialType(KeycloakSession keycloakSession, AuthenticationSessionModel authenticationSessionModel) {
+		return SmsAuthCredentialModel.TYPE;
+	}
 }

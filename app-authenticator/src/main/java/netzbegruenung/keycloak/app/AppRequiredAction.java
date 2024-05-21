@@ -7,6 +7,7 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import netzbegruenung.keycloak.app.actiontoken.ActionTokenUtil;
 import netzbegruenung.keycloak.app.actiontoken.AppSetupActionToken;
+import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
 import netzbegruenung.keycloak.app.rest.StatusResourceProviderFactory;
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.CredentialRegistrator;
@@ -14,6 +15,7 @@ import org.keycloak.authentication.InitiatedActionSupport;
 import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.common.util.Base64;
+import org.keycloak.models.KeycloakSession;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 import jakarta.ws.rs.core.Response;
@@ -115,5 +117,10 @@ public class AppRequiredAction implements RequiredActionProvider, CredentialRegi
 	@Override
 	public void close() {
 
+	}
+
+	@Override
+	public String getCredentialType(KeycloakSession keycloakSession, AuthenticationSessionModel authenticationSessionModel) {
+		return AppCredentialModel.TYPE;
 	}
 }
