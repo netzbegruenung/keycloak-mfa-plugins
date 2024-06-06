@@ -22,10 +22,10 @@
 						</div>
 						<div class="${properties.kcSelectAuthListItemBodyClass!}">
 							<div class="${properties.kcSelectAuthListItemHeadingClass!}">
-                                ${msg('requiredAction.${requiredAction.providerId}')}
+                                ${msg('${localizationPrefix}.${requiredAction.providerId}')}
 							</div>
 							<div class="${properties.kcSelectAuthListItemDescriptionClass!}">
-                                ${msg('requiredAction.${requiredAction.providerId}-help-text')}
+                                ${msg('${localizationPrefix}.${requiredAction.providerId}-help-text')}
 							</div>
 						</div>
 						<div class="${properties.kcSelectAuthListItemFillClass!}"></div>

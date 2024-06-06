@@ -22,6 +22,8 @@ public class EnforceMfaAuthenticator implements Authenticator {
 
 	private static final String FORM_PARAM_MFA_METHOD = "mfaMethod";
 
+	private static final String LOCALIZATION_PREFIX = "enforceMfa";
+
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
 		List<RequiredActionProviderModel> requiredActions = getAllRequiredActions(context);
@@ -39,6 +41,7 @@ public class EnforceMfaAuthenticator implements Authenticator {
 		} else {
 			Response challenge = context.form()
 				.setAttribute("mfa", requiredActions)
+				.setAttribute("localizationPrefix", LOCALIZATION_PREFIX)
 				.createForm("enforce-mfa.ftl");
 			context.challenge(challenge);
 		}
