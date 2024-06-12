@@ -21,8 +21,10 @@ public class EnforceMfaAuthenticator implements Authenticator {
 	private static final Logger logger = Logger.getLogger(EnforceMfaAuthenticator.class);
 
 	private static final String FORM_PARAM_MFA_METHOD = "mfaMethod";
-
 	private static final String LOCALIZATION_PREFIX = "enforceMfa";
+
+	public static final String CONFIG_OPTIONAL_NAME = "mfaSetupOptional";
+	public static final Boolean CONFIG_OPTIONAL_DEFAULT_VALUE = false;
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
@@ -41,6 +43,7 @@ public class EnforceMfaAuthenticator implements Authenticator {
 		} else {
 			Response challenge = context.form()
 				.setAttribute("mfa", requiredActions)
+				.setAttribute("isSetupOptional", isSetupOptional(context.getAuthenticatorConfig()))
 				.setAttribute("localizationPrefix", LOCALIZATION_PREFIX)
 				.createForm("enforce-mfa.ftl");
 			context.challenge(challenge);
@@ -110,7 +113,7 @@ public class EnforceMfaAuthenticator implements Authenticator {
 			.filter(e -> e.isAuthenticatorFlow())
 			.findFirst();
 
-		if (!baseExecution.isPresent()) {
+		if (baseExecution.isEmpty()) {
 			throw new IllegalStateException("This authenticator is only valid in combination with 2FA subflow");
 		}
 		return baseExecution.get();
@@ -147,6 +150,10 @@ public class EnforceMfaAuthenticator implements Authenticator {
 	@Override
 	public void action(AuthenticationFlowContext context) {
 		MultivaluedMap<String, String> decodedFormParameters = context.getHttpRequest().getDecodedFormParameters();
+		if(isSetupOptional(context.getAuthenticatorConfig()) && (!decodedFormParameters.containsKey(FORM_PARAM_MFA_METHOD) || decodedFormParameters.getFirst(FORM_PARAM_MFA_METHOD).isBlank())) {
+			context.success();
+			return;
+		}
 
 		if (!decodedFormParameters.containsKey(FORM_PARAM_MFA_METHOD)) {
 			context.challenge(
@@ -171,6 +178,14 @@ public class EnforceMfaAuthenticator implements Authenticator {
 			authenticationSession.addRequiredAction(action);
 		}
 		context.success();
+	}
+
+	private boolean isSetupOptional(AuthenticatorConfigModel config) {
+		return Optional.ofNullable(config)
+				.map(AuthenticatorConfigModel::getConfig)
+				.map(c -> c.getOrDefault(CONFIG_OPTIONAL_NAME, String.valueOf(CONFIG_OPTIONAL_DEFAULT_VALUE)))
+				.map(Boolean::parseBoolean)
+				.orElse(CONFIG_OPTIONAL_DEFAULT_VALUE);
 	}
 
 	@Override

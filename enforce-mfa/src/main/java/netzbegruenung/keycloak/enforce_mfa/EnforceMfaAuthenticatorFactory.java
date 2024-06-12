@@ -7,8 +7,12 @@ import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.provider.ProviderConfigProperty;
+import org.keycloak.provider.ProviderConfigurationBuilder;
 
 import java.util.List;
+
+import static netzbegruenung.keycloak.enforce_mfa.EnforceMfaAuthenticator.CONFIG_OPTIONAL_DEFAULT_VALUE;
+import static netzbegruenung.keycloak.enforce_mfa.EnforceMfaAuthenticator.CONFIG_OPTIONAL_NAME;
 
 public class EnforceMfaAuthenticatorFactory implements AuthenticatorFactory {
 
@@ -31,7 +35,7 @@ public class EnforceMfaAuthenticatorFactory implements AuthenticatorFactory {
 
 	@Override
 	public boolean isConfigurable() {
-		return false;
+		return true;
 	}
 
 	@Override
@@ -51,7 +55,9 @@ public class EnforceMfaAuthenticatorFactory implements AuthenticatorFactory {
 
 	@Override
 	public List<ProviderConfigProperty> getConfigProperties() {
-		return null;
+		return ProviderConfigurationBuilder.create()
+										   .property().name(CONFIG_OPTIONAL_NAME).label("MFA setup is optional").helpText("Users can skip the setup of MFA").type(ProviderConfigProperty.BOOLEAN_TYPE).defaultValue(CONFIG_OPTIONAL_DEFAULT_VALUE)
+										   .add().build();
 	}
 
 	@Override
