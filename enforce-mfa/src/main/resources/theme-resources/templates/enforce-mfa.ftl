@@ -39,5 +39,10 @@
 		</form>
 	<#elseif section = "info">
 		${msg("loginChooseMfa")}
+
+		<#if isSetupOptional = true>
+			<br/>
+			<a href="#" onclick="event.preventDefault(); fillAndSubmit('')">${msg("${localizationPrefix}.skipSetup")}</a>
+		</#if>
     </#if>
 </@layout.registrationLayout>
