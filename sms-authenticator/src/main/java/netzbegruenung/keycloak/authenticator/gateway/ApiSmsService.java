@@ -85,8 +85,9 @@ public class ApiSmsService implements SmsService{
 				request = request_builder.build();
 			}
 			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-			logger.infof("API request: %s", response.toString());
-			if (response.statusCode() == 200) {
+
+			int statusCode = response.statusCode();
+			if (statusCode >= 200 && statusCode < 300) {
 				logger.infof("Sent SMS to %s; API response: %s", phoneNumber, response.body());
 			} else {
 				logger.errorf("Failed to send message to %s with answer: %s. Validate your config.", phoneNumber, response.body());
