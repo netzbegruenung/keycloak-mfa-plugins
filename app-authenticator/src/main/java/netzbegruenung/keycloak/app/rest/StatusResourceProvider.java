@@ -3,7 +3,6 @@ package netzbegruenung.keycloak.app.rest;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.sse.OutboundSseEvent;
 import jakarta.ws.rs.sse.Sse;
 import jakarta.ws.rs.sse.SseEventSink;
 import org.jboss.logging.Logger;
@@ -50,6 +49,7 @@ public class StatusResourceProvider implements RealmResourceProvider {
 
 		AuthenticationSessionManager authSessionManager = new AuthenticationSessionManager(session);
 		AuthenticationSessionModel authSession;
+		int counter = 0;
 
 		while (true) {
 			authSession = authSessionManager.getCurrentAuthenticationSession(realm, client, tabId);
@@ -57,24 +57,30 @@ public class StatusResourceProvider implements RealmResourceProvider {
 			if (authSession == null)
 				throw new NotAuthorizedException(UNAUTHORIZED);
 
+			UserModel user = authSession.getAuthenticatedUser();
 
 			if (authSession.getAuthNote(READY) != null) {
 				authSession.setAuthNote(READY, null);
-				OutboundSseEvent sseEvent = sse.newEventBuilder()
-					.mediaType(MediaType.APPLICATION_JSON_TYPE)
-					.data("Ready")
-					.reconnectDelay(3000)
-					.build();
-
-				UserModel user = authSession.getAuthenticatedUser();
 
 				try {
-					sseEventSink.send(sseEvent)
+					sseEventSink.send(sse.newEvent("status", "ready"))
 						.toCompletableFuture()
 						.get();
 				} catch (Exception e) {
-					logger.error(String.format("Failed to send authentication status for user %s", user == null ? "null" : user.getId()), e);
+					logger.errorf(e, "Failed to send authentication status for user %s", user == null ? "null" : user.getId());
 				} finally {
+					break;
+				}
+			}
+
+			if (++counter % 30 == 0) {
+				try {
+					sseEventSink.send(sse.newEvent("status", "keep-alive"))
+						.toCompletableFuture()
+						.get();
+				} catch (Exception e) {
+					// should be debug
+					logger.infof(e, "Failed to send keep alive message for user %s", user == null ? "null" : user.getId());
 					break;
 				}
 			}
