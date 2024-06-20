@@ -3,7 +3,7 @@
     <#if section = "header">
         ${msg("appConfigTitle")}
     <#elseif section = "form">
-        <form id="kc-app-setup-form" onsubmit="confirm.disabled = true; return true;" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
+        <form id="kc-app-authentication" onsubmit="confirm.disabled = true; return true;" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
             <ol id="kc-app-setup">
                 <li>
                     <p>${msg("appConfigStep1")}</p>
