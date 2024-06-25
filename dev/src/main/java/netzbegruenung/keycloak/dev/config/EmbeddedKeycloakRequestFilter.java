@@ -10,16 +10,16 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import org.keycloak.common.ClientConnection;
 import org.keycloak.models.KeycloakSessionFactory;
-import org.keycloak.services.filters.AbstractRequestFilter;
+import org.keycloak.models.utils.KeycloakModelUtils;
 
-public class EmbeddedKeycloakRequestFilter extends AbstractRequestFilter implements Filter {
+public class EmbeddedKeycloakRequestFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws UnsupportedEncodingException {
         servletRequest.setCharacterEncoding("UTF-8");
         ClientConnection clientConnection = createConnection((HttpServletRequest) servletRequest);
 
-        filter(clientConnection, (session) -> {
+        KeycloakModelUtils.runJobInTransaction(getSessionFactory(), session -> {
             try {
                 filterChain.doFilter(servletRequest, servletResponse);
             } catch (Exception e) {

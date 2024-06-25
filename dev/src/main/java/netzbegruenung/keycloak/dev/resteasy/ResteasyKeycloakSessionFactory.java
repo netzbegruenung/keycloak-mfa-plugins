@@ -1,7 +1,9 @@
-package netzbegruenung.keycloak.dev.config;
+package netzbegruenung.keycloak.dev.resteasy;
 
+import netzbegruenung.keycloak.dev.config.EmbeddedThemeProviderFactory;
 import org.jboss.logging.Logger;
 import org.keycloak.Config;
+import org.keycloak.models.KeycloakSession;
 import org.keycloak.provider.*;
 import org.keycloak.services.DefaultKeycloakSessionFactory;
 import org.keycloak.services.ServicesLogger;
@@ -10,9 +12,9 @@ import org.keycloak.theme.ThemeResourceSpi;
 import java.net.URL;
 import java.util.*;
 
-public class EmbeddedKeycloakSessionFactory extends DefaultKeycloakSessionFactory {
+public class ResteasyKeycloakSessionFactory extends DefaultKeycloakSessionFactory {
 
-	private static final Logger logger = Logger.getLogger(EmbeddedKeycloakSessionFactory.class);
+	private static final Logger logger = Logger.getLogger(ResteasyKeycloakSessionFactory.class);
 
 	@Override
 	protected Map<Class<? extends Provider>, Map<String, ProviderFactory>> loadFactories(ProviderManager pm) {
@@ -78,4 +80,8 @@ public class EmbeddedKeycloakSessionFactory extends DefaultKeycloakSessionFactor
 		return factoryMap;
 	}
 
+	@Override
+	public KeycloakSession create() {
+		return new ResteasyKeycloakSession(this);
+	}
 }

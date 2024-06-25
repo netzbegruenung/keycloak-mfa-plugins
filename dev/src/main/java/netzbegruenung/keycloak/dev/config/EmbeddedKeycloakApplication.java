@@ -2,6 +2,7 @@ package netzbegruenung.keycloak.dev.config;
 
 import java.util.*;
 
+import netzbegruenung.keycloak.dev.resteasy.ResteasyKeycloakSessionFactory;
 import org.jboss.logging.Logger;
 import org.keycloak.Config;
 import org.keycloak.exportimport.ExportImportManager;
@@ -35,14 +36,14 @@ public class EmbeddedKeycloakApplication extends KeycloakApplication {
 	protected ExportImportManager bootstrap() {
 		final ExportImportManager exportImportManager = super.bootstrap();
 		createMasterRealmAdminUser();
-		createBaeldungRealm();
+//		createBaeldungRealm();
 
 		return exportImportManager;
 	}
 
     @Override
     protected KeycloakSessionFactory createSessionFactory() {
-        DefaultKeycloakSessionFactory factory = new EmbeddedKeycloakSessionFactory();
+        DefaultKeycloakSessionFactory factory = new ResteasyKeycloakSessionFactory();
         factory.init();
         return factory;
     }

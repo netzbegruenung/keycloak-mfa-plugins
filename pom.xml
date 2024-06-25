@@ -18,7 +18,7 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<keycloak.version>24.0.5</keycloak.version>
+		<keycloak.version>25.0.1</keycloak.version>
 		<json.version>20230227</json.version>
 		<maven.compiler.release>17</maven.compiler.release>
 		<maven.compiler.version>3.11.0</maven.compiler.version>
@@ -28,7 +28,6 @@
 		<!-- these should be updated together with Keycloak -->
 		<!-- check keycloak-dependencies-server-all effective pom -->
 		<resteasy.version>6.2.4.Final</resteasy.version>
-		<infinispan.common.version>14.0.10.Final</infinispan.common.version>
 		<h2.version>1.4.200</h2.version>
 	</properties>
 
@@ -85,12 +84,6 @@
 				<groupId>org.jboss.resteasy</groupId>
 				<artifactId>resteasy-jackson2-provider</artifactId>
 				<version>${resteasy.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>org.infinispan</groupId>
-				<artifactId>infinispan-commons</artifactId>
-				<version>${infinispan.common.version}</version>
 			</dependency>
 
 			<dependency>

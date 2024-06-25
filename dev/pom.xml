@@ -90,6 +90,12 @@
 			<artifactId>keycloak-services</artifactId>
 		</dependency>
 
+		<dependency>
+			<groupId>io.quarkus.resteasy.reactive</groupId>
+			<artifactId>resteasy-reactive</artifactId>
+			<version>3.8.5</version>
+		</dependency>
+
 		<!-- config properties processor -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

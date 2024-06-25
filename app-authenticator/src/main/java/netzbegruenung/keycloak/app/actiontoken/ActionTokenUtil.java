@@ -1,6 +1,7 @@
 package netzbegruenung.keycloak.app.actiontoken;
 
 import org.jboss.logging.Logger;
+import org.keycloak.authentication.AuthenticationProcessor;
 import org.keycloak.authentication.actiontoken.DefaultActionToken;
 import org.keycloak.common.util.Time;
 import org.keycloak.models.*;
@@ -39,7 +40,13 @@ public class ActionTokenUtil {
 				clientId
 			);
 			return Urls
-				.actionTokenBuilder(uriInfo.getBaseUri(), token.serialize(session, realm, uriInfo), clientId, authSession.getTabId())
+				.actionTokenBuilder(
+					uriInfo.getBaseUri(),
+					token.serialize(session, realm, uriInfo),
+					clientId,
+					authSession.getTabId(),
+					AuthenticationProcessor.getClientData(session, authSession)
+				)
 				.build(realm.getName());
 		} catch (NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
 			throw new RuntimeException(e);

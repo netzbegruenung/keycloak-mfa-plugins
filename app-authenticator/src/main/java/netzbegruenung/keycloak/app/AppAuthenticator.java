@@ -95,7 +95,8 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 			context.getUriInfo().getBaseUri(),
 			token.serialize(context.getSession(), context.getRealm(), context.getUriInfo()),
 			authSession.getClient().getClientId(),
-			authSession.getTabId()
+			authSession.getTabId(),
+			AuthenticationProcessor.getClientData(context.getSession(), authSession)
 		);
 
 		DeviceRepresentation deviceRepresentation = context
