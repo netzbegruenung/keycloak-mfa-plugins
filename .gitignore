@@ -7,3 +7,5 @@ dependency-reduced-pom.xml
 .project
 .settings
 .jpb
+
+h2db/*.db

@@ -7,10 +7,18 @@ This repository contains the source code for a collection of Keycloak MFA plugin
 
 The different plugins are documented in the submodules README or in docs folder.
 
-# License
+## License
 The code of this project is Apache 2.0 licensed. Parts of the original code are MIT licensed.
 
-# Development
+## Development
+Run the Quarkus distribution in development mode for live reloading and debugging similar to: https://github.com/keycloak/keycloak/tree/main/quarkus#contributing
+
+```shell
+mvn -f some_module/pom.xml compile quarkus:dev
+```
+
+Works great:)
+https://github.com/keycloak/keycloak/discussions/11841
 
 ## Building
 

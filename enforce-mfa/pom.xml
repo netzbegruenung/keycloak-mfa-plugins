@@ -14,22 +14,16 @@
 	<dependencies>
 		<dependency>
 			<groupId>org.keycloak</groupId>
-			<artifactId>keycloak-server-spi</artifactId>
+			<artifactId>keycloak-quarkus-server-app</artifactId>
 			<scope>provided</scope>
 		</dependency>
-
+		<!-- Necessary for proper execution of IDELauncher -->
+		<!-- Can be removed as part of the https://github.com/keycloak/keycloak/issues/22455 enhancement -->
 		<dependency>
-			<groupId>org.keycloak</groupId>
-			<artifactId>keycloak-server-spi-private</artifactId>
+			<groupId>io.quarkus</groupId>
+			<artifactId>quarkus-vertx-http-dev-ui-resources</artifactId>
 			<scope>provided</scope>
 		</dependency>
-
-		<dependency>
-			<groupId>org.keycloak</groupId>
-			<artifactId>keycloak-services</artifactId>
-			<scope>provided</scope>
-		</dependency>
-
 	</dependencies>
 
 	<build>
@@ -42,6 +36,13 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>io.quarkus</groupId>
+				<artifactId>quarkus-maven-plugin</artifactId>
+				<configuration>
+					<argsString>start-dev --db-url jdbc:h2:file:${project.parent.basedir}/h2db/enforce;AUTO_SERVER=TRUE;NON_KEYWORDS=VALUE</argsString>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
