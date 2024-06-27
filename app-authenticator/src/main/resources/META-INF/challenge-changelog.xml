@@ -65,4 +65,10 @@
 		</createIndex>
 	</changeSet>
 
+	<changeSet id="app-auth-challenge-25.0.1" author="giuliano.mele@verdigado.com">
+		<modifyDataType tableName="app_auth_challenge"
+			columnName="target_url"
+			newDataType="TEXT" />
+	</changeSet>
+
 </databaseChangeLog>
