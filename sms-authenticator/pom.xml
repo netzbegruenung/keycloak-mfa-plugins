@@ -18,6 +18,11 @@
 			<artifactId>keycloak-quarkus-server-app</artifactId>
 			<scope>provided</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.googlecode.libphonenumber</groupId>
+			<artifactId>libphonenumber</artifactId>
+			<version>8.13.40</version>
+		</dependency>
 		<!-- Necessary for proper execution of IDELauncher -->
 		<!-- Can be removed as part of the https://github.com/keycloak/keycloak/issues/22455 enhancement -->
 		<dependency>
@@ -45,6 +50,25 @@
 				<configuration>
 					<argsString>start-dev --db-url jdbc:h2:file:${project.parent.basedir}/h2db/sms;AUTO_SERVER=TRUE;NON_KEYWORDS=VALUE</argsString>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>3.4.2</version>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
         </plugins>
     </build>

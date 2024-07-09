@@ -21,7 +21,12 @@
 
 package netzbegruenung.keycloak.authenticator;
 
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
+import jakarta.ws.rs.core.Response;
 import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
+import org.jboss.logging.Logger;
 import org.keycloak.authentication.CredentialRegistrator;
 import org.keycloak.authentication.InitiatedActionSupport;
 import org.keycloak.authentication.RequiredActionContext;
@@ -36,12 +41,10 @@ import org.keycloak.models.credential.OTPCredentialModel;
 import org.keycloak.models.credential.WebAuthnCredentialModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
-
-import jakarta.ws.rs.core.Response;
-
-import org.jboss.logging.Logger;
 
 public class PhoneNumberRequiredAction implements RequiredActionProvider, CredentialRegistrator {
 
@@ -126,10 +129,98 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 	public void processAction(RequiredActionContext context) {
 		String mobileNumber = (context.getHttpRequest().getDecodedFormParameters().getFirst("mobile_number")).replaceAll("[^0-9+]", "");
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
+
+		// get the phone number formatting values from the config
+		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		boolean normalizeNumber = false;
+		boolean failOnBadFormat = false;
+		if (config != null && config.getConfig() != null) {
+			normalizeNumber = Boolean.parseBoolean(config.getConfig().getOrDefault("normalizePhoneNumber", "false"));
+			failOnBadFormat = Boolean.parseBoolean(config.getConfig().getOrDefault("failOnBadFormat", "false"));
+		}
+
+		// try to format the phone number
+		if (normalizeNumber) {
+			String formattedNumber = formatPhoneNumber(context, mobileNumber);
+			if (formattedNumber != null && !formattedNumber.isBlank()) {
+				mobileNumber = formattedNumber;
+				logger.warn("formattedNr:"+formattedNumber);
+			} else if (failOnBadFormat) {
+				context.failure();
+				logger.errorf("Failed phone number formatting checks");
+				return;
+			}
+		}
+
 		authSession.setAuthNote("mobile_number", mobileNumber);
 		logger.infof("Add required action for phone validation: [%s], user: %s", mobileNumber, context.getUser().getUsername());
 		context.getAuthenticationSession().addRequiredAction(PhoneValidationRequiredAction.PROVIDER_ID);
 		context.success();
+	}
+
+	/**
+	 * Formats the provided mobile phone number to E164 standard.
+	 *
+	 * @param context		the current RequiredActionContext
+	 * @param mobileNumber	the mobile phone number to be formatted
+	 * @return				the formatted mobile phone number, null if the phone number is invalid or mobileNumber if the config was not found
+	 */
+	private String formatPhoneNumber(RequiredActionContext context, String mobileNumber) {
+		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		if (config == null || config.getConfig() == null) {
+			logger.error("Failed format phone number, no config alias sms-2fa found");
+			return mobileNumber;
+		}
+		final PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.getInstance();
+		int countryNumber;
+		// try to get the country code from the country number in the config, fallback on default DE
+		try {
+			countryNumber = Integer.parseInt((config.getConfig()
+				.getOrDefault("countrycode", "49").replace("+", "")));
+		} catch (NumberFormatException e) {
+			logger.warn("Failed to parse countrycode to int, using default value (49)", e);
+			countryNumber = 49;
+		}
+		String nameCodeToUse = phoneNumberUtil.getRegionCodeForCountryCode(countryNumber);
+		logger.warn("nameCode:"+nameCodeToUse);
+		PhoneNumber originalPhoneNumberParsed;
+
+		// parse the mobile number and store it as instance of PhoneNumber
+		try {
+			originalPhoneNumberParsed =
+				phoneNumberUtil.parse(mobileNumber, nameCodeToUse);
+		} catch (NumberParseException e) {
+			logger.error("Failed to parse phone number", e);
+			return null;
+		}
+
+		if (!phoneNumberUtil.isValidNumber(originalPhoneNumberParsed)) {
+			logger.error("Phone number is not valid");
+			return null;
+		}
+
+		// apply ValidNumberType filters
+		try {
+			String numberTypeFilters = config.getConfig().getOrDefault("numberTypeFilters", "");
+			if (!numberTypeFilters.isBlank()) {
+				PhoneNumberUtil.PhoneNumberType numberType = phoneNumberUtil.getNumberType(originalPhoneNumberParsed);
+				if (Arrays.stream(numberTypeFilters.split(",")).noneMatch(filter ->
+					{
+						logger.warn("filter:"+filter+" and numberType:"+numberType);
+						return PhoneNumberUtil.PhoneNumberType.valueOf(filter)==numberType;
+					}
+				)) {
+					logger.error("Phone number type does not match any filters");
+					return null;
+				}
+			}
+		} catch (IllegalArgumentException e) {
+			logger.error("Illegal filter name");
+			return null;
+		}
+
+		// return the E164 format of the mobile number
+		return phoneNumberUtil.format(originalPhoneNumberParsed, PhoneNumberUtil.PhoneNumberFormat.E164);
 	}
 
 	@Override
