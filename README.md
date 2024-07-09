@@ -5,7 +5,7 @@ This repository contains the source code for a collection of Keycloak MFA plugin
 * [Enforce MFA](enforce-mfa/README.md): Force users to configure a second factor after logging in. (beta)
 * [Native App MFA integration](app-authenticator/README.md): connect a mobile app to Keycloak which receives a notification about a pending login process and allows the user to allow/block the login request. (work in progress)
 
-The different plugins are documented in the submodules README or in docs folder.
+The different plugins are documented in the submodules README. If you need support for deployment or adjustments, please contact [support@verdigado.com](mailto:support@verdigado.com).
 
 ## License
 The code of this project is Apache 2.0 licensed. Parts of the original code are MIT licensed.
