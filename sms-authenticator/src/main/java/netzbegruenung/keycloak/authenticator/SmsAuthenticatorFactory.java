@@ -90,7 +90,7 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 			new ProviderConfigProperty("storeInAttribute", "Set phone number as attribute", "Sets the phone number as a user attribute.", ProviderConfigProperty.BOOLEAN_TYPE, false),
 			new ProviderConfigProperty("normalizePhoneNumber", "Format phone number", "Normalize the phone number using the E164 standard.", ProviderConfigProperty.BOOLEAN_TYPE, false),
 			new ProviderConfigProperty("numberTypeFilters", "Valid number type filters", "A comma separated list of valid number types.", ProviderConfigProperty.STRING_TYPE, ""),
-			new ProviderConfigProperty("failOnBadFormat", "Fail on formatting checks", "Fails the authentication if the phone number formatting checks are not successfully passed.", ProviderConfigProperty.BOOLEAN_TYPE, false)
+			new ProviderConfigProperty("forceRetryOnBadFormat", "Ask for new number if checks fail", "Sets an error message and asks the user to re-enter phone number if formatting checks are not successfully passed.", ProviderConfigProperty.BOOLEAN_TYPE, false)
 		);
 	}
 

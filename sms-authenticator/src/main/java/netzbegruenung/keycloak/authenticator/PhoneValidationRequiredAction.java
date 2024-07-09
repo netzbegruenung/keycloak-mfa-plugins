@@ -131,7 +131,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 			return;
 		} else {
 			if (Boolean.parseBoolean(config.getConfig().get("storeInAttribute"))) {
-				context.getUser().setSingleAttribute("mobile-number", mobileNumber);
+				context.getUser().setSingleAttribute("mobile_number", mobileNumber);
 			}
 		}
 	}

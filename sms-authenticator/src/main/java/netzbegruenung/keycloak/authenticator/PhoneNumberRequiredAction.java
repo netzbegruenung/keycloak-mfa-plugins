@@ -41,6 +41,7 @@ import org.keycloak.models.credential.OTPCredentialModel;
 import org.keycloak.models.credential.WebAuthnCredentialModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -133,10 +134,10 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		// get the phone number formatting values from the config
 		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
 		boolean normalizeNumber = false;
-		boolean failOnBadFormat = false;
+		boolean forceRetryOnBadFormat = false;
 		if (config != null && config.getConfig() != null) {
 			normalizeNumber = Boolean.parseBoolean(config.getConfig().getOrDefault("normalizePhoneNumber", "false"));
-			failOnBadFormat = Boolean.parseBoolean(config.getConfig().getOrDefault("failOnBadFormat", "false"));
+			forceRetryOnBadFormat = Boolean.parseBoolean(config.getConfig().getOrDefault("forceRetryOnBadFormat", "false"));
 		}
 
 		// try to format the phone number
@@ -144,11 +145,13 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 			String formattedNumber = formatPhoneNumber(context, mobileNumber);
 			if (formattedNumber != null && !formattedNumber.isBlank()) {
 				mobileNumber = formattedNumber;
-				logger.warn("formattedNr:"+formattedNumber);
-			} else if (failOnBadFormat) {
-				context.failure();
-				logger.errorf("Failed phone number formatting checks");
-				return;
+			} else if (forceRetryOnBadFormat) {
+				logger.errorf("Failed phone number formatting checks for: %s", mobileNumber);
+				String formatError = context.getAuthenticationSession().getAuthNote("formatError");
+				if (formatError != null && !formatError.isBlank()) {
+					handleInvalidNumber(context, formatError);
+					return;
+				}
 			}
 		}
 
@@ -176,13 +179,13 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		// try to get the country code from the country number in the config, fallback on default DE
 		try {
 			countryNumber = Integer.parseInt((config.getConfig()
-				.getOrDefault("countrycode", "49").replace("+", "")));
+				.getOrDefault("countrycode", "49").replace("+", "")
+				.replaceAll("\\s+", "")));
 		} catch (NumberFormatException e) {
 			logger.warn("Failed to parse countrycode to int, using default value (49)", e);
 			countryNumber = 49;
 		}
 		String nameCodeToUse = phoneNumberUtil.getRegionCodeForCountryCode(countryNumber);
-		logger.warn("nameCode:"+nameCodeToUse);
 		PhoneNumber originalPhoneNumberParsed;
 
 		// parse the mobile number and store it as instance of PhoneNumber
@@ -191,36 +194,54 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 				phoneNumberUtil.parse(mobileNumber, nameCodeToUse);
 		} catch (NumberParseException e) {
 			logger.error("Failed to parse phone number", e);
+			context.getAuthenticationSession().setAuthNote("formatError", "numberFormatFailedToParse");
 			return null;
 		}
 
 		if (!phoneNumberUtil.isValidNumber(originalPhoneNumberParsed)) {
 			logger.error("Phone number is not valid");
+			context.getAuthenticationSession().setAuthNote("formatError", "numberFormatNumberInvalid");
 			return null;
 		}
 
 		// apply ValidNumberType filters
+		// try to extract number types from filter string
+		List<PhoneNumberUtil.PhoneNumberType> numberTypeFilters = new ArrayList<>();
+		String numberFiltersString = null;
 		try {
-			String numberTypeFilters = config.getConfig().getOrDefault("numberTypeFilters", "");
-			if (!numberTypeFilters.isBlank()) {
-				PhoneNumberUtil.PhoneNumberType numberType = phoneNumberUtil.getNumberType(originalPhoneNumberParsed);
-				if (Arrays.stream(numberTypeFilters.split(",")).noneMatch(filter ->
-					{
-						logger.warn("filter:"+filter+" and numberType:"+numberType);
-						return PhoneNumberUtil.PhoneNumberType.valueOf(filter)==numberType;
-					}
-				)) {
-					logger.error("Phone number type does not match any filters");
-					return null;
-				}
+			numberFiltersString = config.getConfig().getOrDefault("numberTypeFilters", "");
+			if (!numberFiltersString.isBlank()) {
+				Arrays.stream(numberFiltersString.split(",")).forEach(filterString ->
+					numberTypeFilters.add(PhoneNumberUtil.PhoneNumberType.valueOf(filterString)));
 			}
-		} catch (IllegalArgumentException e) {
-			logger.error("Illegal filter name");
-			return null;
+		} catch (Exception e) {
+			// if the number type filter configuration is bad, log an error and continue without filtering
+			logger.errorf("Illegal filter found: %s. Filter must be a list of comma delimited Strings of FIXED_LINE, MOBILE, "
+				+ "FIXED_LINE_OR_MOBILE, PAGER, TOLL_FREE, PREMIUM_RATE, SHARED_COST, PERSONAL_NUMBER, VOIP, UAN, VOICEMAIL", numberFiltersString);
+			numberTypeFilters.clear();
+		}
+
+		// check to see if the number type matches any of the filters set
+		if (!numberTypeFilters.isEmpty()) {
+			PhoneNumberUtil.PhoneNumberType numberType = phoneNumberUtil.getNumberType(originalPhoneNumberParsed);
+			if (numberTypeFilters.stream().noneMatch(filter -> filter == numberType)) {
+				logger.errorf("Phone number type %s does not match any filters in %s", numberType.toString(), numberTypeFilters);
+				context.getAuthenticationSession().setAuthNote("formatError", "numberFormatNoMatchingFilters");
+				return null;
+			}
 		}
 
 		// return the E164 format of the mobile number
 		return phoneNumberUtil.format(originalPhoneNumberParsed, PhoneNumberUtil.PhoneNumberFormat.E164);
+	}
+
+	private void handleInvalidNumber(RequiredActionContext context, String formatError) {
+		Response challenge = context
+			.form()
+			.setAttribute("realm", context.getRealm())
+			.setError(formatError)
+			.createForm("mobile_number_form.ftl");
+		context.challenge(challenge);
 	}
 
 	@Override
