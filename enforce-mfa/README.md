@@ -43,4 +43,4 @@ The expected flow must contain at least two subflows. The subflow, which contain
 
 Example:
 
-![Example Configuration](../docs/Enforce-MFA.png)
+![Example Configuration](Enforce-MFA.png)
