@@ -57,7 +57,6 @@ public class ChallengeResource {
 		}
 
 		String deviceId = signatureMap.get("keyId");
-		EntityManager em = session.getProvider(JpaConnectionProvider.class).getEntityManager();
 
 		CriteriaBuilder cb = em.getCriteriaBuilder();
 		CriteriaQuery<CredentialEntity> criteria = cb.createQuery(CredentialEntity.class);
