@@ -80,6 +80,10 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 				}
 			}
 
+			// add auth note for phone number input placeholder
+			context.getAuthenticationSession().setAuthNote("mobileInputFieldPlaceholder",
+				config.getConfig().getOrDefault("mobileInputFieldPlaceholder", ""));
+
 			// list of accepted 2FA alternatives
 			List<String> secondFactors = Arrays.asList(
 				SmsAuthCredentialModel.TYPE,
@@ -122,7 +126,9 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 
 	@Override
 	public void requiredActionChallenge(RequiredActionContext context) {
-		Response challenge = context.form().createForm("mobile_number_form.ftl");
+		Response challenge = context.form()
+			.setAttribute("mobileInputFieldPlaceholder", context.getAuthenticationSession().getAuthNote("mobileInputFieldPlaceholder"))
+			.createForm("mobile_number_form.ftl");
 		context.challenge(challenge);
 	}
 
@@ -238,7 +244,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 	private void handleInvalidNumber(RequiredActionContext context, String formatError) {
 		Response challenge = context
 			.form()
-			.setAttribute("realm", context.getRealm())
+			.setAttribute("mobileInputFieldPlaceholder", context.getAuthenticationSession().getAuthNote("mobileInputFieldPlaceholder"))
 			.setError(formatError)
 			.createForm("mobile_number_form.ftl");
 		context.challenge(challenge);
