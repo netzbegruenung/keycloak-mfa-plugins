@@ -45,12 +45,14 @@
 				<groupId>org.keycloak</groupId>
 				<artifactId>keycloak-quarkus-server-app</artifactId>
 				<version>${keycloak.version}</version>
+				<scope>provided</scope>
 			</dependency>
 
 			<dependency>
 				<groupId>io.quarkus</groupId>
 				<artifactId>quarkus-vertx-http-dev-ui-resources</artifactId>
 				<version>3.8.5</version>
+				<scope>provided</scope>
 			</dependency>
 
 		</dependencies>
