@@ -12,6 +12,10 @@
         <version>25.0.1</version>
     </parent>
 
+	<properties>
+		<maven.shade.version>3.5.1</maven.shade.version>
+	</properties>
+
     <dependencies>
 		<dependency>
 			<groupId>org.keycloak</groupId>
@@ -53,20 +57,29 @@
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<version>3.4.2</version>
-				<configuration>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
-				</configuration>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>${maven.shade.version}</version>
 				<executions>
 					<execution>
-						<id>make-assembly</id>
 						<phase>package</phase>
 						<goals>
-							<goal>single</goal>
+							<goal>shade</goal>
 						</goals>
+						<configuration>
+							<artifactSet>
+								<includes>
+									<include>com.googlecode.libphonenumber:libphonenumber</include>
+								</includes>
+							</artifactSet>
+							<filters>
+								<filter>
+									<artifact>com.googlecode.libphonenumber:libphonenumber</artifact>
+									<excludes>
+										<exclude>META-INF/MANIFEST.MF</exclude>
+									</excludes>
+								</filter>
+							</filters>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
