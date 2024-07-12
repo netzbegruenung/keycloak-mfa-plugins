@@ -6,10 +6,5 @@ updates:
       interval: weekly
     labels:
       - "version-upgrade"
-    ignore:
-      - dependency-name: org.keycloak:keycloak-quarkus-server-app
-      - dependency-name: io.quarkus:quarkus-vertx-http-dev-ui-resources
-      - dependency-name: org.apache.maven.plugins:maven-surefire-plugin
-      - dependency-name: org.apache.maven.plugins:maven-compiler-plugin
-      - dependency-name: io.quarkus:quarkus-maven-plugin
-      - dependency-name: org.apache.maven.plugins:maven-assembly-plugin
+    allow:
+      - dependency-name: "com.googlecode.libphonenumber:libphonenumber"

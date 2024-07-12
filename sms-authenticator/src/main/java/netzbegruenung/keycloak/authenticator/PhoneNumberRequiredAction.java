@@ -24,6 +24,7 @@ package netzbegruenung.keycloak.authenticator;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
+import io.quarkus.runtime.configuration.ConfigUtils;
 import jakarta.ws.rs.core.Response;
 import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
 import org.jboss.logging.Logger;
@@ -39,7 +40,16 @@ import org.keycloak.models.RoleModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.credential.OTPCredentialModel;
 import org.keycloak.models.credential.WebAuthnCredentialModel;
+import org.keycloak.models.jpa.entities.AuthenticatorConfigEntity;
+import org.keycloak.models.sessions.infinispan.util.KeycloakMarshallUtil;
+import org.keycloak.models.utils.KeycloakModelUtils;
+import org.keycloak.provider.ProviderConfigProperty;
+import org.keycloak.provider.ProviderConfigurationBuilder;
+import org.keycloak.quarkus.runtime.configuration.KeycloakPropertiesConfigSource;
+import org.keycloak.representations.idm.AuthenticatorConfigRepresentation;
+import org.keycloak.representations.idm.ConfigPropertyRepresentation;
 import org.keycloak.sessions.AuthenticationSessionModel;
+import org.keycloak.utils.KeycloakSessionUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -79,7 +89,6 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 					return;
 				}
 			}
-
 			// add auth note for phone number input placeholder
 			context.getAuthenticationSession().setAuthNote("mobileInputFieldPlaceholder",
 				config.getConfig().getOrDefault("mobileInputFieldPlaceholder", ""));
@@ -217,7 +226,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		try {
 			numberFiltersString = config.getConfig().getOrDefault("numberTypeFilters", "");
 			if (!numberFiltersString.isBlank()) {
-				Arrays.stream(numberFiltersString.split(",")).forEach(filterString ->
+				Arrays.stream(numberFiltersString.split("##")).forEach(filterString ->
 					numberTypeFilters.add(PhoneNumberUtil.PhoneNumberType.valueOf(filterString)));
 			}
 		} catch (Exception e) {
