@@ -6,6 +6,7 @@ import netzbegruenung.keycloak.app.credentials.AppCredentialData;
 import netzbegruenung.keycloak.app.dto.ChallengeConverter;
 import netzbegruenung.keycloak.app.jpa.Challenge;
 import netzbegruenung.keycloak.app.messaging.MessagingServiceFactory;
+import netzbegruenung.keycloak.app.rest.ChallengeResourceProvider;
 import netzbegruenung.keycloak.app.rest.StatusResourceProviderFactory;
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.*;
@@ -24,6 +25,7 @@ import org.keycloak.models.jpa.entities.RealmEntity;
 import org.keycloak.models.jpa.entities.UserEntity;
 import org.keycloak.representations.account.DeviceRepresentation;
 import org.keycloak.services.Urls;
+import org.keycloak.services.resource.RealmResourceProvider;
 import org.keycloak.sessions.AuthenticationSessionCompoundId;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.util.JsonSerialization;
@@ -113,6 +115,12 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 				secret,
 				expiresAt
 			);
+
+			ChallengeResourceProvider challengeProvider = (ChallengeResourceProvider) context
+				.getSession()
+				.getProvider(RealmResourceProvider.class, "challenges");
+
+			challengeProvider.notifyListeners(challenge, context.getRealm());
 
 			authSession.setAuthNote("credentialId", appCredentialModel.getId());
 			authSession.setAuthNote("secret", secret);

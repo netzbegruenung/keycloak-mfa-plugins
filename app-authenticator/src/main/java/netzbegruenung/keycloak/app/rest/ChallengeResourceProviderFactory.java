@@ -22,7 +22,7 @@ public class ChallengeResourceProviderFactory implements RealmResourceProviderFa
 
 	@Override
 	public void postInit(KeycloakSessionFactory keycloakSessionFactory) {
-
+		ChallengeResourceProvider.scheduler.setRemoveOnCancelPolicy(true);
 	}
 
 	@Override
