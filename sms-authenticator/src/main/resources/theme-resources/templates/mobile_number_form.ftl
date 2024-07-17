@@ -9,7 +9,7 @@
 					<label for="code" class="${properties.kcLabelClass!}">${msg("smsPhoneNumberLabel")}</label>
 				</div>
 				<div class="${properties.kcInputWrapperClass!}">
-					<input type="tel" id="code" pattern="[0-9\+\-\.\ ]" name="mobile_number" class="${properties.kcInputClass!}" autofocus />
+					<input type="tel" id="code" pattern="[0-9\+\-\.\ ]" name="mobile_number" class="${properties.kcInputClass!}" placeholder="${mobileInputFieldPlaceholder!}" autofocus />
 				</div>
 			</div>
 			<div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
@@ -20,7 +20,7 @@
 				</div>
 
 				<div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
-					<input name="phonenumber" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("doSubmit")}"/>
+					<input name="phonenumber" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("doSubmitMobile")}" />
 				</div>
 			</div>
 		</form>

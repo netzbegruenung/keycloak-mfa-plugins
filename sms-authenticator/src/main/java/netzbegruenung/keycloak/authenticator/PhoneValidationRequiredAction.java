@@ -116,10 +116,23 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 				);
 			}
 			context.getUser().removeRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
+			handlePhoneToAttribute(context, mobileNumber);
 			context.success();
 		} else {
 			// invalid or expired
 			handleInvalidSmsCode(context);
+		}
+	}
+
+	private void handlePhoneToAttribute(RequiredActionContext context, String mobileNumber) {
+		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		if (config == null) {
+			logger.warn("No config alias sms-2fa found, skip phone number to attribute check");
+			return;
+		} else {
+			if (Boolean.parseBoolean(config.getConfig().get("storeInAttribute"))) {
+				context.getUser().setSingleAttribute("mobile_number", mobileNumber);
+			}
 		}
 	}
 

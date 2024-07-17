@@ -9,7 +9,7 @@
 					<label for="code" class="${properties.kcLabelClass!}">${msg("smsAuthLabel")}</label>
 				</div>
 				<div class="${properties.kcInputWrapperClass!}">
-					<input type="tel" id="code" name="code" class="${properties.kcInputClass!}" autocomplete="off" autofocus />
+					<input type="number" min="0" inputmode="numeric" pattern="[0-9]*" id="code" name="code" class="${properties.kcInputClass!}" autocomplete="off" autofocus />
 				</div>
 			</div>
 			<div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">

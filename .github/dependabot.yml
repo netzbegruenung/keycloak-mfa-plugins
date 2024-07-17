@@ -1,0 +1,10 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /sms-authenticator
+    schedule:
+      interval: weekly
+    labels:
+      - "version-upgrade"
+    allow:
+      - dependency-name: "com.googlecode.libphonenumber:libphonenumber"

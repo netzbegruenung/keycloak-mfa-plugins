@@ -30,6 +30,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.provider.ProviderConfigProperty;
 
+import java.util.Collections;
 import java.util.List;
 
 public class SmsAuthenticatorFactory implements AuthenticatorFactory {
@@ -86,7 +87,13 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 			new ProviderConfigProperty("senderattribute", "Sender Phone Number Attribute", "The attribute that contains the sender phone number. Leave empty if not required.", ProviderConfigProperty.STRING_TYPE, "from"),
 			new ProviderConfigProperty("forceSecondFactor", "Force 2FA", "If 2FA authentication is not configured, the user is forced to setup SMS Authentication.", ProviderConfigProperty.BOOLEAN_TYPE, false),
 			new ProviderConfigProperty("whitelist", "Excluded from enforced 2FA", "All users with the here selected role are not forced to setup 2FA.", ProviderConfigProperty.ROLE_TYPE, null),
-			new ProviderConfigProperty("hideResponsePayload", "Redacted API response log message", "Don't log API response body of SMS send request.", ProviderConfigProperty.BOOLEAN_TYPE, false)
+			new ProviderConfigProperty("hideResponsePayload", "Redacted API response log message", "Don't log API response body of SMS send request.", ProviderConfigProperty.BOOLEAN_TYPE, false),
+			new ProviderConfigProperty("mobileInputFieldPlaceholder", "Phone number input field placeholder", "The placeholder string user in the phone number input field", ProviderConfigProperty.STRING_TYPE, ""),
+			new ProviderConfigProperty("storeInAttribute", "Set phone number as attribute", "Sets the phone number as a user attribute.", ProviderConfigProperty.BOOLEAN_TYPE, false),
+			new ProviderConfigProperty("normalizePhoneNumber", "Format phone number", "Normalize the phone number using the E164 standard.", ProviderConfigProperty.BOOLEAN_TYPE, false),
+			new ProviderConfigProperty("numberTypeFilters", "Valid number type filters", "A list of valid number types to filter the input phone number by. Possible values are: FIXED_LINE, MOBILE, "
+				+ " FIXED_LINE_OR_MOBILE, PAGER, TOLL_FREE, PREMIUM_RATE, SHARED_COST, PERSONAL_NUMBER, VOIP, UAN, VOICEMAIL.", ProviderConfigProperty.MULTIVALUED_STRING_TYPE, Collections.emptyList()),
+			new ProviderConfigProperty("forceRetryOnBadFormat", "Ask for new number if checks fail", "Sets an error message and asks the user to re-enter phone number if formatting checks are not successfully passed.", ProviderConfigProperty.BOOLEAN_TYPE, false)
 		);
 	}
 
