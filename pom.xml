@@ -64,29 +64,6 @@
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-shade-plugin</artifactId>
 					<version>${maven.shade.version}</version>
-					<executions>
-						<execution>
-							<phase>package</phase>
-							<goals>
-								<goal>shade</goal>
-							</goals>
-							<configuration>
-								<artifactSet>
-									<includes>
-										<include>org.reactivestreams:reactive-streams</include>
-									</includes>
-								</artifactSet>
-								<filters>
-									<filter>
-										<artifact>org.reactivestreams:reactive-streams</artifact>
-										<excludes>
-											<exclude>META-INF/MANIFEST.MF</exclude>
-										</excludes>
-									</filter>
-								</filters>
-							</configuration>
-						</execution>
-					</executions>
 				</plugin>
 
 				<plugin>
