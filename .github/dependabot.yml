@@ -1,10 +1,16 @@
 version: 2
 updates:
-  - package-ecosystem: maven
-    directory: /sms-authenticator
+  - package-ecosystem: "maven"
+    directory: "/"
     schedule:
-      interval: weekly
-    labels:
-      - "version-upgrade"
+      interval: "weekly"
+  - package-ecosystem: "maven"
+    directory: "/sms-authenticator"
+    schedule:
+      interval: "weekly"
     allow:
       - dependency-name: "com.googlecode.libphonenumber:libphonenumber"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
