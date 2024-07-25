@@ -75,7 +75,7 @@
 				<plugin>
 					<groupId>io.quarkus</groupId>
 					<artifactId>quarkus-maven-plugin</artifactId>
-					<version>3.8.5</version>
+					<version>3.13.0</version>
 					<executions>
 						<execution>
 							<goals>
