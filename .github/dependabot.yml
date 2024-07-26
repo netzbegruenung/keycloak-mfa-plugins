@@ -4,12 +4,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-  - package-ecosystem: "maven"
-    directory: "/sms-authenticator"
-    schedule:
-      interval: "weekly"
-    allow:
-      - dependency-name: "com.googlecode.libphonenumber:libphonenumber"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
