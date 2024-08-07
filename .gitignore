@@ -9,3 +9,4 @@ dependency-reduced-pom.xml
 .jpb
 
 h2db/*.db
+/.vs

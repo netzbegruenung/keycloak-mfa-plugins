@@ -146,27 +146,30 @@ public class ApiSmsService implements SmsService{
 			logger.infof("Clean phone number: no country code set, return %s", phone_number);
 			return phone_number;
 		}
-		String country_number = countrycode.replaceFirst("\\+", "");
-		// convert 49 to +49
-		if (phone_number.startsWith(country_number)) {
-			phone_number = phone_number.replaceFirst(country_number, countrycode);
-			logger.infof("Clean phone number: convert 49 to +49, set phone number to %s", phone_number);
+
+		// Add countrycode prefix if 9 or 10 digits
+		if (phone_number.matches("\\d{9,10}")) {
+			phone_number = countrycode + phone_number;
+			logger.infof("Clean phone number: added country code %s, set phone number to %s", countrycode, phone_number);
+			return phone_number;
 		}
-		// convert 0049 to +49
-		if (phone_number.startsWith("00"+country_number)) {
-			phone_number = phone_number.replaceFirst("00"+country_number, countrycode);
-			logger.infof("Clean phone number: convert 0049 to +49, set phone number to %s", phone_number);
+	
+		// Convert +39 to 39
+		if (phone_number.startsWith("+" + countrycode)) {
+			phone_number = phone_number.replaceFirst("\\+" + countrycode, countrycode);
+			logger.infof("Clean phone number: replace +%s with %s, set phone number to %s", countrycode, countrycode, phone_number);
+			return phone_number;
 		}
-		// convert +490176 to +49176
-		if (phone_number.startsWith(countrycode+"0")) {
-			phone_number = phone_number.replaceFirst("\\+"+country_number+"0", countrycode);
-			logger.infof("Clean phone number: convert +490176 to +49176, set phone number to %s", phone_number);
+	
+		// Convert 0039 to 39
+		if (phone_number.startsWith("00" + countrycode)) {
+			phone_number = phone_number.replaceFirst("00" + countrycode, countrycode);
+			logger.infof("Clean phone number: replace 00%s with %s, set phone number to %s", countrycode, countrycode, phone_number);
+			return phone_number;
 		}
-		// convert 0 to +49
-		if (phone_number.startsWith("0")) {
-			phone_number = phone_number.replaceFirst("0", countrycode);
-			logger.infof("Clean phone number: convert 0 to +49, set phone number to %s", phone_number);
-		}
+	
+		// Return the phone number without modifying it if it does not fall into the cases above
+		logger.infof("Clean phone number: no changes needed, return %s", phone_number);
 		return phone_number;
 	}
 }
