@@ -84,7 +84,7 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 			new ProviderConfigProperty("apiuser", "Basic Auth Username (optional)", "If set, Basic Auth will be performed. Leave empty if not required.", ProviderConfigProperty.STRING_TYPE, ""),
 			new ProviderConfigProperty("messageattribute", "Message Attribute", "The attribute that contains the SMS message text.", ProviderConfigProperty.STRING_TYPE, "text"),
 			new ProviderConfigProperty("receiverattribute", "Receiver Phone Number Attribute", "The attribute that contains the receiver phone number.", ProviderConfigProperty.STRING_TYPE, "to"),
-			new ProviderConfigProperty("receiverUsesList", "Receiver sent as list", "Receiver attribute supports sending one or more phone numbers as a list instead of a string", ProviderConfigProperty.BOOLEAN_TYPE, false),
+			new ProviderConfigProperty("receiverJsonTemplate", "Receiver Phone Number Json value template", "Receiver value structure can be customised to match API requirements.", ProviderConfigProperty.STRING_TYPE, "\"%s\""),
 			new ProviderConfigProperty("senderattribute", "Sender Phone Number Attribute", "The attribute that contains the sender phone number. Leave empty if not required.", ProviderConfigProperty.STRING_TYPE, "from"),
 			new ProviderConfigProperty("forceSecondFactor", "Force 2FA", "If 2FA authentication is not configured, the user is forced to setup SMS Authentication.", ProviderConfigProperty.BOOLEAN_TYPE, false),
 			new ProviderConfigProperty("whitelist", "Excluded from enforced 2FA", "All users with the here selected role are not forced to setup 2FA.", ProviderConfigProperty.ROLE_TYPE, null),
