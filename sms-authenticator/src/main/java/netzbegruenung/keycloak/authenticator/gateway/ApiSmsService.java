@@ -48,7 +48,7 @@ public class ApiSmsService implements SmsService{
 	private final String apitokenattribute;
 	private final String messageattribute;
 	private final String receiverattribute;
-	private final boolean receiverUsesList;
+	private final String receiverJsonTemplate;
 	private final String senderattribute;
 
 	private final boolean hideResponsePayload;
@@ -68,7 +68,7 @@ public class ApiSmsService implements SmsService{
 		apitokenattribute = config.getOrDefault("apitokenattribute", "");
 		messageattribute = config.get("messageattribute");
 		receiverattribute = config.get("receiverattribute");
-		receiverUsesList = Boolean.parseBoolean(config.getOrDefault("receiverUsesList", "false"));
+		receiverJsonTemplate = config.getOrDefault("receiverJsonTemplate", "\"%s\"");
 		senderattribute = config.get("senderattribute");
 
 		hideResponsePayload = Boolean.parseBoolean(config.get("hideResponsePayload"));
@@ -109,7 +109,7 @@ public class ApiSmsService implements SmsService{
 		String sendJson = "{"
 			.concat(apitokenattribute != "" ? String.format("\"%s\":\"%s\",", apitokenattribute, apitoken): "")
 			.concat(String.format("\"%s\":\"%s\",", messageattribute, message))
-			.concat(receiverUsesList ? String.format("\"%s\":[\"%s\"],", receiverattribute, phoneNumber) : String.format("\"%s\":\"%s\",", receiverattribute, phoneNumber))
+			.concat(String.format("\"%s\":%s,", receiverattribute, String.format(receiverJsonTemplate, phoneNumber)))
 			.concat(String.format("\"%s\":\"%s\"", senderattribute, senderId))
 			.concat("}");
 
