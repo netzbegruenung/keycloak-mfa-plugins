@@ -25,9 +25,7 @@ import java.net.URI;
 
 public class AppRequiredAction implements RequiredActionProvider, CredentialRegistrator {
 
-	private static final Logger logger = Logger.getLogger(AppRequiredAction.class);
-
-	public static String PROVIDER_ID = "app-register";
+	public static final String PROVIDER_ID = "app-register";
 
 	@Override
 	public InitiatedActionSupport initiatedActionSupport() {

@@ -18,7 +18,7 @@ public class EnforceMfaAuthenticatorFactory implements AuthenticatorFactory {
 
 	public static final String PROVIDER_ID = "enforce-mfa";
 
-	private static AuthenticationExecutionModel.Requirement[] REQUIREMENT_CHOICES = {
+	private static final AuthenticationExecutionModel.Requirement[] REQUIREMENT_CHOICES = {
 		AuthenticationExecutionModel.Requirement.ALTERNATIVE,
 		AuthenticationExecutionModel.Requirement.DISABLED,
 		AuthenticationExecutionModel.Requirement.REQUIRED

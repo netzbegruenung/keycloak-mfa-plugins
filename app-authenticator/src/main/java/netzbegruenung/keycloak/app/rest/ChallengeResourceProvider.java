@@ -256,17 +256,14 @@ public class ChallengeResourceProvider implements RealmResourceProvider {
 		if (deviceConnection != null) {
 			AsyncResponse asyncResponse = deviceConnection.asyncResponse();
 			if (asyncResponse != null) {
-				runJobInTransaction(sessionFactory, new KeycloakSessionTask() {
-					@Override
-					public void run(KeycloakSession session) {
-						KeycloakContext context = session.getContext();
+				runJobInTransaction(sessionFactory, session -> {
+					KeycloakContext context = session.getContext();
 
-						context.setRealm(realm);
-						asyncResponse.resume(Response
-							.ok(List.of(ChallengeConverter.getChallengeDto(challenge, session)))
-							.build()
-						);
-					}
+					context.setRealm(realm);
+					asyncResponse.resume(Response
+						.ok(List.of(ChallengeConverter.getChallengeDto(challenge, session)))
+						.build()
+					);
 				});
 			}
 		}

@@ -21,6 +21,7 @@
 
 package netzbegruenung.keycloak.authenticator;
 
+import com.google.common.base.Splitter;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
@@ -45,12 +46,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class PhoneNumberRequiredAction implements RequiredActionProvider, CredentialRegistrator {
 
-	public static String PROVIDER_ID = "mobile_number_config";
+	public static final String PROVIDER_ID = "mobile_number_config";
+
 	private static final Logger logger = Logger.getLogger(PhoneNumberRequiredAction.class);
+	private static final Splitter numberFilterSplitter = Splitter.on("##");
+	private static final Pattern nonDigitPattern = Pattern.compile("[^0-9+]");
+	private static final Pattern whitespacePattern = Pattern.compile("\\s+");
 
 	@Override
 	public InitiatedActionSupport initiatedActionSupport() {
@@ -113,7 +119,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 			}
 
 			Stream<String> usersRequiredActions = context.getUser().getRequiredActionsStream();
-			if (!usersRequiredActions.anyMatch(x -> availableRequiredActions.contains(x))) {
+			if (usersRequiredActions.noneMatch(availableRequiredActions::contains)) {
 				logger.infof(
 					"No 2FA method configured for user: %s, setting required action for SMS authenticator",
 					context.getUser().getUsername()
@@ -133,7 +139,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 
 	@Override
 	public void processAction(RequiredActionContext context) {
-		String mobileNumber = (context.getHttpRequest().getDecodedFormParameters().getFirst("mobile_number")).replaceAll("[^0-9+]", "");
+		String mobileNumber = nonDigitPattern.matcher(context.getHttpRequest().getDecodedFormParameters().getFirst("mobile_number")).replaceAll("");
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
 
 		// get the phone number formatting values from the config
@@ -183,9 +189,9 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		int countryNumber;
 		// try to get the country code from the country number in the config, fallback on default DE
 		try {
-			countryNumber = Integer.parseInt((config.getConfig()
-				.getOrDefault("countrycode", "49").replace("+", "")
-				.replaceAll("\\s+", "")));
+			countryNumber = Integer.parseInt(whitespacePattern.matcher(config.getConfig()
+				.getOrDefault("countrycode", "49").replace("+", ""))
+				.replaceAll(""));
 		} catch (NumberFormatException e) {
 			logger.warn("Failed to parse countrycode to int, using default value (49)", e);
 			countryNumber = 49;
@@ -195,8 +201,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 
 		// parse the mobile number and store it as instance of PhoneNumber
 		try {
-			originalPhoneNumberParsed =
-				phoneNumberUtil.parse(mobileNumber, nameCodeToUse);
+			originalPhoneNumberParsed = phoneNumberUtil.parse(mobileNumber, nameCodeToUse);
 		} catch (NumberParseException e) {
 			logger.error("Failed to parse phone number", e);
 			context.getAuthenticationSession().setAuthNote("formatError", "numberFormatFailedToParse");
@@ -216,7 +221,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		try {
 			numberFiltersString = config.getConfig().getOrDefault("numberTypeFilters", "");
 			if (!numberFiltersString.isBlank()) {
-				Arrays.stream(numberFiltersString.split("##")).forEach(filterString ->
+				numberFilterSplitter.splitToStream(numberFiltersString).forEach(filterString ->
 					numberTypeFilters.add(PhoneNumberUtil.PhoneNumberType.valueOf(filterString)));
 			}
 		} catch (Exception e) {

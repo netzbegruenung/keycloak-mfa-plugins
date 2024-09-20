@@ -18,6 +18,7 @@ import java.util.Map;
 public class AuthenticationUtil {
 
 	private static final Logger logger = Logger.getLogger(AuthenticationUtil.class);
+	private static final Splitter.MapSplitter signatureMapSplitter = Splitter.on(",").withKeyValueSeparator(":");
 
 	public static Map<String, String> getSignatureMap(List<String> signatureHeaders) {
 		if (signatureHeaders.isEmpty()) {
@@ -25,9 +26,7 @@ public class AuthenticationUtil {
 		}
 
 		String signatureHeader = signatureHeaders.get(0);
-		Map<String, String> signatureMap = Splitter.on(",")
-			.withKeyValueSeparator(":")
-			.split(signatureHeader);
+		Map<String, String> signatureMap = signatureMapSplitter.split(signatureHeader);
 
 		if (
 			!signatureMap.containsKey("signature")

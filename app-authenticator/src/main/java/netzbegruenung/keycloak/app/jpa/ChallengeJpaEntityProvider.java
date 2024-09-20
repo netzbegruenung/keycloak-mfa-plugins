@@ -8,7 +8,7 @@ import java.util.List;
 public class ChallengeJpaEntityProvider implements JpaEntityProvider {
 	@Override
 	public List<Class<?>> getEntities() {
-		return Collections.<Class<?>>singletonList(Challenge.class);
+		return Collections.singletonList(Challenge.class);
 	}
 
 	@Override

@@ -110,7 +110,7 @@ public class EnforceMfaAuthenticator implements Authenticator {
 		AuthenticationExecutionModel parentExecution = realm.getAuthenticationExecutionByFlowId(execution.getParentFlow());
 
 		Optional<AuthenticationExecutionModel> baseExecution = realm.getAuthenticationExecutionsStream(parentExecution.getParentFlow())
-			.filter(e -> e.isAuthenticatorFlow())
+			.filter(AuthenticationExecutionModel::isAuthenticatorFlow)
 			.findFirst();
 
 		if (baseExecution.isEmpty()) {

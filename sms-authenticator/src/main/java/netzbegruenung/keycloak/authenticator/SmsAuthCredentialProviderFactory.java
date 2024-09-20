@@ -25,10 +25,11 @@ import org.keycloak.credential.CredentialProvider;
 import org.keycloak.credential.CredentialProviderFactory;
 import org.keycloak.models.KeycloakSession;
 
+import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
 
 public class SmsAuthCredentialProviderFactory implements CredentialProviderFactory<SmsAuthCredentialProvider> {
 
-    public static final String PROVIDER_ID =  "mobile-number";
+    public static final String PROVIDER_ID = "mobile-number";
 
     @Override
     public String getId() {
@@ -36,7 +37,7 @@ public class SmsAuthCredentialProviderFactory implements CredentialProviderFacto
     }
 
     @Override
-    public CredentialProvider create(KeycloakSession session) {
+    public CredentialProvider<SmsAuthCredentialModel> create(KeycloakSession session) {
         return new SmsAuthCredentialProvider(session);
     }
 }
