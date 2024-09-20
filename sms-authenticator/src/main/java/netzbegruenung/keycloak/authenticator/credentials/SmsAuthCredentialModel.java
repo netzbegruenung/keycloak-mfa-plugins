@@ -56,7 +56,7 @@ public class SmsAuthCredentialModel extends CredentialModel {
 			smsAuthenticatorModel.setId(credentialModel.getId());
 			smsAuthenticatorModel.setCredentialData(credentialModel.getCredentialData());
 			return smsAuthenticatorModel;
-		} catch (IOException e){
+		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 	}

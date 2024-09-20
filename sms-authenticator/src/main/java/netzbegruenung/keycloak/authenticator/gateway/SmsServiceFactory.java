@@ -37,5 +37,4 @@ public class SmsServiceFactory {
 			return new ApiSmsService(config);
 		}
 	}
-
 }

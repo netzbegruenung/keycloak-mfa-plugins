@@ -39,7 +39,7 @@ import java.util.stream.Stream;
 
 public class SmsAuthCredentialProvider implements CredentialProvider<SmsAuthCredentialModel>, CredentialInputValidator, CredentialInputUpdater {
 
-    protected KeycloakSession session;
+    protected final KeycloakSession session;
 
     public SmsAuthCredentialProvider(KeycloakSession session) {
         this.session = session;
@@ -126,7 +126,5 @@ public class SmsAuthCredentialProvider implements CredentialProvider<SmsAuthCred
     }
 
     @Override
-    public void disableCredentialType(RealmModel realm, UserModel user, String credentialType) {
-        return;
-    }
+    public void disableCredentialType(RealmModel realm, UserModel user, String credentialType) {}
 }

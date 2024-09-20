@@ -49,7 +49,7 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 		return SINGLETON;
 	}
 
-	private static AuthenticationExecutionModel.Requirement[] REQUIREMENT_CHOICES = {
+	private static final AuthenticationExecutionModel.Requirement[] REQUIREMENT_CHOICES = {
 		AuthenticationExecutionModel.Requirement.REQUIRED,
 		AuthenticationExecutionModel.Requirement.ALTERNATIVE,
 		AuthenticationExecutionModel.Requirement.DISABLED

@@ -13,9 +13,8 @@ import java.util.stream.Collectors;
 
 public class AppCredentialProvider implements CredentialProvider<AppCredentialModel>, CredentialInputValidator {
 
-	private static final Logger logger = Logger.getLogger(AppCredentialProvider.class);
+	protected final KeycloakSession session;
 
-	protected KeycloakSession session;
 	public AppCredentialProvider(KeycloakSession session) {
 		this.session = session;
 	}

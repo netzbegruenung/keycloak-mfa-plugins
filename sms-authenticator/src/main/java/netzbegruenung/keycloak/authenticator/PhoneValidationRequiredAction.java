@@ -83,10 +83,9 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 				.createForm("login-sms.ftl");
 			context.challenge(challenge);
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error(e.getMessage(), e);
 			context.failure();
 		}
-
 	}
 
 	@Override
@@ -130,7 +129,6 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
 		if (config == null) {
 			logger.warn("No config alias sms-2fa found, skip phone number to attribute check");
-			return;
 		} else {
 			if (Boolean.parseBoolean(config.getConfig().get("storeInAttribute"))) {
 				context.getUser().setSingleAttribute("mobile_number", mobileNumber);

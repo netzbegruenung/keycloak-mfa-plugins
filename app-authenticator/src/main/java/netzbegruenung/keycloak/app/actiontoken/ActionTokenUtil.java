@@ -30,7 +30,7 @@ public class ActionTokenUtil {
 		);
 	}
 
-	public static URI createActionToken(Class actionTokenClass, AuthenticationSessionModel authSession, KeycloakSession session, RealmModel realm, UserModel user, UriInfo uriInfo) {
+	public static URI createActionToken(Class<?> actionTokenClass, AuthenticationSessionModel authSession, KeycloakSession session, RealmModel realm, UserModel user, UriInfo uriInfo) {
 		try {
 			final String clientId = authSession.getClient().getClientId();
 			DefaultActionToken token = (DefaultActionToken) actionTokenClass.getDeclaredConstructor(String.class, Integer.class, String.class, String.class).newInstance(
