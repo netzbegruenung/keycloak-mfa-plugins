@@ -15,7 +15,7 @@
 		<form id="kc-select-mfa-form" class="${properties.kcFormClass!}" action="${url.loginAction}" method="post">
 			<div class="${properties.kcSelectAuthListClass!}">
                 <#list mfa! as requiredAction>
-					<div class="${properties.kcSelectAuthListItemClass!}" onclick="fillAndSubmit('${requiredAction.providerId}')" id="mfa-${requiredAction.providerId}">
+					<div class="${properties.kcSelectAuthListItemClass!}" onclick="fillAndSubmit('${requiredAction.providerId}')" id="mfa-${requiredAction.providerId}" style="cursor: pointer;">
 
 						<div class="${properties.kcSelectAuthListItemIconClass!}">
 							<i class="${properties.kcSelectAuthListItemIconPropertyClass!} ${properties.kcAuthenticatorDefaultClass!}"></i>
@@ -27,10 +27,6 @@
 							<div class="${properties.kcSelectAuthListItemDescriptionClass!}">
                                 ${msg('${localizationPrefix}.${requiredAction.providerId}-help-text')}
 							</div>
-						</div>
-						<div class="${properties.kcSelectAuthListItemFillClass!}"></div>
-						<div class="${properties.kcSelectAuthListItemArrowClass!}">
-							<i class="${properties.kcSelectAuthListItemArrowIconClass!}"></i>
 						</div>
 					</div>
                 </#list>
