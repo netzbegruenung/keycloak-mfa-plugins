@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>netzbegruenung</groupId>
 		<artifactId>keycloak-mfa-tools</artifactId>
-		<version>25.0.6</version>
+		<version>26.0.0</version>
 	</parent>
 
 	<artifactId>enforce-mfa</artifactId>
