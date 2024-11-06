@@ -7,67 +7,67 @@
 
     <changeSet author="giuliano.mele@verdigado.com" id="app-auth-challenge">
 
-        <createTable tableName="app_auth_challenge">
-            <column name="id" type="UUID">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="pk_app_auth_challenge"/>
+        <createTable tableName="APP_AUTH_CHALLENGE">
+            <column name="ID" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="PK_APP_AUTH_CHALLENGE"/>
             </column>
-            <column name="realm_id" type="VARCHAR(36)"/>
-            <column name="user_id" type="VARCHAR(36)"/>
-            <column name="target_url" type="VARCHAR(1023)">
+            <column name="REALM_ID" type="VARCHAR(36)"/>
+            <column name="USER_ID" type="VARCHAR(36)"/>
+            <column name="TARGET_URL" type="VARCHAR(1023)">
                 <constraints nullable="false"/>
             </column>
-            <column name="device_id" type="VARCHAR(255)">
+            <column name="DEVICE_ID" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="secret" type="VARCHAR(1023)">
+            <column name="SECRET" type="VARCHAR(1023)">
                 <constraints nullable="false"/>
             </column>
-            <column name="updated_timestamp" type="BIGINT">
+            <column name="UPDATED_TIMESTAMP" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="ip_address" type="VARCHAR(63)"/>
-            <column name="device" type="VARCHAR(63)"/>
-            <column name="browser" type="VARCHAR(63)"/>
-            <column name="os" type="VARCHAR(63)"/>
-            <column name="os_version" type="VARCHAR(63)"/>
+            <column name="IP_ADDRESS" type="VARCHAR(63)"/>
+            <column name="DEVICE" type="VARCHAR(63)"/>
+            <column name="BROWSER" type="VARCHAR(63)"/>
+            <column name="OS" type="VARCHAR(63)"/>
+            <column name="OS_VERSION" type="VARCHAR(63)"/>
         </createTable>
-        <addUniqueConstraint columnNames="realm_id, device_id" constraintName="uc_challenge_realm_id" tableName="app_auth_challenge"/>
-        <createIndex indexName="idx_challenge_realm_id" tableName="app_auth_challenge">
-            <column name="realm_id"/>
-            <column name="device_id"/>
+        <addUniqueConstraint columnNames="REALM_ID, DEVICE_ID" constraintName="UC_CHALLENGE_REALM_ID" tableName="APP_AUTH_CHALLENGE"/>
+        <createIndex indexName="IDX_CHALLENGE_REALM_ID" tableName="APP_AUTH_CHALLENGE">
+            <column name="REALM_ID"/>
+            <column name="DEVICE_ID"/>
         </createIndex>
-        <addForeignKeyConstraint baseColumnNames="realm_id" baseTableName="app_auth_challenge" constraintName="FK_APP_AUTH_CHALLENGE_ON_REALM" onDelete="CASCADE" referencedColumnNames="id" referencedTableName="realm"/>
-        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="app_auth_challenge" constraintName="FK_APP_AUTH_CHALLENGE_ON_USER" onDelete="CASCADE" referencedColumnNames="id" referencedTableName="user_entity"/>
+        <addForeignKeyConstraint baseColumnNames="REALM_ID" baseTableName="APP_AUTH_CHALLENGE" constraintName="FK_APP_AUTH_CHALLENGE_ON_REALM"
+								 onDelete="CASCADE" referencedColumnNames="ID" referencedTableName="REALM"/>
+        <addForeignKeyConstraint baseColumnNames="USER_ID" baseTableName="APP_AUTH_CHALLENGE" constraintName="FK_APP_AUTH_CHALLENGE_ON_USER"
+								 onDelete="CASCADE" referencedColumnNames="ID" referencedTableName="USER_ENTITY"/>
     </changeSet>
 
 	<changeSet id="app-auth-challenge-23.0.2" author="giuliano.mele@verdigado.com">
-		<delete tableName="app_auth_challenge">
-		</delete>
-		<addColumn tableName="app_auth_challenge">
-			<column name="client_id" type="VARCHAR(36)">
+		<delete tableName="APP_AUTH_CHALLENGE" />
+		<addColumn tableName="APP_AUTH_CHALLENGE">
+			<column name="CLIENT_ID" type="VARCHAR(36)">
 				<constraints nullable="false"/>
 			</column>
 		</addColumn>
-		<addForeignKeyConstraint baseTableName="app_auth_challenge" baseColumnNames="client_id" onDelete="CASCADE"
-								 referencedTableName="client" referencedColumnNames="ID" constraintName="FK_APP_AUTH_CHALLENGE_ON_CLIENT"/>
+		<addForeignKeyConstraint baseTableName="APP_AUTH_CHALLENGE" baseColumnNames="CLIENT_ID" onDelete="CASCADE"
+								 referencedTableName="CLIENT" referencedColumnNames="ID" constraintName="FK_APP_AUTH_CHALLENGE_ON_CLIENT"/>
 	</changeSet>
 
 	<changeSet id="app-auth-challenge-23.0.4" author="giuliano.mele@verdigado.com">
-		<delete tableName="app_auth_challenge">
-		</delete>
-		<addColumn tableName="app_auth_challenge">
-			<column name="expires_at" type="BIGINT" defaultValueNumeric="0">
+		<delete tableName="APP_AUTH_CHALLENGE" />
+		<addColumn tableName="APP_AUTH_CHALLENGE">
+			<column name="EXPIRES_AT" type="BIGINT" defaultValueNumeric="0">
 				<constraints nullable="false"/>
 			</column>
 		</addColumn>
-		<createIndex tableName="app_auth_challenge" indexName="idx_challenge_device_id">
-			<column name="device_id"></column>
+		<createIndex tableName="APP_AUTH_CHALLENGE" indexName="IDX_CHALLENGE_DEVICE_ID">
+			<column name="DEVICE_ID" />
 		</createIndex>
 	</changeSet>
 
 	<changeSet id="app-auth-challenge-25.0.1" author="giuliano.mele@verdigado.com">
-		<modifyDataType tableName="app_auth_challenge"
-			columnName="target_url"
+		<modifyDataType tableName="APP_AUTH_CHALLENGE"
+			columnName="TARGET_URL"
 			newDataType="TEXT" />
 	</changeSet>
 

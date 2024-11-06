@@ -61,7 +61,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 	}
 
 	private void createAppChallenge(AuthenticationFlowContext context, CredentialModel appCredentialModel) {
-		AppCredentialData appCredentialData = null;
+		AppCredentialData appCredentialData;
 		try {
 			appCredentialData = JsonSerialization.readValue(appCredentialModel.getCredentialData(), AppCredentialData.class);
 		} catch (IOException e) {

@@ -25,6 +25,8 @@ package netzbegruenung.keycloak.authenticator;
 import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialData;
 import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
 import netzbegruenung.keycloak.authenticator.gateway.SmsServiceFactory;
+
+import org.jboss.logging.Logger;
 import org.keycloak.authentication.CredentialValidator;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
@@ -52,6 +54,7 @@ import java.util.List;
 
 public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsAuthCredentialProvider> {
 
+	private static final Logger logger = Logger.getLogger(SmsAuthenticator.class);
 	private static final String TPL_CODE = "login-sms.ftl";
 
 	@Override
@@ -59,13 +62,14 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
 		KeycloakSession session = context.getSession();
 		UserModel user = context.getUser();
+		RealmModel realm = context.getRealm();
 
 		Optional<CredentialModel> model = context.getUser().credentialManager().getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
-		String mobileNumber = "";
+		String mobileNumber;
 		try {
-			mobileNumber = JsonSerialization.readValue(model.get().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
+			mobileNumber = JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
 		} catch (IOException e1) {
-			e1.printStackTrace();
+			logger.warn(e1.getMessage(), e1);
 			return;
 		}
 
@@ -80,12 +84,12 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		try {
 			Theme theme = session.theme().getTheme(Theme.Type.LOGIN);
 			Locale locale = session.getContext().resolveLocale(user);
-			String smsAuthText = theme.getMessages(locale).getProperty("smsAuthText");
+			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
 			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
 
 			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
 
-			context.challenge(context.form().setAttribute("realm", context.getRealm()).createForm(TPL_CODE));
+			context.challenge(context.form().setAttribute("realm", realm).createForm(TPL_CODE));
 		} catch (Exception e) {
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
 				context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")

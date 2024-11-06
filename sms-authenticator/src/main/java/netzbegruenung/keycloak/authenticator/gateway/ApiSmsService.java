@@ -31,10 +31,13 @@ import org.jboss.logging.Logger;
 import java.util.Base64;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 public class ApiSmsService implements SmsService{
+
+	private static final Logger logger = Logger.getLogger(SmsServiceFactory.class);
+	private static final Pattern plusPrefixPattern = Pattern.compile("\\+");
 
 	private final String apiurl;
 	private final Boolean urlencode;
@@ -48,11 +51,10 @@ public class ApiSmsService implements SmsService{
 	private final String apitokenattribute;
 	private final String messageattribute;
 	private final String receiverattribute;
+	private final String receiverJsonTemplate;
 	private final String senderattribute;
 
 	private final boolean hideResponsePayload;
-
-	private static final Logger logger = Logger.getLogger(SmsServiceFactory.class);
 
 	ApiSmsService(Map<String, String> config) {
 		apiurl = config.get("apiurl");
@@ -67,6 +69,7 @@ public class ApiSmsService implements SmsService{
 		apitokenattribute = config.getOrDefault("apitokenattribute", "");
 		messageattribute = config.get("messageattribute");
 		receiverattribute = config.get("receiverattribute");
+		receiverJsonTemplate = config.getOrDefault("receiverJsonTemplate", "\"%s\"");
 		senderattribute = config.get("senderattribute");
 
 		hideResponsePayload = Boolean.parseBoolean(config.get("hideResponsePayload"));
@@ -83,7 +86,7 @@ public class ApiSmsService implements SmsService{
 			} else {
 				request_builder = json_request(phoneNumber, message);
 			}
-			if (apiuser != "") {
+			if (apiuser != null && !apiuser.isEmpty()) {
 				request = request_builder.setHeader("Authorization", get_auth_header(apiuser, apitoken)).build();
 			} else {
 				request = request_builder.build();
@@ -98,18 +101,18 @@ public class ApiSmsService implements SmsService{
 			} else {
 				logger.errorf("Failed to send message to %s [%s]. Validate your config.", phoneNumber, payload);
 			}
-		} catch (Exception e){
+		} catch (Exception e) {
 			logger.errorf(e, "Failed to send message to %s with request: %s. Validate your config.", phoneNumber, request != null ? request.toString() : "null");
 		}
 	}
 
 	public Builder json_request(String phoneNumber, String message) {
 		String sendJson = "{"
-			.concat(apitokenattribute != "" ? String.format("\"%s\":\"%s\",", apitokenattribute, apitoken): "")
-			.concat(String.format("\"%s\":\"%s\",", messageattribute, message))
-			.concat(String.format("\"%s\":\"%s\",", receiverattribute, phoneNumber))
-			.concat(String.format("\"%s\":\"%s\"", senderattribute, senderId))
-			.concat("}");
+						  + Optional.ofNullable(apitokenattribute).map(it -> String.format("\"%s\":\"%s\",", it, apitoken)).orElse("")
+						  + String.format("\"%s\":\"%s\",", messageattribute, message)
+						  + String.format("\"%s\":%s,", receiverattribute, String.format(receiverJsonTemplate, phoneNumber))
+						  + String.format("\"%s\":\"%s\"", senderattribute, senderId)
+						  + "}";
 
 		 return HttpRequest.newBuilder()
 			.uri(URI.create(apiurl))
@@ -117,12 +120,12 @@ public class ApiSmsService implements SmsService{
 			.POST(HttpRequest.BodyPublishers.ofString(sendJson));
 	}
 
-	public Builder urlencoded_request(String phoneNumber, String message) throws JsonProcessingException {
-		String body = ""
-			.concat(apitokenattribute != "" ? String.format("%s=%s&", apitokenattribute, URLEncoder.encode(apitoken, Charset.defaultCharset())) : "" )
-			.concat(String.format("%s=%s&", messageattribute, URLEncoder.encode(message, Charset.defaultCharset())))
-			.concat(String.format("%s=%s&", receiverattribute, URLEncoder.encode(phoneNumber, Charset.defaultCharset())))
-			.concat(String.format("%s=%s", senderattribute, URLEncoder.encode(senderId, Charset.defaultCharset())));
+	public Builder urlencoded_request(String phoneNumber, String message) {
+		String body = Optional.ofNullable(apitokenattribute)
+						  .map(it -> String.format("%s=%s&", it, URLEncoder.encode(apitoken, Charset.defaultCharset()))).orElse("")
+					  + String.format("%s=%s&", messageattribute, URLEncoder.encode(message, Charset.defaultCharset()))
+					  + String.format("%s=%s&", receiverattribute, URLEncoder.encode(phoneNumber, Charset.defaultCharset()))
+					  + String.format("%s=%s", senderattribute, URLEncoder.encode(senderId, Charset.defaultCharset()));
 
 		return HttpRequest.newBuilder()
 				.uri(URI.create(apiurl))
@@ -131,8 +134,8 @@ public class ApiSmsService implements SmsService{
 	}
 
 	private static String get_auth_header(String apiuser, String apitoken) {
-		String authString = apiuser + ":" + apitoken;
-		String b64_cred = new String(Base64.getEncoder().encode(authString.getBytes()));
+		String authString = apiuser + ':' + apitoken;
+		String b64_cred = Base64.getEncoder().encodeToString(authString.getBytes());
 		return "Basic " + b64_cred;
 	}
 
@@ -142,7 +145,7 @@ public class ApiSmsService implements SmsService{
 		 * prefix, this function does not dare to touch the phone number.
 		 * https://en.wikipedia.org/wiki/List_of_mobile_telephone_prefixes_by_country
 		 */
-		if (countrycode == "") {
+		if (countrycode == null || countrycode.isEmpty()) {
 			logger.infof("Clean phone number: no country code set, return %s", phone_number);
 			return phone_number;
 		}
@@ -159,6 +162,7 @@ public class ApiSmsService implements SmsService{
 			phone_number = phone_number.replaceFirst("\\+" + countrycode, countrycode);
 			logger.infof("Clean phone number: replace +%s with %s, set phone number to %s", countrycode, countrycode, phone_number);
 			return phone_number;
+
 		}
 	
 		// Convert 0039 to 39

@@ -33,6 +33,7 @@ import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
@@ -54,6 +55,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 		context.getUser().addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
 		try {
 			UserModel user = context.getUser();
+			RealmModel realm = context.getRealm();
 
 			AuthenticationSessionModel authSession = context.getAuthenticationSession();
 			// TODO: get the alias from somewhere else or move config into realm or application scope
@@ -71,20 +73,19 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 			Theme theme = context.getSession().theme().getTheme(Theme.Type.LOGIN);
 			Locale locale = context.getSession().getContext().resolveLocale(user);
-			String smsAuthText = theme.getMessages(locale).getProperty("smsAuthText");
+			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
 			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
 
 			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
 
 			Response challenge = context.form()
-				.setAttribute("realm", context.getRealm())
+				.setAttribute("realm", realm)
 				.createForm("login-sms.ftl");
 			context.challenge(challenge);
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error(e.getMessage(), e);
 			context.failure();
 		}
-
 	}
 
 	@Override
@@ -128,7 +129,6 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
 		if (config == null) {
 			logger.warn("No config alias sms-2fa found, skip phone number to attribute check");
-			return;
 		} else {
 			if (Boolean.parseBoolean(config.getConfig().get("storeInAttribute"))) {
 				context.getUser().setSingleAttribute("mobile_number", mobileNumber);
