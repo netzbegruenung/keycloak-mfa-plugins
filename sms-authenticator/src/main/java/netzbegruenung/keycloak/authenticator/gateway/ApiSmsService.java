@@ -108,7 +108,7 @@ public class ApiSmsService implements SmsService{
 
 	public Builder json_request(String phoneNumber, String message) {
 		String sendJson = "{"
-						  + Optional.ofNullable(apitokenattribute).map(it -> String.format("\"%s\":\"%s\",", it, apitoken)).orElse("")
+						  //+ Optional.ofNullable(apitokenattribute).map(it -> String.format("\"%s\":\"%s\",", it, apitoken)).orElse("")
 						  + String.format("\"%s\":\"%s\",", messageattribute, message)
 						  + String.format("\"%s\":%s,", receiverattribute, String.format(receiverJsonTemplate, phoneNumber))
 						  + String.format("\"%s\":\"%s\"", senderattribute, senderId)
@@ -121,9 +121,9 @@ public class ApiSmsService implements SmsService{
 	}
 
 	public Builder urlencoded_request(String phoneNumber, String message) {
-		String body = Optional.ofNullable(apitokenattribute)
-						  .map(it -> String.format("%s=%s&", it, URLEncoder.encode(apitoken, Charset.defaultCharset()))).orElse("")
-					  + String.format("%s=%s&", messageattribute, URLEncoder.encode(message, Charset.defaultCharset()))
+		String body = //Optional.ofNullable(apitokenattribute)
+					//	  .map(it -> String.format("%s=%s&", it, URLEncoder.encode(apitoken, Charset.defaultCharset()))).orElse("")
+					  String.format("%s=%s&", messageattribute, URLEncoder.encode(message, Charset.defaultCharset()))
 					  + String.format("%s=%s&", receiverattribute, URLEncoder.encode(phoneNumber, Charset.defaultCharset()))
 					  + String.format("%s=%s", senderattribute, URLEncoder.encode(senderId, Charset.defaultCharset()));
 
