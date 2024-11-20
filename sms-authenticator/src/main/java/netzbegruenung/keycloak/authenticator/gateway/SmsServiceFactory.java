@@ -34,7 +34,9 @@ public class SmsServiceFactory {
 			return (phoneNumber, message) ->
 				logger.infof("***** SIMULATION MODE ***** Would send SMS to %s with text: %s", phoneNumber, message);
 		} else {
-			return new ApiSmsService(config);
+//			return new ApiSmsService(config);
+			return new VodafoneSmsService(config);
 		}
+
 	}
 }
