@@ -15,7 +15,7 @@
         <dependency>
             <groupId>com.google.firebase</groupId>
             <artifactId>firebase-admin</artifactId>
-            <version>9.4.1</version>
+            <version>9.4.3</version>
         </dependency>
 		<dependency>
 			<groupId>org.keycloak</groupId>
