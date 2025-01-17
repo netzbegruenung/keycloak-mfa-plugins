@@ -24,20 +24,8 @@ public class ChallengeConverter {
 			challenge.getBrowser(),
 			challenge.getOs(),
 			challenge.getOsVersion(),
-			resolveClientName(challenge.getClient().getName(), session),
+			challenge.getClient().getName(),
 			ResolveRelative.resolveRelativeUri(session, challenge.getClient().getRootUrl(), challenge.getClient().getBaseUrl())
 		);
-	}
-
-	private static String resolveClientName(String clientName, KeycloakSession session) {
-		return StringPropertyReplacer.replaceProperties(clientName, getProperties(session));
-	}
-
-	private static Properties getProperties(KeycloakSession session) {
-		try {
-			return session.theme().getTheme(Theme.Type.ACCOUNT).getMessages(Locale.ENGLISH);
-		} catch (IOException e) {
-			return null;
-		}
 	}
 }
