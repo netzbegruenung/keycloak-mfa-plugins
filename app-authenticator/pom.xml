@@ -35,6 +35,12 @@
 			<artifactId>ojdbc11</artifactId>
 			<scope>provided</scope>
 		</dependency>
+		<!-- https://github.com/keycloak/keycloak/issues/34549 -->
+		<dependency>
+			<groupId>io.mvnpm</groupId>
+			<artifactId>importmap</artifactId>
+			<scope>provided</scope>
+		</dependency>
     </dependencies>
 
     <build>
