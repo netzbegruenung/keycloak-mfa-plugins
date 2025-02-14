@@ -63,7 +63,7 @@ public class StatusResourceProvider implements RealmResourceProvider {
 				authSession.setAuthNote(READY, null);
 
 				try {
-					sseEventSink.send(sse.newEvent("status", "ready"))
+					sseEventSink.send(sse.newEvent( "ready"))
 						.toCompletableFuture()
 						.get();
 				} catch (Exception e) {
@@ -73,9 +73,9 @@ public class StatusResourceProvider implements RealmResourceProvider {
 				}
 			}
 
-			if (++counter % 30 == 0) {
+			if (counter++ % 4 == 0) {
 				try {
-					sseEventSink.send(sse.newEvent("status", "keep-alive"))
+					sseEventSink.send(sse.newEvent( "keep-alive"))
 						.toCompletableFuture()
 						.get();
 				} catch (Exception e) {

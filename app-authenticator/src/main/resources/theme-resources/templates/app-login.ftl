@@ -8,12 +8,12 @@
 		<#if appAuthStatusUrl??>
 			<script type="text/javascript">
 				const source = new EventSource("${appAuthStatusUrl?no_esc}");
-				source.addEventListener("status", (event) => {
+				source.onmessage = (event) => {
 					if (event.data === 'ready') {
 						source.close();
 						document.getElementById('kc-app-authentication').submit();
 					}
-				});
+				}
 			</script>
 		</#if>
     <#elseif section = "info" >
