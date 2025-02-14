@@ -20,6 +20,9 @@ mvn -f some_module/pom.xml compile quarkus:dev
 Works great:)
 https://github.com/keycloak/keycloak/discussions/11841
 
+If problems occur, check that quarkus-maven-plugin is in sync with keycloaks quarkus version.
+Maven does not support builtin import of properties beside inheritance.
+
 ## Building
 
 1. Clone this repository
