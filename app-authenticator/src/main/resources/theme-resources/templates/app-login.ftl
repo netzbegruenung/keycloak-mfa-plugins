@@ -37,7 +37,7 @@
 					}
 
 					scheduleRetry() {
-						setTimeout(() => this.preflightAndConnect(), this.retryInterval);
+						setTimeout(() => this.connectSSE(), this.retryInterval);
 					}
 
 					// Abort the connection and prevent further retries
@@ -48,7 +48,7 @@
 					}
 				}
 
-				const sse = new ResilientSSE('${appAuthStatusUrl?no_esc}', 5000);
+				const sse = new ResilientSSE('${appAuthStatusUrl?no_esc}', 2000);
 			</script>
 		</#if>
     <#elseif section = "info" >
