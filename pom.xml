@@ -7,7 +7,7 @@
 	<groupId>netzbegruenung</groupId>
 	<artifactId>keycloak-mfa-tools</artifactId>
 	<packaging>pom</packaging>
-	<version>26.1.5</version>
+	<version>26.1.6</version>
 
 	<modules>
 		<module>sms-authenticator</module>
