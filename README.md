@@ -42,7 +42,13 @@ https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-f
 
 1. Update project and submodules version `mvn versions:set -DnewVersion=1.2.3; mvn versions:commit`
 1. Commit your changes
-1. Add tag to your commit `git tag -a v1.2.3 -m "Bump version 1.2.3"`
+1. Add tag to your commit (removes all ANSI escape codes from maven output)
+```shell
+VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout \
+  | awk '{gsub(/\x1b\[[0-9;]*[mK]/,""); print}' \
+  | tr -d '\r')
+git tag -a "v$VERSION" -m "Bump version $VERSION"
+```
 1. Trigger the release by `git push --tags`
 
 After building completes the new release is available on github containing the jar files for each module.
