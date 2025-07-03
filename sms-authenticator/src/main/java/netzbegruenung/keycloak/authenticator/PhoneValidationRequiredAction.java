@@ -80,7 +80,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 			Response challenge = context.form()
 				.setAttribute("realm", realm)
-				.createForm("login-sms.ftl");
+				.createForm(SmsAuthenticator.TPL_CODE);
 			context.challenge(challenge);
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
@@ -141,7 +141,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 			.form()
 			.setAttribute("realm", context.getRealm())
 			.setError("smsAuthCodeInvalid")
-			.createForm("login-sms.ftl");
+			.createForm(SmsAuthenticator.TPL_CODE);
 		context.challenge(challenge);
 	}
 
