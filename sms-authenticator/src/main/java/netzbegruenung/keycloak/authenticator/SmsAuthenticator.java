@@ -55,7 +55,7 @@ import java.util.List;
 public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsAuthCredentialProvider> {
 
 	private static final Logger logger = Logger.getLogger(SmsAuthenticator.class);
-	private static final String TPL_CODE = "login-sms.ftl";
+	static final String TPL_CODE = "login-sms.ftl";
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
