@@ -71,4 +71,10 @@
 			newDataType="TEXT" />
 	</changeSet>
 
+	<changeSet id="app-auth-challenge-26.3.2" author="giuliano.mele@verdigado.com">
+	    <addColumn tableName="APP_AUTH_CHALLENGE">
+	        <column name="LOGIN_ID" type="VARCHAR(255)"/>
+	    </addColumn>
+	</changeSet>
+
 </databaseChangeLog>

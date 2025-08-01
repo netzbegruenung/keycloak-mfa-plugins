@@ -194,6 +194,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 		challenge.setUpdatedTimestamp(Time.currentTimeMillis());
 		challenge.setClient(client);
 		challenge.setExpiresAt(expiresAt);
+		challenge.setLoginId(context.getAuthenticationSession().getClientNote("client_request_param_login_id"));
 
 		em.persist(challenge);
 		em.flush();

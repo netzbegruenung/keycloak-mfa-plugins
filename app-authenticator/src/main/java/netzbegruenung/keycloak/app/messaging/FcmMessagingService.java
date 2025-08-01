@@ -7,7 +7,6 @@ import com.google.firebase.messaging.Message;
 import netzbegruenung.keycloak.app.dto.ChallengeDto;
 import org.jboss.logging.Logger;
 
-import java.net.URI;
 import java.util.Map;
 
 public class FcmMessagingService implements MessagingService {
@@ -18,7 +17,7 @@ public class FcmMessagingService implements MessagingService {
 
 	public void send(String devicePushId, ChallengeDto challenge) {
 		if (devicePushId == null) {
-			logger.infof("Skip sending firebase notification: missing device push ID user [%s]", challenge.getUserName());
+			logger.infof("Skip sending firebase notification: missing device push ID user [%s]", challenge.userName());
 			return;
 		}
 		Map<String, String> challengeMap = objectMapper.convertValue(challenge, Map.class);

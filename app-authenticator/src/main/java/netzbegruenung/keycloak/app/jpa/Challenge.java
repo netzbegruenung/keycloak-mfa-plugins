@@ -71,6 +71,9 @@ public class Challenge {
 	@Column(name = "expires_at", nullable = false)
 	private Long expiresAt;
 
+	@Column(name = "login_id")
+	private String loginId;
+
 	public UUID getId() {
 		return id;
 	}
@@ -177,5 +180,13 @@ public class Challenge {
 
 	public void setExpiresAt(Long expiresAt) {
 		this.expiresAt = expiresAt;
+	}
+
+	public String getLoginId() {
+	    return loginId;
+	}
+
+	public void setLoginId(String loginId) {
+	    this.loginId = loginId;
 	}
 }
