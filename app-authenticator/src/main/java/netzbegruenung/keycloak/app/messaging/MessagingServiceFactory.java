@@ -13,10 +13,10 @@ public class MessagingServiceFactory {
 			return (devicePushId, challengeDto) ->
 				logger.infov(
 					"Simulation mode - send authentication request: action Url {0}, challenge {1}, device push ID {2}, user {3}",
-					challengeDto.getTargetUrl(),
-					challengeDto.getCodeChallenge(),
+					challengeDto.targetUrl(),
+					challengeDto.codeChallenge(),
 					devicePushId,
-					challengeDto.getUserName()
+					challengeDto.userName()
 				);
 		} else {
 			return new FcmMessagingService();
