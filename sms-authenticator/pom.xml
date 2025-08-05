@@ -59,7 +59,7 @@
 				<groupId>io.quarkus</groupId>
 				<artifactId>quarkus-maven-plugin</artifactId>
 				<configuration>
-					<argsString>start-dev --db-url jdbc:h2:file:${project.parent.basedir}/h2db/sms;AUTO_SERVER=TRUE;NON_KEYWORDS=VALUE</argsString>
+					<argsString>start-dev --cache=local --db-url jdbc:h2:file:${project.parent.basedir}/h2db/sms;AUTO_SERVER=TRUE;NON_KEYWORDS=VALUE</argsString>
 				</configuration>
 			</plugin>
 			<plugin>
