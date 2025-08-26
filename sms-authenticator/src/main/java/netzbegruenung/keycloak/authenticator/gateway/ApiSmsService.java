@@ -32,6 +32,7 @@ import java.util.Base64;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 public class ApiSmsService implements SmsService{
@@ -42,6 +43,7 @@ public class ApiSmsService implements SmsService{
 	private final String apiurl;
 	private final Boolean urlencode;
 
+	private final Boolean apiTokenInHeader;
 	private final String apitoken;
 	private final String apiuser;
 
@@ -53,6 +55,10 @@ public class ApiSmsService implements SmsService{
 	private final String receiverattribute;
 	private final String receiverJsonTemplate;
 	private final String senderattribute;
+	private final Boolean useUuid;
+	private final String uuidAttribute;
+
+	private final String jsonTemplate;
 
 	private final boolean hideResponsePayload;
 
@@ -60,6 +66,7 @@ public class ApiSmsService implements SmsService{
 		apiurl = config.get("apiurl");
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
 
+		apiTokenInHeader = Boolean.parseBoolean(config.getOrDefault("apiTokenInHeader", "false"));
 		apitoken = config.getOrDefault("apitoken", "");
 		apiuser = config.getOrDefault("apiuser", "");
 
@@ -71,6 +78,10 @@ public class ApiSmsService implements SmsService{
 		receiverattribute = config.get("receiverattribute");
 		receiverJsonTemplate = config.getOrDefault("receiverJsonTemplate", "\"%s\"");
 		senderattribute = config.get("senderattribute");
+		useUuid = Boolean.parseBoolean(config.getOrDefault("useUuid", "false"));
+		uuidAttribute = config.getOrDefault("uuidAttribute", "");
+
+		jsonTemplate = config.getOrDefault("jsonTemplate", "");
 
 		hideResponsePayload = Boolean.parseBoolean(config.get("hideResponsePayload"));
 	}
@@ -86,7 +97,10 @@ public class ApiSmsService implements SmsService{
 			} else {
 				request_builder = json_request(phoneNumber, message);
 			}
-			if (apiuser != null && !apiuser.isEmpty()) {
+
+			if (apiTokenInHeader) {
+				request = request_builder.setHeader("Authorization", apitoken).build();
+			}else if (apiuser != null && !apiuser.isEmpty()) {
 				request = request_builder.setHeader("Authorization", get_auth_header(apiuser, apitoken)).build();
 			} else {
 				request = request_builder.build();
@@ -107,22 +121,31 @@ public class ApiSmsService implements SmsService{
 	}
 
 	public Builder json_request(String phoneNumber, String message) {
-		String sendJson = "{"
-						  + Optional.ofNullable(apitokenattribute).map(it -> String.format("\"%s\":\"%s\",", it, apitoken)).orElse("")
+		String sendJson = jsonTemplate.isBlank() ? "{"
+						  + (apiTokenInHeader ? "" : Optional.ofNullable(apitokenattribute).map(it -> String.format("\"%s\":\"%s\",", it, apitoken)).orElse(""))
+						  + (useUuid ? String.format("\"%s\":\"%s\",", uuidAttribute, UUID.randomUUID()) : "")
 						  + String.format("\"%s\":\"%s\",", messageattribute, message)
 						  + String.format("\"%s\":%s,", receiverattribute, String.format(receiverJsonTemplate, phoneNumber))
 						  + String.format("\"%s\":\"%s\"", senderattribute, senderId)
-						  + "}";
+						  + "}"
+			: json_body_from_template(phoneNumber, message);
 
-		 return HttpRequest.newBuilder()
+		return HttpRequest.newBuilder()
 			.uri(URI.create(apiurl))
 			.header("Content-Type", "application/json")
 			.POST(HttpRequest.BodyPublishers.ofString(sendJson));
 	}
 
+	private String json_body_from_template(String phoneNumber, String message){
+		return useUuid ?
+			String.format(jsonTemplate, UUID.randomUUID(), phoneNumber, message) :
+			String.format(jsonTemplate, phoneNumber, message);
+	}
+
 	public Builder urlencoded_request(String phoneNumber, String message) {
-		String body = Optional.ofNullable(apitokenattribute)
-						  .map(it -> String.format("%s=%s&", it, URLEncoder.encode(apitoken, Charset.defaultCharset()))).orElse("")
+		String body = (apiTokenInHeader ? "" : Optional.ofNullable(apitokenattribute)
+						  .map(it -> String.format("%s=%s&", it, URLEncoder.encode(apitoken, Charset.defaultCharset()))).orElse(""))
+					  + (useUuid ? String.format("%s=%s&", uuidAttribute, URLEncoder.encode(UUID.randomUUID().toString(), Charset.defaultCharset())) : "")
 					  + String.format("%s=%s&", messageattribute, URLEncoder.encode(message, Charset.defaultCharset()))
 					  + String.format("%s=%s&", receiverattribute, URLEncoder.encode(phoneNumber, Charset.defaultCharset()))
 					  + String.format("%s=%s", senderattribute, URLEncoder.encode(senderId, Charset.defaultCharset()));
