@@ -26,6 +26,7 @@ from the original authenticator provider [documentation](https://www.keycloak.or
 1. Go into the config of the execution and configure the plugin so that it works with the API of your SMS proivder HTTP API. The data is always sent in a HTTP POST request. Refer to the API documentation of your provider to choose the correct configuration values. The details of the request can be configured with the following configuration options:
    1. `SMS API URL`: the URL to which the HTTP POST request should be sent.
    1. `URL encode data`: When off, the data will be sent as an `application/json` body. When on, the data will be encoded as URL parameters.
+   1. `Put API Secret Token in Authorization Header`: If set, API Secret will be sent as Authorization Header, 'API Secret Token Attribute' and 'Basic Auth Username' will be ignored.
    1. `API Secret Token Attribute (optional)`: Name of attribute that contains your API token/secret. In some APIs the secret is already configured in the path. In this case, this can be left empty.
    1. `API Secret (optional)`: Your API secret. If a Basic Auth user is set, this will be the Basic Auth password. If `API Secret Token Attribute` is set, this secret will be sent as the value to the given attribute name.
    1. `Basic Auth Username (optional)`: If set, Basic Auth will be performed. Leave empty if not required.
@@ -33,6 +34,9 @@ from the original authenticator provider [documentation](https://www.keycloak.or
    1. `Receiver Phone Number Attribute`: The attribute that contains the receiver phone number. For many APIs (i.e. GTX Messaging, SMS Eagle) this is `to`.
    1. `Sender Phone Number Attribute`: The attribute that contains the sender phone number. Leave empty if not required.
    1. `SenderId`: The sender ID is displayed as the message sender on the receiving device. This is the value for the `Sender Phone Number Attribute`.
+   1. `Use message UUID`: If your API requires UUID for a message, you can generate it with this property.
+   2. `UUID attribute`: The attribute that contains the generated UUID. Only aplicable when `Use message UUID` is set.
+   3. `Request JSON template`: If default JSON template is not enough for your needs, put your custom template here. UUID (if 'Use message UUID' is set), phone number and message (in that order) use placeholders `%s`.
 1. Go to `/admin/master/console/#/realm/authentication/required-actions` and enable required actions "Phone Validation" and "Update Mobile Number"
 
 # Usage
