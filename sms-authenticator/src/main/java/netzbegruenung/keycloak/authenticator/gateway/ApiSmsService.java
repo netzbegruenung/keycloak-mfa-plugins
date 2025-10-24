@@ -87,23 +87,25 @@ public class ApiSmsService implements SmsService{
 	}
 
 	public void send(String phoneNumber, String message) {
-		phoneNumber = clean_phone_number(phoneNumber, countrycode);
-		Builder request_builder;
+		phoneNumber = cleanPhoneNumber(phoneNumber, countrycode);
+		Builder requestBuilder;
 		HttpRequest request = null;
+		String requestPayload = null;
 		var client = HttpClient.newHttpClient();
 		try {
 			if (urlencode) {
-				request_builder = urlencoded_request(phoneNumber, message);
+				requestBuilder = urlencodedRequest(phoneNumber, message);
 			} else {
-				request_builder = json_request(phoneNumber, message);
+				requestPayload = getJsonBody(phoneNumber, message);
+				requestBuilder = jsonRequest(requestPayload);
 			}
 
 			if (apiTokenInHeader) {
-				request = request_builder.setHeader("Authorization", apitoken).build();
+				request = requestBuilder.setHeader("Authorization", apitoken).build();
 			}else if (apiuser != null && !apiuser.isEmpty()) {
-				request = request_builder.setHeader("Authorization", get_auth_header(apiuser, apitoken)).build();
+				request = requestBuilder.setHeader("Authorization", getAuthHeader(apiuser, apitoken)).build();
 			} else {
-				request = request_builder.build();
+				request = requestBuilder.build();
 			}
 			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -113,36 +115,77 @@ public class ApiSmsService implements SmsService{
 			if (statusCode >= 200 && statusCode < 300) {
 				logger.infof("Sent SMS to %s [%s]", phoneNumber, payload);
 			} else {
-				logger.errorf("Failed to send message to %s [%s]. Validate your config.", phoneNumber, payload);
+				logErrorStatus(phoneNumber, payload, request, requestPayload, statusCode);
 			}
 		} catch (Exception e) {
-			logger.errorf(e, "Failed to send message to %s with request: %s. Validate your config.", phoneNumber, request != null ? request.toString() : "null");
+			logErrorException(phoneNumber, request, requestPayload);
 		}
 	}
 
-	public Builder json_request(String phoneNumber, String message) {
-		String sendJson = jsonTemplate.isBlank() ? "{"
-						  + (apiTokenInHeader ? "" : Optional.ofNullable(apitokenattribute).map(it -> String.format("\"%s\":\"%s\",", it, apitoken)).orElse(""))
-						  + (useUuid ? String.format("\"%s\":\"%s\",", uuidAttribute, UUID.randomUUID()) : "")
-						  + String.format("\"%s\":\"%s\",", messageattribute, message)
-						  + String.format("\"%s\":%s,", receiverattribute, String.format(receiverJsonTemplate, phoneNumber))
-						  + String.format("\"%s\":\"%s\"", senderattribute, senderId)
-						  + "}"
-			: json_body_from_template(phoneNumber, message);
+	private void logErrorStatus(String phoneNumber, String responsePayload, HttpRequest request, String requestPayload, int statusCode) {
+		String logMessage = "Failed to send message to %s [%s] with request: %s [Status: %s]";
+		Object[] logParams = new Object[]{phoneNumber, responsePayload, request != null ? request.toString() : "null", statusCode};
 
+		if (!urlencode && requestPayload != null) {
+			logMessage += ". Payload: %s";
+			logParams = new Object[]{phoneNumber, responsePayload, request != null ? request.toString() : "null", statusCode, requestPayload};
+		}
+		logMessage += ". Validate your config.";
+		logger.errorf(logMessage, logParams);
+	}
+
+	private void logErrorException(String phoneNumber, HttpRequest request, String requestPayload) {
+		String logMessage = "Failed to send message to %s with request: %s";
+		Object[] logParams = new Object[]{phoneNumber, request != null ? request.toString() : "null"};
+
+		if (!urlencode && requestPayload != null) {
+			logMessage += ". Payload: %s";
+			logParams = new Object[]{phoneNumber, request != null ? request.toString() : "null", requestPayload};
+		}
+		logMessage += ". Validate your config.";
+		logger.errorf(logMessage, logParams);
+	}
+
+	private String getJsonBody(String phoneNumber, String message) {
+		if (!jsonTemplate.isBlank()) {
+			return useUuid ?
+				String.format(jsonTemplate, UUID.randomUUID(), phoneNumber, message) :
+				String.format(jsonTemplate, phoneNumber, message);
+		}
+
+		StringBuilder json = new StringBuilder("{");
+		boolean firstField = true;
+
+		if (!apiTokenInHeader && apitokenattribute != null && !apitokenattribute.isEmpty()) {
+			json.append(String.format("\"%s\":\"%s\"", apitokenattribute, apitoken));
+			firstField = false;
+		}
+
+		if (useUuid) {
+			if (!firstField) json.append(",");
+			json.append(String.format("\"%s\":\"%s\"", uuidAttribute, UUID.randomUUID()));
+			firstField = false;
+		}
+
+		if (!firstField) json.append(",");
+		json.append(String.format("\"%s\":\"%s\"", messageattribute, message));
+
+		json.append(",").append(String.format("\"%s\":%s", receiverattribute, String.format(receiverJsonTemplate, phoneNumber)));
+		json.append(",").append(String.format("\"%s\":\"%s\"", senderattribute, senderId));
+		json.append("}");
+
+		return json.toString();
+	}
+
+	public Builder jsonRequest(String sendJson) {
 		return HttpRequest.newBuilder()
 			.uri(URI.create(apiurl))
 			.header("Content-Type", "application/json")
 			.POST(HttpRequest.BodyPublishers.ofString(sendJson));
 	}
 
-	private String json_body_from_template(String phoneNumber, String message){
-		return useUuid ?
-			String.format(jsonTemplate, UUID.randomUUID(), phoneNumber, message) :
-			String.format(jsonTemplate, phoneNumber, message);
-	}
 
-	public Builder urlencoded_request(String phoneNumber, String message) {
+	public Builder urlencodedRequest(String phoneNumber, String message) {
 		String body = (apiTokenInHeader ? "" : Optional.ofNullable(apitokenattribute)
 						  .map(it -> String.format("%s=%s&", it, URLEncoder.encode(apitoken, Charset.defaultCharset()))).orElse(""))
 					  + (useUuid ? String.format("%s=%s&", uuidAttribute, URLEncoder.encode(UUID.randomUUID().toString(), Charset.defaultCharset())) : "")
@@ -156,13 +199,13 @@ public class ApiSmsService implements SmsService{
 				.POST(HttpRequest.BodyPublishers.ofString(body));
 	}
 
-	private static String get_auth_header(String apiuser, String apitoken) {
+	private static String getAuthHeader(String apiuser, String apitoken) {
 		String authString = apiuser + ':' + apitoken;
 		String b64_cred = Base64.getEncoder().encodeToString(authString.getBytes());
 		return "Basic " + b64_cred;
 	}
 
-	private static String clean_phone_number(String phone_number, String countrycode) {
+	private static String cleanPhoneNumber(String phone_number, String countrycode) {
 		/*
 		 * This function tries to correct several common user errors. If there is no default country
 		 * prefix, this function does not dare to touch the phone number.
