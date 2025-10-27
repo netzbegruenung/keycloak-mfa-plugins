@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Download math result for job 2
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: packages
           path: staging
