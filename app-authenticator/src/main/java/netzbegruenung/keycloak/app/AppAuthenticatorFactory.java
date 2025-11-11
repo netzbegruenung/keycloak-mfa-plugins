@@ -70,7 +70,14 @@ public class AppAuthenticatorFactory implements AuthenticatorFactory {
 			ProviderConfigProperty.STRING_TYPE,
 			60
 		);
-		return Arrays.asList(simulationMode, appAuthActionTokenExpiration);
+		ProviderConfigProperty fcmServiceAccountFile = new ProviderConfigProperty(
+			"fcmServiceAccountFile",
+			"FCM Service Account File",
+			"Path to the Firebase Cloud Messaging service account JSON file.",
+			ProviderConfigProperty.FILE_TYPE,
+			""
+		);
+		return Arrays.asList(simulationMode, appAuthActionTokenExpiration, fcmServiceAccountFile);
 	}
 
 	@Override
