@@ -135,7 +135,11 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 				logger.infov("App authentication signature string\n\n{0}\n", AuthenticationUtil.getSignatureString(signatureStringMap));
 			}
 
-			MessagingServiceFactory.get(authConfig).send(appCredentialData.getDevicePushId(), ChallengeConverter.getChallengeDto(challenge, context.getSession()));
+			MessagingServiceFactory.get(authConfig).send(
+				appCredentialData.getDevicePushId(),
+				ChallengeConverter.getChallengeDto(challenge, context.getSession()),
+				context.getSession()
+			);
 
 			Response response = context.form()
 				.setAttribute("appAuthStatusUrl", String.format(
