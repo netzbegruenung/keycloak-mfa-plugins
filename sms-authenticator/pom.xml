@@ -23,13 +23,6 @@
 			<artifactId>libphonenumber</artifactId>
 			<version>9.0.17</version>
 		</dependency>
-		<!-- Necessary for proper execution of IDELauncher -->
-		<!-- Can be removed as part of the https://github.com/keycloak/keycloak/issues/22455 enhancement -->
-		<dependency>
-			<groupId>io.quarkus</groupId>
-			<artifactId>quarkus-vertx-http-dev-ui-resources</artifactId>
-			<scope>provided</scope>
-		</dependency>
 		<!-- this dependency is necessary to start the IDELauncher -->
 		<dependency>
 			<groupId>com.oracle.database.jdbc</groupId>
@@ -60,6 +53,9 @@
 				<artifactId>quarkus-maven-plugin</artifactId>
 				<configuration>
 					<argsString>start-dev --cache=local --db-url jdbc:h2:file:${project.parent.basedir}/h2db/sms;AUTO_SERVER=TRUE;NON_KEYWORDS=VALUE;USER=sa;PASSWORD=password</argsString>
+					<systemProperties>
+						<kc.config.built>true</kc.config.built>
+					</systemProperties>
 				</configuration>
 			</plugin>
 			<plugin>
