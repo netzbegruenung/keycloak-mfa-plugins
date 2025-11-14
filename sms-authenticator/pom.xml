@@ -15,25 +15,38 @@
     <dependencies>
 		<dependency>
 			<groupId>org.keycloak</groupId>
-			<artifactId>keycloak-quarkus-server-app</artifactId>
+			<artifactId>keycloak-core</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak</groupId>
+			<artifactId>keycloak-server-spi</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak</groupId>
+			<artifactId>keycloak-server-spi-private</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak</groupId>
+			<artifactId>keycloak-services</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.logging</groupId>
+			<artifactId>jboss-logging</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.ws.rs</groupId>
+			<artifactId>jakarta.ws.rs-api</artifactId>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.googlecode.libphonenumber</groupId>
 			<artifactId>libphonenumber</artifactId>
 			<version>9.0.17</version>
-		</dependency>
-		<!-- this dependency is necessary to start the IDELauncher -->
-		<dependency>
-			<groupId>com.oracle.database.jdbc</groupId>
-			<artifactId>ojdbc11</artifactId>
-			<scope>provided</scope>
-		</dependency>
-		<!-- https://github.com/keycloak/keycloak/issues/34549 -->
-		<dependency>
-			<groupId>io.mvnpm</groupId>
-			<artifactId>importmap</artifactId>
-			<scope>provided</scope>
 		</dependency>
     </dependencies>
 
@@ -48,16 +61,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
             </plugin>
-			<plugin>
-				<groupId>io.quarkus</groupId>
-				<artifactId>quarkus-maven-plugin</artifactId>
-				<configuration>
-					<argsString>start-dev --cache=local --db-url jdbc:h2:file:${project.parent.basedir}/h2db/sms;AUTO_SERVER=TRUE;NON_KEYWORDS=VALUE;USER=sa;PASSWORD=password</argsString>
-					<systemProperties>
-						<kc.config.built>true</kc.config.built>
-					</systemProperties>
-				</configuration>
-			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
