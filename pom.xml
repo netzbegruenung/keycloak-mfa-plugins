@@ -13,6 +13,7 @@
 		<module>sms-authenticator</module>
         <module>app-authenticator</module>
 		<module>enforce-mfa</module>
+		<module>mfa-dev-runner</module>
 	</modules>
 
 	<properties>
@@ -28,7 +29,6 @@
 
 	<dependencyManagement>
 		<dependencies>
-
 			<dependency>
 				<groupId>org.keycloak</groupId>
 				<artifactId>keycloak-dependencies-server-all</artifactId>
@@ -36,26 +36,12 @@
 				<scope>import</scope>
 				<type>pom</type>
 			</dependency>
-
-			<dependency>
-				<groupId>org.keycloak</groupId>
-				<artifactId>keycloak-quarkus-server-app</artifactId>
-				<version>${keycloak.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>io.quarkus</groupId>
-				<artifactId>quarkus-vertx-http-dev-ui-resources</artifactId>
-				<version>${quarkus.version}</version>
-			</dependency>
-
 		</dependencies>
 	</dependencyManagement>
 
 	<build>
 		<pluginManagement>
 			<plugins>
-
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
@@ -78,23 +64,8 @@
 					<groupId>io.quarkus</groupId>
 					<artifactId>quarkus-maven-plugin</artifactId>
 					<version>${quarkus.version}</version>
-					<executions>
-						<execution>
-							<goals>
-								<goal>build</goal>
-							</goals>
-						</execution>
-					</executions>
-					<configuration>
-						<systemProperties>
-							<java.util.concurrent.ForkJoinPool.common.threadFactory>
-								io.quarkus.bootstrap.forkjoin.QuarkusForkJoinWorkerThreadFactory
-							</java.util.concurrent.ForkJoinPool.common.threadFactory>
-						</systemProperties>
-					</configuration>
 				</plugin>
 			</plugins>
 		</pluginManagement>
 	</build>
-
 </project>
