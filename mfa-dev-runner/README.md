@@ -34,4 +34,3 @@ This will launch a Keycloak instance with the authenticators from the other modu
 The `pom.xml` in this module contains the configuration for the `quarkus-maven-plugin`. The arguments for starting the Keycloak development server are configured within the `<argsString>` tag, which includes settings for the database connection.
 
 For more details on how Keycloak runs as a Quarkus extension, you can refer to the [Keycloak developer documentation](https://github.com/keycloak/keycloak/blob/main/quarkus/CONTRIBUTING.md).
-
