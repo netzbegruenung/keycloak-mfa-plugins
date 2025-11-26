@@ -20,9 +20,10 @@ from the original authenticator provider [documentation](https://www.keycloak.or
    ```
 
 # Setup
+1. Go to `/admin/master/console/#/realm/authentication/required-actions` and enable required actions "Phone Validation" and "Update Mobile Number"
 1. Navigate to your Authentication flow configuration: https://keycloak.example.com/admin/master/console/#/YOUR-REALM/authentication. Then edit the `Browser flow`.
 1. Add a new step next to the `OTP Form` step. Choose the `SMS Authentication (2FA)` authenticator and set it to `Alternative`.
-1. Make sure that you name it `sms-2fa`. This is currently a hack that will hopefully be fixed. Additional executions with other names can be added. But this first execution will be used for the confirmation SMS when setting up a new phone number.
+1. Make sure that you name the Alias `sms-2fa`. This is currently a hack that will hopefully be fixed. Additional executions with other names can be added. But this first execution will be used for the confirmation SMS when setting up a new phone number.
 1. Go into the config of the execution and configure the plugin so that it works with the API of your SMS proivder HTTP API. The data is always sent in a HTTP POST request. Refer to the API documentation of your provider to choose the correct configuration values. The details of the request can be configured with the following configuration options:
    1. `SMS API URL`: the URL to which the HTTP POST request should be sent.
    1. `URL encode data`: When off, the data will be sent as an `application/json` body. When on, the data will be encoded as URL parameters.
@@ -37,7 +38,6 @@ from the original authenticator provider [documentation](https://www.keycloak.or
    1. `Use message UUID`: If your API requires UUID for a message, you can generate it with this property.
    2. `UUID attribute`: The attribute that contains the generated UUID. Only aplicable when `Use message UUID` is set.
    3. `Request JSON template`: If default JSON template is not enough for your needs, put your custom template here. UUID (if 'Use message UUID' is set), phone number and message (in that order) use placeholders `%s`.
-1. Go to `/admin/master/console/#/realm/authentication/required-actions` and enable required actions "Phone Validation" and "Update Mobile Number"
 
 # Usage
 After successfully configured the authenticator and the required actions users can set up SMS Authentication in the
