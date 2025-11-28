@@ -187,8 +187,8 @@ The signature token is not used for authentication here but rather for a **consi
 
 The field `loginId` is a unique identifier (random string) for the login attempt\. It is used to identify the login attempt when replying to the challenge\.
 
-To include `loginId` in the challenge response, set the `login_id` query parameter in the request to the OIDC Authorization endpoint\.
-See [AuthorizationEndpoint.java#L82](https://github.com/keycloak/keycloak/blob/31495ec7b930032418298971e1ed5d0977a99eec/services/src/main/java/org/keycloak/protocol/oidc/endpoints/AuthorizationEndpoint.java#L82) for implementation details\.
+To receive the `loginId` in the challenge response, you must provide a `login_id` query parameter in the initial OIDC authorization request.
+This allows you to correlate a login attempt on the client side with the challenge from the server.
 
 **Example request:**
 ```
