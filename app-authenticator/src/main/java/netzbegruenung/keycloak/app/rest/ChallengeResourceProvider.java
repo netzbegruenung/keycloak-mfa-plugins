@@ -1,7 +1,5 @@
 package netzbegruenung.keycloak.app.rest;
 
-import static org.keycloak.models.utils.KeycloakModelUtils.runJobInTransaction;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.NonUniqueResultException;
@@ -9,10 +7,7 @@ import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HeaderParam;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.container.AsyncResponse;
 import jakarta.ws.rs.container.Suspended;
 import jakarta.ws.rs.core.GenericType;
@@ -22,6 +17,7 @@ import netzbegruenung.keycloak.app.AuthenticationUtil;
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
 import netzbegruenung.keycloak.app.dto.ChallengeConverter;
 import netzbegruenung.keycloak.app.dto.ChallengeDto;
+import netzbegruenung.keycloak.app.dto.TokenDto;
 import netzbegruenung.keycloak.app.jpa.Challenge;
 import org.jboss.logging.Logger;
 import org.keycloak.common.util.Base64;
@@ -38,6 +34,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
+
+import static org.keycloak.models.utils.KeycloakModelUtils.runJobInTransaction;
 
 public class ChallengeResourceProvider implements RealmResourceProvider {
 
@@ -96,53 +94,13 @@ public class ChallengeResourceProvider implements RealmResourceProvider {
 				.build();
 		}
 
-		String deviceId = signatureMap.get("keyId");
-
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<CredentialEntity> criteria = cb.createQuery(CredentialEntity.class);
-		Root<CredentialEntity> root = criteria.from(CredentialEntity.class);
-		criteria.where(
-			cb.equal(root.get("type"), AppCredentialModel.TYPE),
-			cb.like(root.get("credentialData"), String.format("%%\"deviceId\":\"%s\"%%", deviceId))
-		);
-
-		TypedQuery<CredentialEntity> criteriaQuery = em.createQuery(criteria);
-		CredentialEntity credentialEntity;
-
 		try {
-			credentialEntity = criteriaQuery.getSingleResult();
-		} catch (NoResultException e) {
-			return Response
-				.status(Response.Status.CONFLICT)
-				.entity(new Message(NO_CREDENTIAL, "App credential does not exist"))
-				.build();
-		} catch (NonUniqueResultException e) {
-			logger.error("Failed to get app credentials: duplicate credentials detected for device ID: " + deviceId, e);
-			return Response
-				.status(Response.Status.INTERNAL_SERVER_ERROR)
-				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
-				.build();
+			getVerifiedCredentialContainer(signatureMap);
+		} catch (VerificationErrorResponseException e) {
+			return e.getResponse();
 		}
 
-		AppCredentialModel appCredential = AppCredentialModel.createFromCredentialModel(toModel(credentialEntity));
-		UserModel user = session.users().getUserById(session.getContext().getRealm(), credentialEntity.getUser().getId());
-
-		Map<String, String> signatureStringMap = new LinkedHashMap<>();
-		signatureStringMap.put("created", signatureMap.get("created"));
-
-		boolean verified = AuthenticationUtil.verifyChallenge(
-			user,
-			appCredential.getAppCredentialData(),
-			AuthenticationUtil.getSignatureString(signatureStringMap),
-			signatureMap.get("signature")
-		);
-
-		if (!verified) {
-			return Response
-				.status(Response.Status.FORBIDDEN)
-				.entity(new Message(CHALLENGE_REJECTED, "Invalid signature"))
-				.build();
-		}
+		String deviceId = signatureMap.get("keyId");
 
 		TypedQuery<Challenge> query = em.createNamedQuery("Challenge.findByRealmAndDeviceId", Challenge.class);
 		RealmEntity realm = em.getReference(RealmEntity.class, session.getContext().getRealm().getId());
@@ -187,7 +145,20 @@ public class ChallengeResourceProvider implements RealmResourceProvider {
 			.build();
 	}
 
-	CredentialModel toModel(CredentialEntity entity) {
+	private CredentialEntity getCredentialEntityByDeviceId(String deviceId) {
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<CredentialEntity> criteria = cb.createQuery(CredentialEntity.class);
+		Root<CredentialEntity> root = criteria.from(CredentialEntity.class);
+		criteria.where(
+			cb.equal(root.get("type"), AppCredentialModel.TYPE),
+			cb.like(root.get("credentialData"), String.format("%%\"deviceId\":\"%s\"%%", deviceId))
+		);
+
+		TypedQuery<CredentialEntity> criteriaQuery = em.createQuery(criteria);
+		return criteriaQuery.getSingleResult();
+	}
+
+	private CredentialModel toModel(CredentialEntity entity) {
 		CredentialModel model = new CredentialModel();
 		model.setId(entity.getId());
 		model.setType(entity.getType());
@@ -266,6 +237,109 @@ public class ChallengeResourceProvider implements RealmResourceProvider {
 					);
 				});
 			}
+		}
+	}
+
+	@PUT
+	@Path("registration-token")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response updateRegistrationToken(@HeaderParam("Signature") List<String> signatureHeader, TokenDto tokenDto) {
+		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(signatureHeader);
+		if (signatureMap == null) {
+			return Response
+				.status(Response.Status.BAD_REQUEST)
+				.entity(new Message("invalid_request", "Missing, incomplete or invalid signature header"))
+				.build();
+		}
+
+		String deviceId = signatureMap.get("keyId");
+		if (tokenDto == null || tokenDto.token() == null || tokenDto.token().isBlank()) {
+			return Response
+				.status(Response.Status.BAD_REQUEST)
+				.entity(new Message("invalid_request", "Missing token in request body"))
+				.build();
+		}
+
+		try {
+			VerifiedCredentialContainer verifiedCredentialContainer;
+			try {
+				verifiedCredentialContainer = getVerifiedCredentialContainer(signatureMap);
+			} catch (VerificationErrorResponseException e) {
+				return e.getResponse();
+			}
+
+			// Update the push token
+			AppCredentialModel appCredential = verifiedCredentialContainer.appCredential();
+			appCredential.updateDevicePushId(tokenDto.token());
+			UserModel user = verifiedCredentialContainer.user();
+			user.credentialManager().updateStoredCredential(appCredential);
+
+			return Response.noContent().build();
+
+		} catch (Exception e) {
+			logger.error("Failed to update registration token for device ID: " + deviceId, e);
+			return Response
+				.status(Response.Status.INTERNAL_SERVER_ERROR)
+				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
+				.build();
+		}
+	}
+
+	private VerifiedCredentialContainer getVerifiedCredentialContainer(Map<String, String> signatureMap) throws VerificationErrorResponseException {
+		String deviceId = signatureMap.get("keyId");
+
+		CredentialEntity credentialEntity;
+		try {
+			credentialEntity = getCredentialEntityByDeviceId(deviceId);
+		} catch (NoResultException e) {
+			throw new VerificationErrorResponseException(Response
+				.status(Response.Status.CONFLICT)
+				.entity(new Message(NO_CREDENTIAL, "App credential does not exist"))
+				.build());
+		} catch (NonUniqueResultException e) {
+			logger.error("Failed to get app credentials: duplicate credentials detected for device ID: " + deviceId, e);
+			throw new VerificationErrorResponseException(Response
+				.status(Response.Status.INTERNAL_SERVER_ERROR)
+				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
+				.build());
+		}
+
+		CredentialModel credential = toModel(credentialEntity);
+		AppCredentialModel appCredential = AppCredentialModel.createFromCredentialModel(credential);
+		UserModel user = session.users().getUserById(session.getContext().getRealm(), credentialEntity.getUser().getId());
+
+		Map<String, String> signatureStringMap = new LinkedHashMap<>();
+		signatureStringMap.put("created", signatureMap.get("created"));
+
+		boolean verified = AuthenticationUtil.verifyChallenge(
+			user,
+			appCredential.getAppCredentialData(),
+			AuthenticationUtil.getSignatureString(signatureStringMap),
+			signatureMap.get("signature")
+		);
+
+		if (!verified) {
+			throw new VerificationErrorResponseException(Response
+				.status(Response.Status.FORBIDDEN)
+				.entity(new Message(CHALLENGE_REJECTED, "Invalid signature"))
+				.build());
+		}
+		return new VerifiedCredentialContainer(user, credential, appCredential);
+	}
+
+	private record VerifiedCredentialContainer(UserModel user, CredentialModel credential, AppCredentialModel appCredential) {
+	}
+
+	private static class VerificationErrorResponseException extends Exception {
+		private final Response response;
+
+		public VerificationErrorResponseException(Response response) {
+			this.response = response;
+		}
+
+		public Response getResponse() {
+			return response;
 		}
 	}
 }
