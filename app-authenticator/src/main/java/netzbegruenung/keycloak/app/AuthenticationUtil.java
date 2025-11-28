@@ -26,7 +26,13 @@ public class AuthenticationUtil {
 		}
 
 		String signatureHeader = signatureHeaders.get(0);
-		Map<String, String> signatureMap = signatureMapSplitter.split(signatureHeader);
+		Map<String, String> signatureMap;
+		try {
+			signatureMap = signatureMapSplitter.split(signatureHeader);
+		} catch (IllegalArgumentException e) {
+			logger.warnf(e, "Failed to parse signature header: [%s]", signatureHeader);
+			return null;
+		}
 
 		if (
 			!signatureMap.containsKey("signature")
