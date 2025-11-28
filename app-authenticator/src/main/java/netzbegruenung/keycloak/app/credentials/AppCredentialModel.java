@@ -56,4 +56,13 @@ public class AppCredentialModel extends CredentialModel {
 	public AppCredentialData getAppCredentialData() {
 		return credentialData;
 	}
+
+	public void updateDevicePushId(String devicePushId) {
+		credentialData.setDevicePushId(devicePushId);
+		try {
+			setCredentialData(JsonSerialization.writeValueAsString(credentialData));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
 }
