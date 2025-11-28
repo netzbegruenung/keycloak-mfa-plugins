@@ -13,7 +13,7 @@ public class AppCredentialData {
 
 	private final String signatureAlgorithm;
 
-	private final String devicePushId;
+	private String devicePushId;
 
 
 	@JsonCreator
@@ -55,5 +55,9 @@ public class AppCredentialData {
 
 	public String getSignatureAlgorithm() {
 		return signatureAlgorithm;
+	}
+
+	public void setDevicePushId(String devicePushId) {
+		this.devicePushId = devicePushId;
 	}
 }
