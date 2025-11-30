@@ -45,7 +45,9 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -129,10 +131,52 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		}
 	}
 
+	/**
+	 * Generates a list of country codes with their names and emojis to be displayed in the phone number input form.
+	 *
+	 * @param context the current RequiredActionContext
+	 * @return a list of maps containing country name, code, and emoji
+	 */
+	public List<Map<String, String>> getCountryCodeList(RequiredActionContext context) {
+		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		String countryCodeList = config.getConfig().getOrDefault("countryCodeList", "");
+
+		UserModel user = context.getUser();
+		KeycloakSession session = context.getSession();
+		Locale locale = session.getContext().resolveLocale(user);
+
+		PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+
+		List<Map<String, String>> countryList = new ArrayList<>();
+		if (!countryCodeList.isBlank()) {
+			List<String> countryCodes = Arrays.asList(countryCodeList.split(","));
+			for (String countryCode : countryCodes) {
+				try {
+					String code = "+" + Integer.toString(phoneUtil.getCountryCodeForRegion(countryCode.trim().toUpperCase()));
+					String countryName = new Locale("", countryCode.trim().toUpperCase()).getDisplayCountry(locale);
+
+					// generate emoji from country code
+					int offset = 0x1F1E6;  // Base Unicode for regional indicator symbols
+					int codePoint1 = offset + (countryCode.trim().toUpperCase().charAt(0) - 'A');
+					int codePoint2 = offset + (countryCode.trim().toUpperCase().charAt(1) - 'A');
+					String emoji = new String(new int[]{codePoint1, codePoint2}, 0, 2);
+
+					countryList.add(Map.of("name", countryName, "code", code, "emoji", emoji));
+					logger.infof("Added country code %s for country %s", code, countryName);
+				} catch (Exception e) {
+					logger.errorf("Failed to get country code for country %s", countryCode, e);
+				}
+			}
+		}
+
+		return countryList;
+	}
+
 	@Override
 	public void requiredActionChallenge(RequiredActionContext context) {
 		Response challenge = context.form()
 			.setAttribute("mobileInputFieldPlaceholder", context.getAuthenticationSession().getAuthNote("mobileInputFieldPlaceholder"))
+			.setAttribute("countryList", getCountryCodeList(context))
 			.createForm("mobile_number_form.ftl");
 		context.challenge(challenge);
 	}
@@ -141,6 +185,12 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 	public void processAction(RequiredActionContext context) {
 		String mobileNumber = nonDigitPattern.matcher(context.getHttpRequest().getDecodedFormParameters().getFirst("mobile_number")).replaceAll("");
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
+
+		// get the country code from the select input if available and add it to the mobile number
+		if (context.getHttpRequest().getDecodedFormParameters().getFirst("country_code") != null) {
+			String countryCode = nonDigitPattern.matcher(context.getHttpRequest().getDecodedFormParameters().getFirst("country_code")).replaceAll("");
+			mobileNumber = countryCode + mobileNumber.replaceAll("^0+", "");
+		}
 
 		// get the phone number formatting values from the config
 		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
