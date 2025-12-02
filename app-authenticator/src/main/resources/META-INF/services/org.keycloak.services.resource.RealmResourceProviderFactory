@@ -1,2 +1,3 @@
 netzbegruenung.keycloak.app.rest.ChallengeResourceProviderFactory
 netzbegruenung.keycloak.app.rest.StatusResourceProviderFactory
+netzbegruenung.keycloak.app.rest.CredentialResourceProviderFactory

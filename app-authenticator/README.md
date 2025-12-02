@@ -304,7 +304,7 @@ GET /realms/{realmId}/login-actions/action-token
 #### Update Device Push ID
 
 ```
-PUT /realms/{realmId}/challenges/registration-token
+PUT /realms/{realmId}/credential/registration-token
 ```
 
 ##### Authentication
