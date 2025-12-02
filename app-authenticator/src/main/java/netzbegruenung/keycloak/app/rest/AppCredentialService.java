@@ -70,7 +70,7 @@ public class AppCredentialService {
 
 		if (!verified) {
 			throw new VerificationErrorResponseException(Response
-				.status(Response.Status.FORBIDDEN)
+				.status(Response.Status.UNAUTHORIZED)
 				.entity(new Message(CHALLENGE_REJECTED, "Invalid signature"))
 				.build());
 		}
