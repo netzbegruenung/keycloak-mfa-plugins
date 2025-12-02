@@ -21,7 +21,6 @@ import org.keycloak.models.jpa.entities.RealmEntity;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
-import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.Map;
@@ -76,7 +75,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		AppCredentialData appCredentialData = AppCredentialModel.createFromCredentialModel(appCredentialModel).getAppCredentialData();
 
 		Map<String, String> signatureStringMap = new HashMap<>();
-		signatureStringMap.put("created", authSession.getAuthNote("timestamp"));
+		signatureStringMap.put("created", signatureMap.get("created"));
 		signatureStringMap.put("secret", authSession.getAuthNote("secret"));
 		signatureStringMap.put("granted", signatureMap.get("granted"));
 
