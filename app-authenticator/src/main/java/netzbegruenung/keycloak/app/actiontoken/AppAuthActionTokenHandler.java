@@ -42,9 +42,6 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 
 	@Override
 	public Response handleToken(AppAuthActionToken token, ActionTokenContext<AppAuthActionToken> tokenContext) {
-		MultivaluedMap<String, String> queryParameters = tokenContext.getRequest().getUri().getQueryParameters();
-		String granted = queryParameters.getFirst("granted");
-
 		AuthenticationSessionModel authSession = ActionTokenUtil.getOriginalAuthSession(
 			tokenContext.getSession(),
 			tokenContext.getRealm(),
@@ -59,13 +56,8 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		String authSessionGranted = authSession.getAuthNote(AppAuthenticator.APP_AUTH_GRANTED_NOTE);
 
 		if (authSessionGranted != null && !Boolean.parseBoolean(authSessionGranted)) {
+			// once rejected, always rejected
 			return Response.status(Response.Status.FORBIDDEN).build();
-		}
-
-		if (granted == null) {
-			logger.warnf("App authentication rejected: missing query param \"granted\" for user ID [%s]", token.getUserId());
-			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
-			return Response.status(Response.Status.BAD_REQUEST).build();
 		}
 
 		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(tokenContext.getRequest().getHttpHeaders().getRequestHeader(AuthenticationUtil.SIGNATURE_HEADER));
@@ -86,7 +78,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		Map<String, String> signatureStringMap = new HashMap<>();
 		signatureStringMap.put("created", authSession.getAuthNote("timestamp"));
 		signatureStringMap.put("secret", authSession.getAuthNote("secret"));
-		signatureStringMap.put("granted", granted);
+		signatureStringMap.put("granted", signatureMap.get("granted"));
 
 		boolean verified = AuthenticationUtil.verifyChallenge(
 			authSession.getAuthenticatedUser(),
@@ -100,7 +92,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 
-		if (!Boolean.parseBoolean(granted)) {
+		if (!Boolean.parseBoolean(signatureMap.get("granted"))) {
 			authSession.setAuthNote(AppAuthenticator.APP_AUTH_GRANTED_NOTE, Boolean.toString(false));
 		} else {
 			authSession.setAuthNote(AppAuthenticator.APP_AUTH_GRANTED_NOTE, Boolean.toString(true));
