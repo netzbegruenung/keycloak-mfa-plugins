@@ -63,7 +63,7 @@ public class ChallengeResourceProvider implements RealmResourceProvider {
 
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getChallenges(@HeaderParam("Signature") List<String> signatureHeader) {
+	public Response getChallenges(@HeaderParam(AuthenticationUtil.SIGNATURE_HEADER) List<String> signatureHeader) {
 		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(signatureHeader);
 		return getChallengesResponse(signatureMap);
 	}
@@ -130,7 +130,7 @@ public class ChallengeResourceProvider implements RealmResourceProvider {
 	@GET
 	@Path("async")
 	@Produces(MediaType.APPLICATION_JSON)
-	public void getChallengesAsync(@HeaderParam("Signature") List<String> signatureHeader, @Suspended AsyncResponse asyncResponse) {
+	public void getChallengesAsync(@HeaderParam(AuthenticationUtil.SIGNATURE_HEADER) List<String> signatureHeader, @Suspended AsyncResponse asyncResponse) {
 		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(signatureHeader);
 		Response response = getChallengesResponse(signatureMap);
 

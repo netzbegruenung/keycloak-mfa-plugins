@@ -35,7 +35,7 @@ public class CredentialResourceProvider implements RealmResourceProvider {
 	@Path("registration-token")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response updateRegistrationToken(@HeaderParam("Signature") List<String> signatureHeader, TokenDto tokenDto) {
+	public Response updateRegistrationToken(@HeaderParam(AuthenticationUtil.SIGNATURE_HEADER) List<String> signatureHeader, TokenDto tokenDto) {
 		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(signatureHeader);
 		if (signatureMap == null) {
 			return Response

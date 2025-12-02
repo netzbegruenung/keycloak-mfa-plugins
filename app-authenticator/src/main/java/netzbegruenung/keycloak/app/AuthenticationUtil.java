@@ -19,6 +19,7 @@ public class AuthenticationUtil {
 
 	private static final Logger logger = Logger.getLogger(AuthenticationUtil.class);
 	private static final Splitter.MapSplitter signatureMapSplitter = Splitter.on(",").withKeyValueSeparator(":");
+	public static final String SIGNATURE_HEADER = "Signature";
 
 	public static Map<String, String> getSignatureMap(List<String> signatureHeaders) {
 		if (signatureHeaders.isEmpty()) {
