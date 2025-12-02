@@ -68,7 +68,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 			return Response.status(Response.Status.BAD_REQUEST).build();
 		}
 
-		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(tokenContext.getRequest().getHttpHeaders().getRequestHeader("Signature"));
+		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(tokenContext.getRequest().getHttpHeaders().getRequestHeader(AuthenticationUtil.SIGNATURE_HEADER));
 		if (signatureMap == null) {
 			logger.warnf("App authentication rejected: missing or incomplete signature header for user ID [%s]", token.getUserId());
 			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
