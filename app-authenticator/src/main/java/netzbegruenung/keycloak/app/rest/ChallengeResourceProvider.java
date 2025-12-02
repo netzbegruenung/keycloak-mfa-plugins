@@ -4,9 +4,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.NonUniqueResultException;
 import jakarta.persistence.TypedQuery;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Root;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.container.AsyncResponse;
 import jakarta.ws.rs.container.Suspended;
@@ -14,23 +11,17 @@ import jakarta.ws.rs.core.GenericType;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import netzbegruenung.keycloak.app.AuthenticationUtil;
-import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
 import netzbegruenung.keycloak.app.dto.ChallengeConverter;
 import netzbegruenung.keycloak.app.dto.ChallengeDto;
-import netzbegruenung.keycloak.app.dto.TokenDto;
 import netzbegruenung.keycloak.app.jpa.Challenge;
 import org.jboss.logging.Logger;
-import org.keycloak.common.util.Base64;
 import org.keycloak.common.util.Time;
 import org.keycloak.connections.jpa.JpaConnectionProvider;
-import org.keycloak.credential.CredentialModel;
 import org.keycloak.models.*;
-import org.keycloak.models.jpa.entities.CredentialEntity;
 import org.keycloak.models.jpa.entities.RealmEntity;
 import org.keycloak.services.resource.RealmResourceProvider;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -40,33 +31,24 @@ import static org.keycloak.models.utils.KeycloakModelUtils.runJobInTransaction;
 public class ChallengeResourceProvider implements RealmResourceProvider {
 
 	private final KeycloakSession session;
-
 	private final EntityManager em;
-
 	private final Logger logger = Logger.getLogger(ChallengeResourceProvider.class);
-
 	private final KeycloakSessionFactory sessionFactory;
+	private final AppCredentialService appCredentialService;
 
 	private final static ConcurrentHashMap<String, DeviceConnection> listeners = new ConcurrentHashMap<>();
-
 	public final static ScheduledThreadPoolExecutor scheduler = new ScheduledThreadPoolExecutor(1);
-
 	public final static String CHALLENGE_REJECTED = "challenge_rejected";
-
 	public final static String CHALLENGE_EXPIRED = "challenge_expired";
-
 	public final static String INTERNAL_ERROR = "internal_error";
-
-	public final static String NO_CREDENTIAL = "no_credential";
-
 	private final static long EXPIRATION_TIME = 120;
-
 	private final static long RESPONSE_TIMEOUT = 60;
 
 	public ChallengeResourceProvider(KeycloakSession session) {
 		this.session = session;
 		this.em = session.getProvider(JpaConnectionProvider.class).getEntityManager();
 		this.sessionFactory = session.getKeycloakSessionFactory();
+		this.appCredentialService = new AppCredentialService(session);
 	}
 
 	@Override
@@ -95,7 +77,7 @@ public class ChallengeResourceProvider implements RealmResourceProvider {
 		}
 
 		try {
-			getVerifiedCredentialContainer(signatureMap);
+			appCredentialService.getVerifiedCredentialContainer(signatureMap);
 		} catch (VerificationErrorResponseException e) {
 			return e.getResponse();
 		}
@@ -143,39 +125,6 @@ public class ChallengeResourceProvider implements RealmResourceProvider {
 		return Response
 			.ok(List.of(ChallengeConverter.getChallengeDto(challenge, session)))
 			.build();
-	}
-
-	private CredentialEntity getCredentialEntityByDeviceId(String deviceId) {
-		CriteriaBuilder cb = em.getCriteriaBuilder();
-		CriteriaQuery<CredentialEntity> criteria = cb.createQuery(CredentialEntity.class);
-		Root<CredentialEntity> root = criteria.from(CredentialEntity.class);
-		criteria.where(
-			cb.equal(root.get("type"), AppCredentialModel.TYPE),
-			cb.like(root.get("credentialData"), String.format("%%\"deviceId\":\"%s\"%%", deviceId))
-		);
-
-		TypedQuery<CredentialEntity> criteriaQuery = em.createQuery(criteria);
-		return criteriaQuery.getSingleResult();
-	}
-
-	private CredentialModel toModel(CredentialEntity entity) {
-		CredentialModel model = new CredentialModel();
-		model.setId(entity.getId());
-		model.setType(entity.getType());
-		model.setCreatedDate(entity.getCreatedDate());
-		model.setUserLabel(entity.getUserLabel());
-
-		// Backwards compatibility - users from previous version still have "salt" in the DB filled.
-		// We migrate it to new secretData format on-the-fly
-		if (entity.getSalt() != null) {
-			String newSecretData = entity.getSecretData().replace("__SALT__", Base64.encodeBytes(entity.getSalt()));
-			entity.setSecretData(newSecretData);
-			entity.setSalt(null);
-		}
-
-		model.setSecretData(entity.getSecretData());
-		model.setCredentialData(entity.getCredentialData());
-		return model;
 	}
 
 	@GET
@@ -240,106 +189,6 @@ public class ChallengeResourceProvider implements RealmResourceProvider {
 		}
 	}
 
-	@PUT
-	@Path("registration-token")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response updateRegistrationToken(@HeaderParam("Signature") List<String> signatureHeader, TokenDto tokenDto) {
-		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(signatureHeader);
-		if (signatureMap == null) {
-			return Response
-				.status(Response.Status.BAD_REQUEST)
-				.entity(new Message("invalid_request", "Missing, incomplete or invalid signature header"))
-				.build();
-		}
-
-		String deviceId = signatureMap.get("keyId");
-		if (tokenDto == null || tokenDto.token() == null || tokenDto.token().isBlank()) {
-			return Response
-				.status(Response.Status.BAD_REQUEST)
-				.entity(new Message("invalid_request", "Missing token in request body"))
-				.build();
-		}
-
-		try {
-			VerifiedCredentialContainer verifiedCredentialContainer;
-			try {
-				verifiedCredentialContainer = getVerifiedCredentialContainer(signatureMap);
-			} catch (VerificationErrorResponseException e) {
-				return e.getResponse();
-			}
-
-			// Update the push token
-			AppCredentialModel appCredential = verifiedCredentialContainer.appCredential();
-			appCredential.updateDevicePushId(tokenDto.token());
-			UserModel user = verifiedCredentialContainer.user();
-			user.credentialManager().updateStoredCredential(appCredential);
-
-			return Response.noContent().build();
-
-		} catch (Exception e) {
-			logger.error("Failed to update registration token for device ID: " + deviceId, e);
-			return Response
-				.status(Response.Status.INTERNAL_SERVER_ERROR)
-				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
-				.build();
-		}
-	}
-
-	private VerifiedCredentialContainer getVerifiedCredentialContainer(Map<String, String> signatureMap) throws VerificationErrorResponseException {
-		String deviceId = signatureMap.get("keyId");
-
-		CredentialEntity credentialEntity;
-		try {
-			credentialEntity = getCredentialEntityByDeviceId(deviceId);
-		} catch (NoResultException e) {
-			throw new VerificationErrorResponseException(Response
-				.status(Response.Status.CONFLICT)
-				.entity(new Message(NO_CREDENTIAL, "App credential does not exist"))
-				.build());
-		} catch (NonUniqueResultException e) {
-			logger.error("Failed to get app credentials: duplicate credentials detected for device ID: " + deviceId, e);
-			throw new VerificationErrorResponseException(Response
-				.status(Response.Status.INTERNAL_SERVER_ERROR)
-				.entity(new Message(INTERNAL_ERROR, "Internal server error"))
-				.build());
-		}
-
-		CredentialModel credential = toModel(credentialEntity);
-		AppCredentialModel appCredential = AppCredentialModel.createFromCredentialModel(credential);
-		UserModel user = session.users().getUserById(session.getContext().getRealm(), credentialEntity.getUser().getId());
-
-		Map<String, String> signatureStringMap = new LinkedHashMap<>();
-		signatureStringMap.put("created", signatureMap.get("created"));
-
-		boolean verified = AuthenticationUtil.verifyChallenge(
-			user,
-			appCredential.getAppCredentialData(),
-			AuthenticationUtil.getSignatureString(signatureStringMap),
-			signatureMap.get("signature")
-		);
-
-		if (!verified) {
-			throw new VerificationErrorResponseException(Response
-				.status(Response.Status.FORBIDDEN)
-				.entity(new Message(CHALLENGE_REJECTED, "Invalid signature"))
-				.build());
-		}
-		return new VerifiedCredentialContainer(user, credential, appCredential);
-	}
-
-	private record VerifiedCredentialContainer(UserModel user, CredentialModel credential, AppCredentialModel appCredential) {
-	}
-
-	private static class VerificationErrorResponseException extends Exception {
-		private final Response response;
-
-		public VerificationErrorResponseException(Response response) {
-			this.response = response;
-		}
-
-		public Response getResponse() {
-			return response;
-		}
+	private record DeviceConnection(AsyncResponse asyncResponse, ScheduledFuture<?> evictionJob) {
 	}
 }
