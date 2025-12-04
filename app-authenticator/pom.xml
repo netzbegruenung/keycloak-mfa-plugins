@@ -111,6 +111,9 @@
                                 <relocation>
                                     <pattern>com.google</pattern>
                                     <shadedPattern>netzbegruenung.keycloak.app.shaded.com.google</shadedPattern>
+									<excludes>
+										<exclude>com.google.zxing.**</exclude>
+									</excludes>
                                 </relocation>
                                 <relocation>
                                     <pattern>io.opencensus</pattern>
