@@ -11,6 +11,18 @@
 
     <artifactId>app-authenticator</artifactId>
 
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.google.auth</groupId>
+				<artifactId>google-auth-library-bom</artifactId>
+				<version>1.30.1</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
     <dependencies>
 		<dependency>
 			<groupId>org.keycloak</groupId>
@@ -43,9 +55,8 @@
 			<scope>provided</scope>
 		</dependency>
         <dependency>
-            <groupId>com.google.firebase</groupId>
-            <artifactId>firebase-admin</artifactId>
-            <version>9.7.0</version>
+            <groupId>com.google.auth</groupId>
+            <artifactId>google-auth-library-oauth2-http</artifactId>
         </dependency>
     </dependencies>
 
@@ -70,15 +81,37 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <artifactSet>
-                                <includes>
-                                    <include>com.google.firebase:firebase-admin</include>
-                                </includes>
-                            </artifactSet>
+                            <minimizeJar>true</minimizeJar>
+                            <relocations>
+                                <relocation>
+                                    <pattern>com.google</pattern>
+                                    <shadedPattern>netzbegruenung.keycloak.app.shaded.com.google</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.apache.httpcomponents</pattern>
+                                    <shadedPattern>netzbegruenung.keycloak.app.shaded.org.apache.httpcomponents</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>io.opencensus</pattern>
+                                    <shadedPattern>netzbegruenung.keycloak.app.shaded.io.opencensus</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>io.grpc</pattern>
+                                    <shadedPattern>netzbegruenung.keycloak.app.shaded.io.grpc</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.jspecify</pattern>
+                                    <shadedPattern>netzbegruenung.keycloak.app.shaded.org.jspecify</shadedPattern>
+                                </relocation>
+                            </relocations>
                             <filters>
                                 <filter>
-                                    <artifact>com.google.firebase:firebase-admin</artifact>
+                                    <artifact>*:*</artifact>
                                     <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>META-INF/INDEX.LIST</exclude>
                                         <exclude>META-INF/MANIFEST.MF</exclude>
                                     </excludes>
                                 </filter>
