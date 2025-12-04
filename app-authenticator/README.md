@@ -287,7 +287,6 @@ GET /realms/{realmId}/login-actions/action-token
 | `client_id` | query | The Keycloak client ID. This should always be `account-console` for the setup step. Client receives this value from the `targetUrl` from the ChallengeDTO.       |
 | `tab_id`    | query | The Keycloak tab ID in the browser session where the user is setting up the authenticator. Client receives this value from the `targetUrl` from the ChallengeDTO |
 | `key`       | query | The from Keycloak generated action token in form of a JWT. Client receives this value from the `targetUrl` from the ChallengeDTO.                                |
-| `granted`   | query | boolean that indicates of the login attempt was granted or not                                                                                                   |
 
 #### Responses
 
