@@ -1,18 +1,15 @@
 package netzbegruenung.keycloak.app.messaging;
 
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseOptions;
 import org.jboss.logging.Logger;
 
-import java.io.IOException;
 import java.util.Map;
 
 public class MessagingServiceFactory {
 
 	private static final Logger logger = Logger.getLogger(MessagingServiceFactory.class);
 
-	private static boolean isFirebaseInitialized = false;
+	private static MessagingService fcmMessagingService;
+	private static boolean isInitialized = false;
 
 	public static MessagingService get(Map<String, String> config) {
 		if (Boolean.parseBoolean(config.getOrDefault("simulation", "false"))) {
@@ -25,9 +22,9 @@ public class MessagingServiceFactory {
 					challengeDto.userName()
 				);
 		} else {
-			initializeFirebase();
-			if (isFirebaseInitialized) {
-				return new FcmMessagingService();
+			initialize();
+			if (fcmMessagingService != null) {
+				return fcmMessagingService;
 			} else {
 				return (devicePushId, challengeDto, session) ->
 					logger.error("Firebase not initialized, cannot send push notification. Check previous logs for details.");
@@ -35,20 +32,17 @@ public class MessagingServiceFactory {
 		}
 	}
 
-	private static synchronized void initializeFirebase() {
-		if (isFirebaseInitialized) {
+	private static synchronized void initialize() {
+		if (isInitialized) {
 			return;
 		}
-
 		try {
-			FirebaseOptions options = FirebaseOptions.builder()
-				.setCredentials(GoogleCredentials.getApplicationDefault())
-				.build();
-			FirebaseApp.initializeApp(options);
-			isFirebaseInitialized = true;
-			logger.info("Firebase Cloud Messaging initialized successfully");
-		} catch (IOException e) {
-			logger.error("Failed to initialize Firebase. The App Authenticator will not be able to send push notifications. Please make sure the GOOGLE_APPLICATION_CREDENTIALS environment variable is set correctly and points to a valid service account credentials file.", e);
+			fcmMessagingService = new FcmMessagingService();
+			logger.info("Messaging service initialized successfully");
+		} catch (Exception e) {
+			logger.error("Failed to initialize messaging service. The App Authenticator will not be able to send push notifications. Please make sure the GOOGLE_APPLICATION_CREDENTIALS environment variable is set correctly.", e);
+		} finally {
+			isInitialized = true;
 		}
 	}
 }
