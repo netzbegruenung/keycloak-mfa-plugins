@@ -54,6 +54,11 @@
 			<artifactId>jakarta.ws.rs-api</artifactId>
 			<scope>provided</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.google.zxing</groupId>
+			<artifactId>core</artifactId>
+			<scope>provided</scope>
+		</dependency>
         <dependency>
             <groupId>com.google.auth</groupId>
             <artifactId>google-auth-library-oauth2-http</artifactId>
@@ -82,14 +87,30 @@
                         </goals>
                         <configuration>
                             <minimizeJar>true</minimizeJar>
+                            <artifactSet>
+                                <includes>
+                                    <include>com.google.auth:google-auth-library-oauth2-http</include>
+                                    <include>com.google.auth:google-auth-library-credentials</include>
+                                    <include>com.google.auto.value:auto-value-annotations</include>
+                                    <include>com.google.code.findbugs:jsr305</include>
+                                    <include>com.google.errorprone:error_prone_annotations</include>
+                                    <include>com.google.http-client:google-http-client</include>
+                                    <include>com.google.http-client:google-http-client-gson</include>
+                                    <include>com.google.j2objc:j2objc-annotations</include>
+                                    <include>com.google.code.gson:gson</include>
+                                    <include>com.google.guava:guava</include>
+                                    <include>com.google.guava:failureaccess</include>
+                                    <include>io.grpc:grpc-api</include>
+                                    <include>io.grpc:grpc-context</include>
+                                    <include>io.opencensus:opencensus-api</include>
+                                    <include>io.opencensus:opencensus-contrib-http-util</include>
+                                    <include>org.jspecify:jspecify</include>
+                                </includes>
+                            </artifactSet>
                             <relocations>
                                 <relocation>
                                     <pattern>com.google</pattern>
                                     <shadedPattern>netzbegruenung.keycloak.app.shaded.com.google</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.apache.httpcomponents</pattern>
-                                    <shadedPattern>netzbegruenung.keycloak.app.shaded.org.apache.httpcomponents</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>io.opencensus</pattern>
