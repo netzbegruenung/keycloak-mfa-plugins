@@ -34,3 +34,18 @@ This will launch a Keycloak instance with the authenticators from the other modu
 The `pom.xml` in this module contains the configuration for the `quarkus-maven-plugin`. The arguments for starting the Keycloak development server are configured within the `<argsString>` tag, which includes settings for the database connection.
 
 For more details on how Keycloak runs as a Quarkus extension, you can refer to the [Keycloak developer documentation](https://github.com/keycloak/keycloak/blob/main/quarkus/CONTRIBUTING.md).
+
+## Database Access
+
+The development server uses an H2 file-based database located at `h2db/mfa`. While the Keycloak server is running, you can connect to this database to inspect data.
+
+### Using the H2 Shell CLI
+
+You can use the H2 command-line shell to connect. The following command will automatically detect the H2 driver version from your project's `pom.xml` and launch the shell:
+
+```bash
+H2_VERSION=$(mvn -f pom.xml dependency:tree -Dincludes=com.h2database:h2 -Dverbose | grep 'com.h2database:h2:jar:' | head -n 1 | cut -d: -f4)
+java -cp ~/.m2/repository/com/h2database/h2/$H2_VERSION/h2-$H2_VERSION.jar org.h2.tools.Shell -url "jdbc:h2:file:./h2db/mfa;AUTO_SERVER=TRUE" -user sa -password password
+```
+
+Once connected, you can run SQL queries at the `sql>` prompt.
