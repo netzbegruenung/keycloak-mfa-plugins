@@ -49,7 +49,7 @@ public class FcmMessagingService implements MessagingService {
 	}
 
 	public void send(String devicePushId, ChallengeDto challenge, KeycloakSession session) {
-		if (devicePushId == null) {
+		if (devicePushId == null || devicePushId.isEmpty()) {
 			logger.warnf("Skip sending firebase notification: missing device push ID user [%s]", challenge.userName());
 			return;
 		}
