@@ -28,7 +28,7 @@ jobs:
               sha512sum $jar | awk '{ print $1 }' > "${jar}.sha512"
           done
         working-directory: staging
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: packages
           path: staging
