@@ -8,7 +8,12 @@
 				<div class="${properties.kcLabelWrapperClass!}">
 					<label for="code" class="${properties.kcLabelClass!}">${msg("smsPhoneNumberLabel")}</label>
 				</div>
+			<#if countryList?has_content>
+				<div class="${properties.kcInputWrapperClass!}" style="display:flex">
+					<#include "select-country.ftl">
+			<#else>
 				<div class="${properties.kcInputWrapperClass!}">
+			</#if>
 					<input type="tel" id="code" pattern="[0-9\+\-\.\ ]" name="mobile_number" class="${properties.kcInputClass!}" placeholder="${mobileInputFieldPlaceholder!}" autofocus />
 				</div>
 			</div>
