@@ -150,7 +150,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		if (config != null && config.getConfig() != null) {
 			normalizeNumber = Boolean.parseBoolean(config.getConfig().getOrDefault("normalizePhoneNumber", "false"));
 			forceRetryOnBadFormat = Boolean.parseBoolean(config.getConfig().getOrDefault("forceRetryOnBadFormat", "false"));
-			enforcePhoneNumberUniqueness = Boolean.parseBoolean(config.getConfig().getOrDefault("enforcePhoneNumberUniqueness", "true"));
+			enforcePhoneNumberUniqueness = Boolean.parseBoolean(config.getConfig().getOrDefault("enforcePhoneNumberUniqueness", "false"));
 		}
 
 		// try to format the phone number
