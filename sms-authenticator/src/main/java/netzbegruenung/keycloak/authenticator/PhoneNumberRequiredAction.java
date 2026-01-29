@@ -147,10 +147,12 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		boolean normalizeNumber = false;
 		boolean forceRetryOnBadFormat = false;
 		boolean enforcePhoneNumberUniqueness = true;
+		boolean storeInAttribute = false;
 		if (config != null && config.getConfig() != null) {
 			normalizeNumber = Boolean.parseBoolean(config.getConfig().getOrDefault("normalizePhoneNumber", "false"));
 			forceRetryOnBadFormat = Boolean.parseBoolean(config.getConfig().getOrDefault("forceRetryOnBadFormat", "false"));
 			enforcePhoneNumberUniqueness = Boolean.parseBoolean(config.getConfig().getOrDefault("enforcePhoneNumberUniqueness", "false"));
+			storeInAttribute = Boolean.parseBoolean(config.getConfig().getOrDefault("storeInAttribute", "false"));
 		}
 
 		// try to format the phone number
@@ -167,9 +169,10 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 				}
 			}
 		}
-		if (enforcePhoneNumberUniqueness) {
+		if (enforcePhoneNumberUniqueness && storeInAttribute) {
 			long count = context.getSession().users()
 					.searchForUserByUserAttributeStream(context.getRealm(), "mobile_number", mobileNumber).count();
+
 			if (count > 0) {
 				logger.errorf("Phone number %s is already in use", mobileNumber);
 				handleInvalidNumber(context, "numberFormatNumberInUse");
