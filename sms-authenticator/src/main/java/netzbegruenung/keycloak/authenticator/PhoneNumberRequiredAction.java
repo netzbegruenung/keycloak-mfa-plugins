@@ -172,7 +172,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 					.searchForUserByUserAttributeStream(context.getRealm(), "mobile_number", mobileNumber).count();
 			if (count > 0) {
 				logger.errorf("Phone number %s is already in use", mobileNumber);
-				//handleInvalidNumber(context, "numberFormatNumberInUse");
+				handleInvalidNumber(context, "numberFormatNumberInUse");
 				authSession.setAuthNote("numberFormatNumberInUse", "true");
 				return;
 			}
