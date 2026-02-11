@@ -123,14 +123,11 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			}
 		} else {
 			// invalid
-			AuthenticationExecutionModel execution = context.getExecution();
-			if (execution.isRequired()) {
-				context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
-					context.form().setAttribute("realm", context.getRealm())
-						.setError("smsAuthCodeInvalid").createForm(TPL_CODE));
-			} else if (execution.isConditional() || execution.isAlternative()) {
-				context.attempted();
-			}
+			context.getEvent().user(context.getUser()).error("invalid_user_credentials");
+			Response challenge = context.form()
+				.setError("smsAuthCodeInvalid")
+				.createForm("login-sms.ftl");
+			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
 		}
 	}
 
