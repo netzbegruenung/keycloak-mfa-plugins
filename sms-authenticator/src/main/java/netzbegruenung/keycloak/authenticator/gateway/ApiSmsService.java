@@ -31,6 +31,7 @@ import org.jboss.logging.Logger;
 import java.util.Base64;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -62,6 +63,8 @@ public class ApiSmsService implements SmsService{
 
 	private final boolean hideResponsePayload;
 
+	private final String getUrl;
+
 	ApiSmsService(Map<String, String> config) {
 		apiurl = config.get("apiurl");
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
@@ -84,6 +87,8 @@ public class ApiSmsService implements SmsService{
 		jsonTemplate = config.getOrDefault("jsonTemplate", "");
 
 		hideResponsePayload = Boolean.parseBoolean(config.get("hideResponsePayload"));
+
+		getUrl = config.getOrDefault("getUrl", "");
 	}
 
 	public void send(String phoneNumber, String message) {
@@ -93,11 +98,16 @@ public class ApiSmsService implements SmsService{
 		String requestPayload = null;
 		var client = HttpClient.newHttpClient();
 		try {
-			if (urlencode) {
-				requestBuilder = urlencodedRequest(phoneNumber, message);
+			logger.error(getUrl);
+			if (getUrl != null && !getUrl.isBlank()) {
+				requestBuilder = getRequest(phoneNumber, message);
 			} else {
-				requestPayload = getJsonBody(phoneNumber, message);
-				requestBuilder = jsonRequest(requestPayload);
+				if (urlencode) {
+					requestBuilder = urlencodedRequest(phoneNumber, message);
+				} else {
+					requestPayload = getJsonBody(phoneNumber, message);
+					requestBuilder = jsonRequest(requestPayload);
+				}
 			}
 
 			if (apiTokenInHeader) {
@@ -197,6 +207,15 @@ public class ApiSmsService implements SmsService{
 				.uri(URI.create(apiurl))
 				.header("Content-Type", "application/x-www-form-urlencoded")
 				.POST(HttpRequest.BodyPublishers.ofString(body));
+	}
+
+	public Builder getRequest(String phoneNumber, String message) {
+		String getNewUrl = getUrl.replace("{phone}", URLEncoder.encode(phoneNumber, StandardCharsets.UTF_8));
+		getNewUrl = getNewUrl.replace("{message}", URLEncoder.encode(message, StandardCharsets.UTF_8));
+		getNewUrl = getNewUrl.replace("{apitoken}", URLEncoder.encode(apitoken, StandardCharsets.UTF_8));
+		return HttpRequest.newBuilder()
+				.uri(URI.create(apiurl.concat(getNewUrl)))
+				.GET();
 	}
 
 	private static String getAuthHeader(String apiuser, String apitoken) {
