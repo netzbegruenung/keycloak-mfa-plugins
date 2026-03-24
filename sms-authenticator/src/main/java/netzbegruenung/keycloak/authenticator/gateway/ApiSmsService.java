@@ -98,7 +98,6 @@ public class ApiSmsService implements SmsService{
 		String requestPayload = null;
 		var client = HttpClient.newHttpClient();
 		try {
-			logger.error(getUrl);
 			if (getUrl != null && !getUrl.isBlank()) {
 				requestBuilder = getRequest(phoneNumber, message);
 			} else {
