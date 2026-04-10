@@ -5,7 +5,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import netzbegruenung.keycloak.app.AuthenticationUtil;
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
-import netzbegruenung.keycloak.app.dto.TokenDto;
+import netzbegruenung.keycloak.app.dto.UpdateDevicePushIdDto;
 import org.jboss.logging.Logger;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.UserModel;
@@ -35,7 +35,7 @@ public class CredentialResourceProvider implements RealmResourceProvider {
 	@Path("registration-token")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response updateRegistrationToken(@HeaderParam(AuthenticationUtil.SIGNATURE_HEADER) List<String> signatureHeader, TokenDto tokenDto) {
+	public Response updateRegistrationToken(@HeaderParam(AuthenticationUtil.SIGNATURE_HEADER) List<String> signatureHeader, UpdateDevicePushIdDto dto) {
 		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(signatureHeader);
 		if (signatureMap == null) {
 			return Response
@@ -45,10 +45,10 @@ public class CredentialResourceProvider implements RealmResourceProvider {
 		}
 
 		String deviceId = signatureMap.get("keyId");
-		if (tokenDto == null || tokenDto.token() == null || tokenDto.token().isBlank()) {
+		if (dto == null || dto.devicePushId() == null || dto.devicePushId().isBlank()) {
 			return Response
 				.status(Response.Status.BAD_REQUEST)
-				.entity(new Message("invalid_request", "Missing token in request body"))
+				.entity(new Message("invalid_request", "Missing devicePushId in request body"))
 				.build();
 		}
 
@@ -62,7 +62,7 @@ public class CredentialResourceProvider implements RealmResourceProvider {
 
 			// Update the push token
 			AppCredentialModel appCredential = verifiedCredentialContainer.appCredential();
-			appCredential.updateDevicePushId(tokenDto.token());
+			appCredential.updateDevicePushId(dto.devicePushId());
 			UserModel user = verifiedCredentialContainer.user();
 			user.credentialManager().updateStoredCredential(appCredential);
 

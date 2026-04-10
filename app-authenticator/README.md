@@ -150,7 +150,7 @@ The signature is not used for authentication here but rather for a **consistency
 | `device_os`                 | query | The platform on which the authenticator app is running on. Supported values are: `android` and `ios`                                                 |
 | `public_key`                | query | The X.509 public key (e.g. as PKCS#8 base64 encoded) used to verify signatures                                                                       |
 | `key_algorithm`             | query | Key algorithm of the public key                                                                                                                      |
-| `device_push_id (optional)` | query | The platform specific ID to receive push notifications. For android this is the Firebase ID                                                          |
+| `device_push_id (optional)` | query | The platform specific ID to receive push notifications. For android this is the Firebase Registration Token                                                          |
 
 ##### Responses
 
@@ -322,7 +322,7 @@ PUT /realms/{realmId}/credential/registration-token
 
 | Name             | In   | Description                                                                                                  |
 | ---------------- | ---- | ------------------------------------------------------------------------------------------------------------ |
-| `token` | body | The Firebase registration token for push notifications. Can be `null` to unset. |
+| `devicePushId`   | body | The device push ID for push notifications (e.g. Firebase registration token). Can be `null` to unset. |
 
 ##### Responses
 
