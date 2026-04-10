@@ -73,7 +73,7 @@ public class FcmMessagingService implements MessagingService {
 			String message = buildFcmV1Message(
 				devicePushId,
 				localizedMessages.getProperty("appAuthPushTitle", "Anmeldeversuch"),
-				localizedMessages.getProperty("appAuthPushBody", "Sie haben einen neuen Anmeldeversuch."),
+				localizedMessages.getProperty("appAuthPushBody", "Bitte bestätige deine Anmeldung in der App."),
 				data
 			);
 
