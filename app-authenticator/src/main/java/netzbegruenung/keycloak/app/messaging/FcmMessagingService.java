@@ -57,7 +57,8 @@ public class FcmMessagingService implements MessagingService {
 			logger.error("Firebase Project ID is not configured. Cannot send push notification.");
 			return;
 		}
-		Map<String, String> challengeData = objectMapper.convertValue(challenge, new TypeReference<>() {});
+		Map<String, String> data = objectMapper.convertValue(challenge, new TypeReference<>() {});
+		data.put("type", "mfa");
 		Properties localizedMessages;
 		try {
 			localizedMessages = session.theme()
@@ -72,8 +73,8 @@ public class FcmMessagingService implements MessagingService {
 			String message = buildFcmV1Message(
 				devicePushId,
 				localizedMessages.getProperty("appAuthPushTitle", "Anmeldeversuch"),
-				localizedMessages.getProperty("appAuthPushBody", "Sie haben einen neuen Anmeldeversuch."),
-				challengeData
+				localizedMessages.getProperty("appAuthPushBody", "Bitte bestätige deine Anmeldung in der App."),
+				data
 			);
 
 			HttpRequest request = HttpRequest.newBuilder()
