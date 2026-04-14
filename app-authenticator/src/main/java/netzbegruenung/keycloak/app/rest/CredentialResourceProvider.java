@@ -5,7 +5,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import netzbegruenung.keycloak.app.AuthenticationUtil;
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
-import netzbegruenung.keycloak.app.dto.UpdateDevicePushIdDto;
+import netzbegruenung.keycloak.app.dto.UpdateAppCredentialsDto;
 import org.jboss.logging.Logger;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.UserModel;
@@ -32,10 +32,10 @@ public class CredentialResourceProvider implements RealmResourceProvider {
 	}
 
 	@PUT
-	@Path("registration-token")
+	@Path("{authenticator_id}/credentials")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response updateRegistrationToken(@HeaderParam(AuthenticationUtil.SIGNATURE_HEADER) List<String> signatureHeader, UpdateDevicePushIdDto dto) {
+	public Response updateRegistrationToken(@HeaderParam(AuthenticationUtil.SIGNATURE_HEADER) List<String> signatureHeader, UpdateAppCredentialsDto dto) {
 		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(signatureHeader);
 		if (signatureMap == null) {
 			return Response
