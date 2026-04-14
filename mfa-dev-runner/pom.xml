@@ -31,6 +31,19 @@
 			<version>${keycloak.version}</version>
 			<scope>provided</scope>
 		</dependency>
+		<!--
+			This dependency is added to fix an issue with the Quarkus dev runner.
+			Keycloak removed the EL dependency, but in the dev runner environment,
+			Hibernate Validator falls back to its default behavior and requires it.
+			This provides the missing EL implementation.
+			See: https://github.com/keycloak/keycloak/pull/44628
+		-->
+		<dependency>
+			<groupId>org.glassfish.expressly</groupId>
+			<artifactId>expressly</artifactId>
+			<version>6.0.0</version>
+		</dependency>
+
 	</dependencies>
 	<build>
 		<plugins>
