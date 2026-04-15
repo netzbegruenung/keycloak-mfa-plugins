@@ -303,7 +303,7 @@ GET /realms/{realmId}/login-actions/action-token
 #### Update Device Push ID
 
 ```
-PUT /realms/{realmId}/credential/registration-token
+PUT /realms/{realmId}/app-authenticators/{authenticatorId}/credentials
 ```
 
 ##### Authentication
@@ -314,9 +314,10 @@ PUT /realms/{realmId}/credential/registration-token
 
 **Note:** The authenticator id is retrieved from the `keyId` component of the `Signature` header.
 
-| Name      | In   | Description           |
-| --------- | ---- | --------------------- |
-| `realmId` | path | The Keycloak realm ID |
+| Name              | In   | Description           |
+|-------------------|------|-----------------------|
+| `realmId`         | path | The Keycloak realm ID |
+| `authenticatorId` | path | The device ID         |
 
 ##### Request Body
 
