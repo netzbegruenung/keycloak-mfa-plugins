@@ -45,7 +45,7 @@ public class CredentialResourceProvider implements RealmResourceProvider {
 		}
 
 		String deviceId = signatureMap.get("keyId");
-		if (dto == null || dto.devicePushId() == null || dto.devicePushId().isBlank()) {
+		if (dto == null) {
 			return Response
 				.status(Response.Status.BAD_REQUEST)
 				.entity(new Message("invalid_request", "Missing devicePushId in request body"))
