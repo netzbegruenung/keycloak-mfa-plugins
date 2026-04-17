@@ -117,8 +117,8 @@ public class ChallengeResourceProvider implements RealmResourceProvider {
 		if (Time.currentTime() > challenge.getExpiresAt()
 			|| Long.parseLong(signatureMap.get("created")) < challenge.getUpdatedTimestamp() - 1000) {
 			return Response
-				.status(Response.Status.FORBIDDEN)
-				.entity(new Message(CHALLENGE_EXPIRED, "Challenge expired"))
+				.status(Response.Status.OK)
+				.entity(Collections.emptyList())
 				.build();
 		}
 
