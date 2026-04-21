@@ -19,6 +19,7 @@ jobs:
       - run: |
           mkdir staging
           cp sms-authenticator/target/*.jar staging
+          cp email-authenticator/target/*.jar staging
           cp app-authenticator/target/*.jar staging
           cp enforce-mfa/target/*.jar staging
       - name: Create hash files

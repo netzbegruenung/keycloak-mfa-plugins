@@ -11,6 +11,7 @@
 
 	<modules>
 		<module>sms-authenticator</module>
+		<module>email-authenticator</module>
         <module>app-authenticator</module>
 		<module>enforce-mfa</module>
 		<module>mfa-dev-runner</module>
