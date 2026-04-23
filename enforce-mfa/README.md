@@ -44,3 +44,20 @@ The expected flow must contain at least two subflows. The subflow, which contain
 Example:
 
 ![Example Configuration](Enforce-MFA.png)
+
+## Conditional Enforce MFA (`conditional-enforce-mfa`) and MFA credential condition (`mfa-credential-condition`)
+
+The same JAR also registers:
+
+- **`conditional-enforce-mfa`**: same login form as **Enforce MFA** (`enforce-mfa.ftl`). Offered methods are taken only from authenticator config (`offeredRequiredActions`). Optional skip: **`mfaSetupOptional`** (same key as Enforce MFA).
+- **`mfa-credential-condition`**: conditional on credentials already enrolled (`credentialTypes`, combine **ALL** / **ANY**, optional **invertMatch**).
+
+Simple example (excerpt of a browser flow):
+
+```
+- Register MFA (subflow CONDITIONAL)
+-- Condition - MFA credentials (enrolled) REQUIRED   [invertMatch: true, types e.g. otp + webauthn, combine ANY]
+-- Conditional Enforce MFA (config lists) REQUIRED   [offered: CONFIGURE_TOTP, webauthn-register]
+```
+
+Here the condition can send users into the subflow when MFA is still missing; **Conditional Enforce MFA** then lets them pick one configured method until at least one offered enrollment is satisfied.

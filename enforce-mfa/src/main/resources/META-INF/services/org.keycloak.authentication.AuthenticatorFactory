@@ -1,1 +1,3 @@
 netzbegruenung.keycloak.enforce_mfa.EnforceMfaAuthenticatorFactory
+netzbegruenung.keycloak.enforce_mfa.ConditionalEnforceMfaAuthenticatorFactory
+netzbegruenung.keycloak.enforce_mfa.MfaCredentialConditionFactory
