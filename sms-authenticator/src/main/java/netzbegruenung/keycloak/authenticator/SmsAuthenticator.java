@@ -89,7 +89,12 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
 
-			context.challenge(context.form().setAttribute("realm", realm).createForm(TPL_CODE));
+			String destLine = PhoneNumberRequiredAction.buildSmsDestinationHint(session, realm, user, mobileNumber);
+			context.challenge(
+				context.form()
+					.setAttribute("realm", realm)
+					.setAttribute("smsAuthSentToText", destLine)
+					.createForm(TPL_CODE));
 		} catch (Exception e) {
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
 				context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
@@ -124,8 +129,25 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		} else {
 			// invalid
 			context.getEvent().user(context.getUser()).error("invalid_user_credentials");
+			String mobile = null;
+			try {
+				Optional<CredentialModel> model = context.getUser().credentialManager()
+					.getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
+				if (model.isPresent()) {
+					mobile = JsonSerialization.readValue(model.get().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
+				}
+			} catch (Exception ignored) {
+			}
+			String destLine = PhoneNumberRequiredAction.buildSmsDestinationHint(
+				context.getSession(),
+				context.getRealm(),
+				context.getUser(),
+				mobile
+			);
 			Response challenge = context.form()
 				.setError("smsAuthCodeInvalid")
+				.setAttribute("smsAuthSentToText", destLine)
+				.setAttribute("realm", context.getRealm())
 				.createForm("login-sms.ftl");
 			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
 		}

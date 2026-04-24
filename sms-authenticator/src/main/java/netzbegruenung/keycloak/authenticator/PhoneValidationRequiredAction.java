@@ -40,11 +40,14 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 
 import java.util.Locale;
+
 import jakarta.ws.rs.core.Response;
 
 public class PhoneValidationRequiredAction implements RequiredActionProvider, CredentialRegistrator {
 	private static final Logger logger = Logger.getLogger(PhoneValidationRequiredAction.class);
 	public static final String PROVIDER_ID = "phone_validation_config";
+
+	private static final String ACTION_CHANGE_NUMBER = "change_number";
 
 	@Override
 	public void evaluateTriggers(RequiredActionContext context) {
@@ -52,7 +55,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 	@Override
 	public void requiredActionChallenge(RequiredActionContext context) {
-		context.getUser().addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
+
 		try {
 			UserModel user = context.getUser();
 			RealmModel realm = context.getRealm();
@@ -78,9 +81,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
 
-			Response challenge = context.form()
-				.setAttribute("realm", realm)
-				.createForm(SmsAuthenticator.TPL_CODE);
+			Response challenge = buildSmsCodeForm(context, realm, mobileNumber);
 			context.challenge(challenge);
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
@@ -90,6 +91,16 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 	@Override
 	public void processAction(RequiredActionContext context) {
+		String enrollment = context.getHttpRequest().getDecodedFormParameters().getFirst(SmsEnrollmentAbandon.FORM_PARAM);
+		if (SmsEnrollmentAbandon.ACTION_CANCEL.equals(enrollment)) {
+			SmsEnrollmentAbandon.abandonAndRedirect(context);
+			return;
+		}
+		if (ACTION_CHANGE_NUMBER.equals(enrollment)) {
+			handleChangeNumber(context);
+			return;
+		}
+
 		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst("code");
 
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
@@ -98,8 +109,8 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 		String ttl = authSession.getAuthNote("ttl");
 
 		if (code == null || ttl == null || enteredCode == null) {
-			logger.warn("Phone number is not set");
-			handleInvalidSmsCode(context);
+			logger.warn("SMS code session state missing or no code entered");
+			handleInvalidSmsCode(context, mobileNumber);
 			return;
 		}
 
@@ -121,8 +132,46 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 			context.success();
 		} else {
 			// invalid or expired
-			handleInvalidSmsCode(context);
+			handleInvalidSmsCode(context, mobileNumber);
 		}
+	}
+
+	private void handleChangeNumber(RequiredActionContext context) {
+		AuthenticationSessionModel session = context.getAuthenticationSession();
+		UserModel user = context.getUser();
+		clearSmsEnrollmentState(session);
+		session.removeAuthNote("mobile_number");
+		user.removeRequiredAction(PhoneValidationRequiredAction.PROVIDER_ID);
+		user.removeRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
+		session.removeRequiredAction(PhoneValidationRequiredAction.PROVIDER_ID);
+		session.removeRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
+		// Same as initial enrollment (enforcement): one User-level RA, not user+session duplicate, so
+		// PhoneNumberRequiredAction.processAction + success() matches a first pass.
+		user.addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
+		session.addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
+		// Do not reuse the current URL (old session_code) after changing execution: ClientSessionCode no longer
+		// matches → "Page has expired". Same idea as RequiredActionContextResult#getActionUrl: new code from
+		// generateCode(), server-shaped URL, execution = phone entry.
+		new PhoneNumberRequiredAction().showPhoneNumberFormAfterChangeNumber(context);
+	}
+
+	private static void clearSmsEnrollmentState(AuthenticationSessionModel session) {
+		session.removeAuthNote("code");
+		session.removeAuthNote("ttl");
+	}
+
+	Response buildSmsCodeForm(RequiredActionContext context, RealmModel realm, String rawSendDestination) {
+		String line = PhoneNumberRequiredAction.buildSmsDestinationHint(
+			context.getSession(),
+			realm,
+			context.getUser(),
+			rawSendDestination
+		);
+		return context.form()
+			.setAttribute("realm", realm)
+			.setAttribute("smsEnrollmentMode", Boolean.TRUE)
+			.setAttribute("smsAuthSentToText", line)
+			.createForm(SmsAuthenticator.TPL_CODE);
 	}
 
 	private void handlePhoneToAttribute(RequiredActionContext context, String mobileNumber) {
@@ -136,10 +185,18 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 		}
 	}
 
-	private void handleInvalidSmsCode(RequiredActionContext context) {
+	private void handleInvalidSmsCode(RequiredActionContext context, String e164) {
+		String line = PhoneNumberRequiredAction.buildSmsDestinationHint(
+			context.getSession(),
+			context.getRealm(),
+			context.getUser(),
+			e164
+		);
 		Response challenge = context
 			.form()
 			.setAttribute("realm", context.getRealm())
+			.setAttribute("smsEnrollmentMode", Boolean.TRUE)
+			.setAttribute("smsAuthSentToText", line)
 			.setError("smsAuthCodeInvalid")
 			.createForm(SmsAuthenticator.TPL_CODE);
 		context.challenge(challenge);
