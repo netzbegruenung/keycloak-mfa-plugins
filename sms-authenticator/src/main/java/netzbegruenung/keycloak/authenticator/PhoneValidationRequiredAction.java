@@ -30,6 +30,7 @@ import org.keycloak.authentication.CredentialRegistrator;
 import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.common.util.SecretGenerator;
+import org.keycloak.common.util.Time;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
@@ -45,6 +46,8 @@ import jakarta.ws.rs.core.Response;
 public class PhoneValidationRequiredAction implements RequiredActionProvider, CredentialRegistrator {
 	private static final Logger logger = Logger.getLogger(PhoneValidationRequiredAction.class);
 	public static final String PROVIDER_ID = "phone_validation_config";
+	private static final String LAST_OTP_SENT = "last_otp_sent";
+	private static final long DEBOUNCE_SECONDS = 30; // Minimum time between SMS sends (in seconds)
 
 	@Override
 	public void evaluateTriggers(RequiredActionContext context) {
@@ -64,28 +67,71 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 			String mobileNumber = authSession.getAuthNote("mobile_number");
 			logger.infof("Validating phone number: %s of user: %s", mobileNumber, user.getUsername());
 
-			int length = Integer.parseInt(config.getConfig().get("length"));
-			int ttl = Integer.parseInt(config.getConfig().get("ttl"));
-
-			String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
-			authSession.setAuthNote("code", code);
-			authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
-
-			Theme theme = context.getSession().theme().getTheme(Theme.Type.LOGIN);
-			Locale locale = context.getSession().getContext().resolveLocale(user);
-			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
-			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
-
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
-
-			Response challenge = context.form()
-				.setAttribute("realm", realm)
-				.createForm(SmsAuthenticator.TPL_CODE);
-			context.challenge(challenge);
+			// Check if an SMS can be sent (debouncing logic)
+			if (canSendOtp(authSession)) {
+				sendSmsAndCreateForm(context, authSession, config, mobileNumber);
+				logger.info("Initial SMS OTP sent for user " + user.getUsername());
+			} else {
+				// If debouncing prevents sending, show form with a message indicating remaining
+				// time
+				long secondsRemaining = getSecondsRemaining(authSession);
+				Response challenge = context.form()
+						.setAttribute("realm", realm)
+						.setError("smsDebounceMessage", String.valueOf(secondsRemaining))
+						.createForm(SmsAuthenticator.TPL_CODE);
+				context.challenge(challenge);
+				logger.infof("SMS resend rejected for user %s (%d seconds remaining)", user.getUsername(),
+						secondsRemaining);
+			}
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			context.failure();
 		}
+	}
+
+	private boolean canSendOtp(AuthenticationSessionModel authSession) {
+		String lastSent = authSession.getAuthNote(LAST_OTP_SENT);
+		long currentTime = Time.currentTime();
+		long lastTime = lastSent != null ? Long.parseLong(lastSent) : 0;
+		return currentTime - lastTime >= DEBOUNCE_SECONDS;
+	}
+
+	private long getSecondsRemaining(AuthenticationSessionModel authSession) {
+		String lastSent = authSession.getAuthNote(LAST_OTP_SENT);
+		long lastTime = lastSent != null ? Long.parseLong(lastSent) : 0;
+		return lastTime > 0 ? DEBOUNCE_SECONDS - (Time.currentTime() - lastTime) : 0;
+	}
+
+	private void sendSmsAndCreateForm(RequiredActionContext context, AuthenticationSessionModel authSession,
+			AuthenticatorConfigModel config, String mobileNumber) throws Exception {
+		int length = Integer.parseInt(config.getConfig().get("length"));
+		int ttl = Integer.parseInt(config.getConfig().get("ttl"));
+
+		String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
+		authSession.setAuthNote("code", code);
+		authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
+		authSession.setAuthNote(LAST_OTP_SENT, String.valueOf(Time.currentTime()));
+
+		Theme theme = context.getSession().theme().getTheme(Theme.Type.LOGIN);
+		Locale locale = context.getSession().getContext().resolveLocale(context.getUser());
+		String smsAuthText = theme.getEnhancedMessages(context.getRealm(), locale).getProperty("smsAuthText");
+		String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
+
+		if (authSession.getAuthNote("numberFormatNumberInUse") == null) {
+			// smsText = authSession.getAuthNote("numberFormatNumberInUse") + ": " +
+			// smsText;
+			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
+		} else {
+			logger.warnf("The phone number %s is already in use.", mobileNumber);
+
+		}
+
+		context.getUser().removeRequiredAction(PhoneValidationRequiredAction.PROVIDER_ID);
+
+		Response challenge = context.form()
+				.setAttribute("realm", context.getRealm())
+				.createForm(SmsAuthenticator.TPL_CODE);
+		context.challenge(challenge);
 	}
 
 	@Override
