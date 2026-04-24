@@ -28,6 +28,7 @@ import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import jakarta.ws.rs.core.Response;
 import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
 import org.jboss.logging.Logger;
+import org.keycloak.authentication.AuthenticationProcessor;
 import org.keycloak.authentication.CredentialRegistrator;
 import org.keycloak.authentication.InitiatedActionSupport;
 import org.keycloak.authentication.RequiredActionContext;
@@ -35,7 +36,9 @@ import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.authentication.requiredactions.WebAuthnRegisterFactory;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.models.AuthenticatorConfigModel;
+import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.RealmModel;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.credential.OTPCredentialModel;
@@ -46,10 +49,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+
+import org.keycloak.forms.login.LoginFormsProvider;
+import org.keycloak.services.resources.LoginActionsService;
+import org.keycloak.theme.Theme;
+
+import java.net.URI;
+
+import jakarta.ws.rs.core.UriBuilder;
 
 public class PhoneNumberRequiredAction implements RequiredActionProvider, CredentialRegistrator {
 
@@ -113,21 +125,20 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 				WebAuthnRegisterFactory.PROVIDER_ID,
 				UserModel.RequiredAction.UPDATE_PASSWORD.name()
 			);
-			Set<String> authSessionRequiredActions = context.getAuthenticationSession().getRequiredActions();
-			authSessionRequiredActions.retainAll(availableRequiredActions);
-			if (!authSessionRequiredActions.isEmpty()) {
-				// skip as relevant required action is already set
+			// Merge user + session queues: phone_validation often sits only on the session queue (e.g. after number submit).
+			// Session-only checks used to re-queue mobile_number in evaluateTriggers and show the phone step twice.
+			Set<String> mfaRequiredActionsPending = new HashSet<>(context.getAuthenticationSession().getRequiredActions());
+			context.getUser().getRequiredActionsStream().forEach(mfaRequiredActionsPending::add);
+			mfaRequiredActionsPending.retainAll(availableRequiredActions);
+			if (!mfaRequiredActionsPending.isEmpty()) {
 				return;
 			}
 
-			Stream<String> usersRequiredActions = context.getUser().getRequiredActionsStream();
-			if (usersRequiredActions.noneMatch(availableRequiredActions::contains)) {
-				logger.infof(
-					"No 2FA method configured for user: %s, setting required action for SMS authenticator",
-					context.getUser().getUsername()
-				);
-				context.getUser().addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
-			}
+			logger.infof(
+				"No 2FA method configured for user: %s, setting required action for SMS authenticator",
+				context.getUser().getUsername()
+			);
+			context.getUser().addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
 		}
 	}
 
@@ -172,18 +183,137 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		return countryList;
 	}
 
+	/**
+	 * Same contract as Keycloak's {@code RequiredActionContextResult#getActionUrl(String)}: first arg is the
+	 * client session code, not a provider id. {@code execution} is set explicitly (server always uses the current action).
+	 */
+	private static URI buildRequiredActionFormUri(
+		RequiredActionContext context,
+		String clientSessionCode,
+		String executionProviderId) {
+		UriBuilder b = LoginActionsService.requiredActionProcessor(context.getUriInfo());
+		b.queryParam(LoginActionsService.SESSION_CODE, clientSessionCode);
+		b.queryParam("execution", executionProviderId);
+		ClientModel client = context.getAuthenticationSession().getClient();
+		if (client != null) {
+			b.queryParam("client_id", client.getClientId());
+		} else {
+			String cid = context.getUriInfo().getQueryParameters().getFirst("client_id");
+			if (cid != null) {
+				b.queryParam("client_id", cid);
+			}
+		}
+		String tabId = context.getAuthenticationSession().getTabId();
+		if (tabId == null) {
+			tabId = context.getUriInfo().getQueryParameters().getFirst("tab_id");
+		}
+		if (tabId != null) {
+			b.queryParam("tab_id", tabId);
+		}
+		String clientData = AuthenticationProcessor.getClientData(
+			context.getSession(),
+			context.getAuthenticationSession()
+		);
+		if (clientData == null) {
+			clientData = context.getUriInfo().getQueryParameters().getFirst("client_data");
+		}
+		if (clientData != null) {
+			b.queryParam("client_data", clientData);
+		}
+		return b.build(context.getRealm().getName());
+	}
+
+	/**
+	 * Return to the phone step from SMS validation: issues a fresh {@code session_code} (required; reusing the old
+	 * one yields Keycloak's "Page has expired"). Does not use {@link #buildPhoneNumberForm(RequiredActionContext, URI)}
+	 * because {@code context.form()} would mint another code and desync the form action URL.
+	 */
+	public void showPhoneNumberFormAfterChangeNumber(RequiredActionContext context) {
+		// Keep current execution in sync with the shown form; otherwise getLastExecutionUrl / replaceState can keep
+		// phone_validation while the next GET mixes validation URL with the phone UI / RA queue.
+		context.getAuthenticationSession().setAuthNote(
+			AuthenticationProcessor.CURRENT_AUTHENTICATION_EXECUTION,
+			PROVIDER_ID
+		);
+		String code = context.generateCode();
+		URI action = buildRequiredActionFormUri(context, code, PROVIDER_ID);
+		LoginFormsProvider form = context
+			.getSession()
+			.getProvider(LoginFormsProvider.class)
+			.setAuthenticationSession(context.getAuthenticationSession())
+			.setUser(context.getUser())
+			.setActionUri(action)
+			.setExecution(PROVIDER_ID)
+			.setClientSessionCode(code)
+			.setAttribute(
+				"mobileInputFieldPlaceholder",
+				context.getAuthenticationSession().getAuthNote("mobileInputFieldPlaceholder")
+			)
+			.setAttribute("countryList", getCountryCodeList(context));
+		context.challenge(form.createForm("mobile_number_form.ftl"));
+	}
+
+	/**
+	 * Localized line for the code screen: shows the exact destination used for the SMS (same string as in session / send path).
+	 */
+	public static String buildSmsDestinationHint(
+		KeycloakSession session,
+		RealmModel realm,
+		UserModel user,
+		String rawDestination) {
+		if (rawDestination == null || rawDestination.isBlank()) {
+			return null;
+		}
+		try {
+			Theme theme = session.theme().getTheme(Theme.Type.LOGIN);
+			Locale locale = session.getContext().resolveLocale(user);
+			String pattern = theme.getEnhancedMessages(realm, locale).getProperty("smsAuthSentTo");
+			if (pattern == null) {
+				pattern = "The code was sent to %1$s";
+			}
+			return String.format(pattern, rawDestination);
+		} catch (Exception e) {
+			return rawDestination;
+		}
+	}
+
+	/**
+	 * Phone number form; when {@code formAction} is set, POST targets that URL (e.g. return from code validation).
+	 */
+	Response buildPhoneNumberForm(RequiredActionContext context, java.net.URI formAction) {
+		LoginFormsProvider form = context.form()
+			.setAttribute("mobileInputFieldPlaceholder", context.getAuthenticationSession().getAuthNote("mobileInputFieldPlaceholder"))
+			.setAttribute("countryList", getCountryCodeList(context));
+		if (formAction != null) {
+			form = form.setActionUri(formAction);
+		}
+		return form.createForm("mobile_number_form.ftl");
+	}
+
+	/** Shows the phone number form; optional custom form action URL. */
+	public void showPhoneNumberForm(RequiredActionContext context, java.net.URI formAction) {
+		context.challenge(buildPhoneNumberForm(context, formAction));
+	}
+
 	@Override
 	public void requiredActionChallenge(RequiredActionContext context) {
-		Response challenge = context.form()
-			.setAttribute("mobileInputFieldPlaceholder", context.getAuthenticationSession().getAuthNote("mobileInputFieldPlaceholder"))
-			.setAttribute("countryList", getCountryCodeList(context))
-			.createForm("mobile_number_form.ftl");
-		context.challenge(challenge);
+		context.challenge(buildPhoneNumberForm(context, null));
 	}
 
 	@Override
 	public void processAction(RequiredActionContext context) {
-		String mobileNumber = nonDigitPattern.matcher(context.getHttpRequest().getDecodedFormParameters().getFirst("mobile_number")).replaceAll("");
+		String enrollment = context.getHttpRequest().getDecodedFormParameters().getFirst(SmsEnrollmentAbandon.FORM_PARAM);
+		if (SmsEnrollmentAbandon.ACTION_CANCEL.equals(enrollment)) {
+			SmsEnrollmentAbandon.abandonAndRedirect(context);
+			return;
+		}
+
+		String mobileRaw = context.getHttpRequest().getDecodedFormParameters().getFirst("mobile_number");
+		if (mobileRaw == null) {
+			requiredActionChallenge(context);
+			return;
+		}
+		String mobileNumber = nonDigitPattern.matcher(mobileRaw).replaceAll("");
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
 
 		// get the country code from the select input if available and add it to the mobile number
@@ -218,7 +348,10 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 
 		authSession.setAuthNote("mobile_number", mobileNumber);
 		logger.infof("Add required action for phone validation: [%s], user: %s", mobileNumber, context.getUser().getUsername());
-		context.getAuthenticationSession().addRequiredAction(PhoneValidationRequiredAction.PROVIDER_ID);
+		authSession.addRequiredAction(PhoneValidationRequiredAction.PROVIDER_ID);
+		// Both queues: some GETs without session_code only see user-level RAs; otherwise evaluateTriggers can re-add
+		// mobile_number and ordering puts the phone step ahead of the code step again.
+		context.getUser().addRequiredAction(PhoneValidationRequiredAction.PROVIDER_ID);
 		context.success();
 	}
 
