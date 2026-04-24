@@ -299,6 +299,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		Response challenge = context
 			.form()
 			.setAttribute("mobileInputFieldPlaceholder", context.getAuthenticationSession().getAuthNote("mobileInputFieldPlaceholder"))
+			.setAttribute("countryList", getCountryCodeList(context))
 			.setError(formatError)
 			.createForm("mobile_number_form.ftl");
 		context.challenge(challenge);
