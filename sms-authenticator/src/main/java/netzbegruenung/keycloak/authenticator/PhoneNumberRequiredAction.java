@@ -34,6 +34,7 @@ import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.authentication.requiredactions.WebAuthnRegisterFactory;
 import org.keycloak.credential.CredentialModel;
+import org.keycloak.credential.CredentialProvider;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RoleModel;
@@ -73,6 +74,28 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 			logger.error("Failed to check 2FA enforcement, no config alias sms-2fa found");
 			return;
 		}
+
+		// Auto-enroll: if enableByDefault is active and user has the mobile number attribute,
+		// create the SMS credential automatically so 2FA is enforced from the next login onwards.
+		boolean enableByDefault = Boolean.parseBoolean(config.getConfig().getOrDefault("enableByDefault", "false"));
+		if (enableByDefault) {
+			boolean hasCredential = context.getUser().credentialManager()
+				.getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findAny().isPresent();
+			if (!hasCredential) {
+				String mobileNumberAttribute = config.getConfig().getOrDefault("mobileNumberAttribute", "mobile_number");
+				String mobileNumber = context.getUser().getAttributeStream(mobileNumberAttribute)
+					.filter(n -> n != null && !n.isBlank()).findFirst().orElse(null);
+				if (mobileNumber != null) {
+					SmsAuthCredentialProvider credentialProvider = (SmsAuthCredentialProvider) context.getSession()
+						.getProvider(CredentialProvider.class, SmsAuthCredentialProviderFactory.PROVIDER_ID);
+					credentialProvider.createCredential(context.getRealm(), context.getUser(),
+						SmsAuthCredentialModel.createSmsAuthenticator(mobileNumber));
+					logger.infof("Auto-enrolled user %s for SMS 2FA from attribute '%s'",
+						context.getUser().getUsername(), mobileNumberAttribute);
+				}
+			}
+		}
+
 		boolean forceSecondFactorEnabled = Boolean.parseBoolean(config.getConfig().get("forceSecondFactor"));
 		if (forceSecondFactorEnabled) {
 			if (config.getConfig().get("whitelist") != null) {
