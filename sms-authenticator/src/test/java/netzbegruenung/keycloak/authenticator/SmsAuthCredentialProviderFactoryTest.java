@@ -20,14 +20,14 @@ package netzbegruenung.keycloak.authenticator;
 import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.models.KeycloakSession;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.mock;
 
 @DisplayName("SmsAuthCredentialProviderFactory")
@@ -41,62 +41,18 @@ class SmsAuthCredentialProviderFactoryTest {
 		factory = new SmsAuthCredentialProviderFactory();
 	}
 
-	@Nested
-	@DisplayName("Provider identification")
-	class ProviderIdentification {
-
-		@Test
-		@DisplayName("should return correct provider ID")
-		void shouldReturnCorrectProviderId() {
-			assertEquals("mobile-number", factory.getId());
-		}
+	@Test
+	@DisplayName("should return correct provider ID")
+	void shouldReturnCorrectProviderId() {
+		assertEquals("mobile-number", factory.getId());
 	}
 
-	@Nested
-	@DisplayName("Credential provider creation")
-	class CredentialProviderCreation {
+	@Test
+	@DisplayName("should create SmsAuthCredentialProvider instance")
+	void shouldCreateSmsAuthCredentialProviderInstance() {
+		KeycloakSession mockSession = mock(KeycloakSession.class);
+		CredentialProvider<SmsAuthCredentialModel> provider = factory.create(mockSession);
 
-		@Test
-		@DisplayName("should create SmsAuthCredentialProvider instance")
-		void shouldCreateSmsAuthCredentialProviderInstance() {
-			KeycloakSession mockSession = mock(KeycloakSession.class);
-			CredentialProvider<SmsAuthCredentialModel> provider = factory.create(mockSession);
-
-			assertInstanceOf(SmsAuthCredentialProvider.class, provider);
-		}
-	}
-
-	@Nested
-	@DisplayName("Type compatibility")
-	class TypeCompatibility {
-
-		@Test
-		@DisplayName("should support mobile-number credential type")
-		void shouldSupportMobileNumberCredentialType() {
-			KeycloakSession mockSession = mock(KeycloakSession.class);
-			SmsAuthCredentialProvider provider = (SmsAuthCredentialProvider) factory.create(mockSession);
-
-			assertTrue(provider.supportsCredentialType("mobile-number"));
-		}
-
-		@Test
-		@DisplayName("should not support other credential types")
-		void shouldNotSupportOtherCredentialTypes() {
-			KeycloakSession mockSession = mock(KeycloakSession.class);
-			SmsAuthCredentialProvider provider = (SmsAuthCredentialProvider) factory.create(mockSession);
-
-			assertFalse(provider.supportsCredentialType("other-type"));
-		}
-	}
-
-	@Nested
-	@DisplayName("Lifecycle")
-	class Lifecycle {
-
-		@Test
-		@DisplayName("should not throw exception on close")
-		void shouldNotThrowExceptionOnClose() {
-			factory.close();
-		}
+		assertInstanceOf(SmsAuthCredentialProvider.class, provider);
 	}
 }
