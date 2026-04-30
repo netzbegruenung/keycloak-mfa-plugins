@@ -18,7 +18,6 @@
 package netzbegruenung.keycloak.app.actiontoken;
 
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,35 +25,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @DisplayName("AppSetupActionToken")
 class AppSetupActionTokenTest {
 
-	@Nested
-	@DisplayName("Token type")
-	class TokenType {
-
-		@Test
-		@DisplayName("should have correct token type")
-		void shouldHaveCorrectTokenType() {
-			assertEquals("app-setup-action-token", AppSetupActionToken.TOKEN_TYPE);
-		}
+	@Test
+	@DisplayName("Token type should have correct token type")
+	void tokenTypeShouldHaveCorrectTokenType() {
+		assertEquals("app-setup-action-token", AppSetupActionToken.TOKEN_TYPE);
 	}
 
-	@Nested
-	@DisplayName("Creation")
-	class Creation {
+	@Test
+	@DisplayName("Creation should create token with correct values")
+	void creationShouldCreateTokenWithCorrectValues() {
+		String userId = "user-123";
+		Integer expiration = 3600;
+		String authSessionId = "auth-session-456";
+		String clientId = "client-789";
 
-		@Test
-		@DisplayName("should create token with correct values")
-		void shouldCreateTokenWithCorrectValues() {
-			String userId = "user-123";
-			Integer expiration = 3600;
-			String authSessionId = "auth-session-456";
-			String clientId = "client-789";
+		AppSetupActionToken token = new AppSetupActionToken(userId, expiration, authSessionId, clientId);
 
-			AppSetupActionToken token = new AppSetupActionToken(userId, expiration, authSessionId, clientId);
-
-			assertEquals(userId, token.getUserId());
-			assertEquals(authSessionId, token.getOriginalAuthenticationSessionId());
-			assertEquals(clientId, token.getIssuer());
-			assertEquals(AppSetupActionToken.TOKEN_TYPE, token.getType());
-		}
+		assertEquals(userId, token.getUserId());
+		assertEquals(authSessionId, token.getOriginalAuthenticationSessionId());
+		assertEquals(clientId, token.getIssuer());
+		assertEquals(AppSetupActionToken.TOKEN_TYPE, token.getType());
 	}
 }

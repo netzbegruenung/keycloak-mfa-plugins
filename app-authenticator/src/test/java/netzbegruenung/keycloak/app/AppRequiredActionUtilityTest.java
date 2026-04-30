@@ -18,7 +18,6 @@
 package netzbegruenung.keycloak.app;
 
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,14 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @DisplayName("AppRequiredAction utility methods")
 class AppRequiredActionUtilityTest {
 
-	@Nested
-	@DisplayName("Provider identification")
-	class ProviderIdentification {
-
-		@Test
-		@DisplayName("should have correct provider ID")
-		void shouldHaveCorrectProviderId() {
-			assertEquals("app-register", AppRequiredAction.PROVIDER_ID);
-		}
+	@Test
+	@DisplayName("Provider identification should have correct provider ID")
+	void providerIdentificationShouldHaveCorrectProviderId() {
+		assertEquals("app-register", AppRequiredAction.PROVIDER_ID);
 	}
 }

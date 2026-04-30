@@ -19,7 +19,6 @@ package netzbegruenung.keycloak.app;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.Config;
@@ -45,67 +44,55 @@ class AppRequiredActionFactoryTest {
 		factory = new AppRequiredActionFactory();
 	}
 
-	@Nested
-	@DisplayName("Provider identification")
-	class ProviderIdentification {
-
-		@Test
-		@DisplayName("should return correct provider ID")
-		void shouldReturnCorrectProviderId() {
-			assertEquals("app-register", factory.getId());
-		}
-
-		@Test
-		@DisplayName("should return correct display text")
-		void shouldReturnCorrectDisplayText() {
-			assertEquals("Update App Authenticator", factory.getDisplayText());
-		}
+	// Provider identification tests
+	@Test
+	@DisplayName("should return correct provider ID")
+	void shouldReturnCorrectProviderId() {
+		assertEquals("app-register", factory.getId());
 	}
 
-	@Nested
-	@DisplayName("Required action creation")
-	class RequiredActionCreation {
-
-		@Test
-		@DisplayName("should create AppRequiredAction instance")
-		void shouldCreateAppRequiredActionInstance() {
-			RequiredActionProvider action = factory.create(session);
-
-			assertInstanceOf(AppRequiredAction.class, action);
-		}
-
-		@Test
-		@DisplayName("should return singleton instance")
-		void shouldReturnSingletonInstance() {
-			RequiredActionProvider instance1 = factory.create(session);
-			RequiredActionProvider instance2 = factory.create(session);
-
-			assertSame(instance1, instance2);
-		}
+	@Test
+	@DisplayName("should return correct display text")
+	void shouldReturnCorrectDisplayText() {
+		assertEquals("Update App Authenticator", factory.getDisplayText());
 	}
 
-	@Nested
-	@DisplayName("Lifecycle")
-	class Lifecycle {
+	// Required action creation tests
+	@Test
+	@DisplayName("should create AppRequiredAction instance")
+	void shouldCreateAppRequiredActionInstance() {
+		RequiredActionProvider action = factory.create(session);
 
-		@Test
-		@DisplayName("should not throw exception on init")
-		void shouldNotThrowExceptionOnInit() {
-			Config.Scope scope = mock(Config.Scope.class);
-			factory.init(scope);
-		}
+		assertInstanceOf(AppRequiredAction.class, action);
+	}
 
-		@Test
-		@DisplayName("should not throw exception on postInit")
-		void shouldNotThrowExceptionOnPostInit() {
-			KeycloakSessionFactory sessionFactory = mock(KeycloakSessionFactory.class);
-			factory.postInit(sessionFactory);
-		}
+	@Test
+	@DisplayName("should return singleton instance")
+	void shouldReturnSingletonInstance() {
+		RequiredActionProvider instance1 = factory.create(session);
+		RequiredActionProvider instance2 = factory.create(session);
 
-		@Test
-		@DisplayName("should not throw exception on close")
-		void shouldNotThrowExceptionOnClose() {
-			factory.close();
-		}
+		assertSame(instance1, instance2);
+	}
+
+	// Lifecycle tests
+	@Test
+	@DisplayName("should not throw exception on init")
+	void shouldNotThrowExceptionOnInit() {
+		Config.Scope scope = mock(Config.Scope.class);
+		factory.init(scope);
+	}
+
+	@Test
+	@DisplayName("should not throw exception on postInit")
+	void shouldNotThrowExceptionOnPostInit() {
+		KeycloakSessionFactory sessionFactory = mock(KeycloakSessionFactory.class);
+		factory.postInit(sessionFactory);
+	}
+
+	@Test
+	@DisplayName("should not throw exception on close")
+	void shouldNotThrowExceptionOnClose() {
+		factory.close();
 	}
 }

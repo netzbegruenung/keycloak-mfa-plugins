@@ -18,7 +18,6 @@
 package netzbegruenung.keycloak.app;
 
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,14 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @DisplayName("AppAuthenticator utility methods")
 class AppAuthenticatorUtilityTest {
 
-	@Nested
-	@DisplayName("Constants")
-	class Constants {
-
-		@Test
-		@DisplayName("should have correct APP_AUTH_GRANTED_NOTE")
-		void shouldHaveCorrectAppAuthGrantedNote() {
-			assertEquals("appAuthGranted", AppAuthenticator.APP_AUTH_GRANTED_NOTE);
-		}
+	@Test
+	@DisplayName("Constants should have correct APP_AUTH_GRANTED_NOTE")
+	void constantsShouldHaveCorrectAppAuthGrantedNote() {
+		assertEquals("appAuthGranted", AppAuthenticator.APP_AUTH_GRANTED_NOTE);
 	}
 }

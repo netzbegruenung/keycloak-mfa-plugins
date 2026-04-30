@@ -80,6 +80,13 @@
 			<artifactId>mockito-junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- JAX-RS implementation for tests -->
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-core</artifactId>
+			<version>6.2.11.Final</version>
+			<scope>test</scope>
+		</dependency>
     </dependencies>
 
     <build>

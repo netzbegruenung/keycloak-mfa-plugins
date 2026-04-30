@@ -19,7 +19,6 @@ package netzbegruenung.keycloak.app;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.credential.CredentialProvider;
@@ -41,39 +40,27 @@ class AppCredentialProviderFactoryTest {
 		factory = new AppCredentialProviderFactory();
 	}
 
-	@Nested
-	@DisplayName("Provider identification")
-	class ProviderIdentification {
-
-		@Test
-		@DisplayName("should return correct provider ID")
-		void shouldReturnCorrectProviderId() {
-			assertEquals("app-credential", factory.getId());
-		}
+	// Provider identification tests
+	@Test
+	@DisplayName("should return correct provider ID")
+	void shouldReturnCorrectProviderId() {
+		assertEquals("app-credential", factory.getId());
 	}
 
-	@Nested
-	@DisplayName("Credential provider creation")
-	class CredentialProviderCreation {
+	// Credential provider creation tests
+	@Test
+	@DisplayName("should create AppCredentialProvider instance")
+	void shouldCreateAppCredentialProviderInstance() {
+		KeycloakSession mockSession = mock(KeycloakSession.class);
+		CredentialProvider<?> provider = factory.create(mockSession);
 
-		@Test
-		@DisplayName("should create AppCredentialProvider instance")
-		void shouldCreateAppCredentialProviderInstance() {
-			KeycloakSession mockSession = mock(KeycloakSession.class);
-			CredentialProvider<?> provider = factory.create(mockSession);
-
-			assertInstanceOf(AppCredentialProvider.class, provider);
-		}
+		assertInstanceOf(AppCredentialProvider.class, provider);
 	}
 
-	@Nested
-	@DisplayName("Lifecycle")
-	class Lifecycle {
-
-		@Test
-		@DisplayName("should not throw exception on close")
-		void shouldNotThrowExceptionOnClose() {
-			factory.close();
-		}
+	// Lifecycle tests
+	@Test
+	@DisplayName("should not throw exception on close")
+	void shouldNotThrowExceptionOnClose() {
+		factory.close();
 	}
 }
