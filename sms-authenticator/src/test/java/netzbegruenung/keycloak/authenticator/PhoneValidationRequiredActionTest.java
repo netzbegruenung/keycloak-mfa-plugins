@@ -17,34 +17,29 @@
 
 package netzbegruenung.keycloak.authenticator;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@DisplayName("PhoneValidationRequiredAction utility methods")
-class PhoneValidationRequiredActionUtilityTest {
+@DisplayName("PhoneValidationRequiredAction")
+@ExtendWith(MockitoExtension.class)
+class PhoneValidationRequiredActionTest {
 
-	@Nested
-	@DisplayName("Provider identification")
-	class ProviderIdentification {
+	private PhoneValidationRequiredAction action;
 
-		@Test
-		@DisplayName("should have correct provider ID")
-		void shouldHaveCorrectProviderId() {
-			assertEquals("phone_validation_config", PhoneValidationRequiredAction.PROVIDER_ID);
-		}
+	@BeforeEach
+	void setUp() {
+		action = new PhoneValidationRequiredAction();
 	}
 
-	@Nested
-	@DisplayName("SmsAuthenticator constants")
-	class SmsAuthenticatorConstants {
-
-		@Test
-		@DisplayName("should have correct TPL_CODE constant")
-		void shouldHaveCorrectTplCodeConstant() {
-			assertEquals("login-sms.ftl", SmsAuthenticator.TPL_CODE);
-		}
+	@Test
+	@DisplayName("should have correct PROVIDER_ID")
+	void shouldHaveCorrectProviderId() {
+		assertEquals("phone_validation_config", PhoneValidationRequiredAction.PROVIDER_ID);
 	}
+
 }
