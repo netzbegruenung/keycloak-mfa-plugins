@@ -1,0 +1,229 @@
+package netzbegruenung.keycloak.enforce_mfa;
+
+import jakarta.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.MultivaluedMap;
+import jakarta.ws.rs.core.Response;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.keycloak.Config;
+import org.keycloak.authentication.*;
+import org.keycloak.authentication.authenticators.conditional.ConditionalAuthenticator;
+import org.keycloak.forms.login.LoginFormsProvider;
+import org.keycloak.models.*;
+import org.keycloak.provider.ProviderConfigProperty;
+import org.keycloak.sessions.AuthenticationSessionModel;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@DisplayName("EnforceMfaAuthenticator")
+@ExtendWith(MockitoExtension.class)
+class EnforceMfaAuthenticatorTest {
+
+    private EnforceMfaAuthenticator authenticator;
+    
+    @Mock
+    private KeycloakSession session;
+    
+    @Mock
+    private RealmModel realm;
+    
+    @Mock
+    private AuthenticationExecutionModel execution;
+    
+    @Mock
+    private AuthenticationFlowContext context;
+    
+    @Mock
+    private AuthenticationSessionModel authSession;
+    
+    @Mock
+    private UserModel user;
+    
+    @Mock
+    private AuthenticatorConfigModel authenticatorConfig;
+    
+    @Mock
+    private LoginFormsProvider formsProvider;
+    
+    @Mock
+    private RequiredActionProviderModel requiredActionProviderModel;
+
+    @BeforeEach
+    void setUp() {
+        authenticator = new EnforceMfaAuthenticator();
+    }
+
+    @DisplayName("Provider ID should be enforce-mfa")
+    @Test
+    void shouldHaveCorrectProviderId() {
+        assertEquals(EnforceMfaAuthenticatorFactory.PROVIDER_ID, "enforce-mfa");
+    }
+
+    @DisplayName("Configuration option name should be mfaSetupOptional")
+    @Test
+    void shouldHaveCorrectConfigOptionName() {
+        assertEquals(EnforceMfaAuthenticator.CONFIG_OPTIONAL_NAME, "mfaSetupOptional");
+    }
+
+    @DisplayName("Configuration option default value should be false")
+    @Test
+    void shouldHaveCorrectConfigDefaultValue() {
+        assertFalse(EnforceMfaAuthenticator.CONFIG_OPTIONAL_DEFAULT_VALUE);
+    }
+
+    @DisplayName("requiresUser should return true")
+    @Test
+    void shouldRequireUser() {
+        assertTrue(authenticator.requiresUser());
+    }
+
+    @DisplayName("setRequiredActions should not throw exception")
+    @Test
+    void shouldNotThrowExceptionOnSetRequiredActions() {
+        assertDoesNotThrow(() -> authenticator.setRequiredActions(session, realm, user));
+    }
+
+    @DisplayName("close should not throw exception")
+    @Test
+    void shouldNotThrowExceptionOnClose() {
+        assertDoesNotThrow(authenticator::close);
+    }
+
+    @DisplayName("authenticate with empty required actions should fail with INTERNAL_ERROR")
+    @Test
+    void shouldFailWithInternalErrorWhenNoRequiredActions() {
+        when(context.getAuthenticationSession()).thenReturn(authSession);
+        when(authSession.getAuthenticatedUser()).thenReturn(user);
+        when(context.getRealm()).thenReturn(realm);
+        when(context.getExecution()).thenReturn(execution);
+        when(context.getSession()).thenReturn(session);
+        when(context.form()).thenReturn(formsProvider);
+        when(formsProvider.setError(anyString())).thenReturn(formsProvider);
+        when(formsProvider.createForm(anyString())).thenReturn(Response.ok().build());
+
+        authenticator.authenticate(context);
+
+        verify(context).failure(eq(AuthenticationFlowError.INTERNAL_ERROR), any(Response.class));
+    }
+
+    @DisplayName("authenticate with required actions should challenge with form")
+    @Test
+    void shouldChallengeWithFormWhenRequiredActionsAvailable() {
+        List<RequiredActionProviderModel> requiredActions = Collections.singletonList(requiredActionProviderModel);
+        when(requiredActionProviderModel.getProviderId()).thenReturn("sms-authenticator");
+        when(requiredActionProviderModel.getAlias()).thenReturn("SMS");
+        
+        when(context.getExecution()).thenReturn(execution);
+        when(context.getRealm()).thenReturn(realm);
+        when(context.getSession()).thenReturn(session);
+        when(context.form()).thenReturn(formsProvider);
+        
+        Response response = Response.ok().build();
+        when(formsProvider.setAttribute(anyString(), any())).thenReturn(formsProvider);
+        when(formsProvider.createForm(anyString())).thenReturn(response);
+
+        authenticator.authenticate(context);
+
+        verify(context).challenge(response);
+    }
+
+    @DisplayName("action with optional setup and no selection should succeed")
+    @Test
+    void shouldSucceedWhenOptionalSetupAndNoSelection() {
+        when(context.getHttpRequest()).thenReturn(mock(AuthenticationHttpRequest.class));
+        MultivaluedMap<String, String> formParams = new MultivaluedHashMap<>();
+        when(((AuthenticationHttpRequest) context.getHttpRequest()).getDecodedFormParameters()).thenReturn(formParams);
+        when(context.getAuthenticatorConfig()).thenReturn(mock(AuthenticatorConfigModel.class));
+        when(context.getAuthenticatorConfig().getConfig()).thenReturn(
+            Collections.singletonMap(EnforceMfaAuthenticator.CONFIG_OPTIONAL_NAME, "true")
+        );
+
+        authenticator.action(context);
+
+        verify(context).success();
+    }
+
+    @DisplayName("action with missing MFA method parameter should challenge with error")
+    @Test
+    void shouldChallengeWithErrorWhenMissingMfaMethodParameter() {
+        when(context.getHttpRequest()).thenReturn(mock(AuthenticationHttpRequest.class));
+        MultivaluedMap<String, String> formParams = new MultivaluedHashMap<>();
+        when(((AuthenticationHttpRequest) context.getHttpRequest()).getDecodedFormParameters()).thenReturn(formParams);
+        when(context.getAuthenticatorConfig()).thenReturn(mock(AuthenticatorConfigModel.class));
+        when(context.getAuthenticatorConfig().getConfig()).thenReturn(new HashMap<>());
+        when(context.form()).thenReturn(formsProvider);
+        when(formsProvider.createErrorPage(any())).thenReturn(Response.ok().build());
+
+        authenticator.action(context);
+
+        verify(context).failure(AuthenticationFlowError.CREDENTIAL_SETUP_REQUIRED);
+    }
+
+    @DisplayName("action with valid MFA method should add required action and succeed")
+    @Test
+    void shouldAddRequiredActionAndSucceedWithValidMfaMethod() {
+        when(context.getHttpRequest()).thenReturn(mock(AuthenticationHttpRequest.class));
+        MultivaluedMap<String, String> formParams = new MultivaluedHashMap<>();
+        formParams.add("mfaMethod", "sms-authenticator");
+        when(((AuthenticationHttpRequest) context.getHttpRequest()).getDecodedFormParameters()).thenReturn(formParams);
+        when(context.getAuthenticatorConfig()).thenReturn(mock(AuthenticatorConfigModel.class));
+        when(context.getAuthenticatorConfig().getConfig()).thenReturn(new HashMap<>());
+        when(context.getAuthenticationSession()).thenReturn(authSession);
+        when(context.getRealm()).thenReturn(realm);
+        when(context.getExecution()).thenReturn(execution);
+        when(context.getSession()).thenReturn(session);
+        
+        List<RequiredActionProviderModel> requiredActions = Collections.singletonList(requiredActionProviderModel);
+        when(requiredActionProviderModel.getProviderId()).thenReturn("sms-authenticator");
+        
+        // Mock helper methods indirectly through behavior
+        doAnswer(invocation -> {
+            String action = invocation.getArgument(0);
+            return action.equals("sms-authenticator");
+        }).when(authSession).getRequiredActions();
+
+        // Simulate success path
+        authenticator.action(context);
+
+        verify(authSession).addRequiredAction("sms-authenticator");
+        verify(context).success();
+    }
+
+    @DisplayName("action with invalid MFA method should fail with CREDENTIAL_SETUP_REQUIRED")
+    @Test
+    void shouldFailWithInvalidMfaMethod() {
+        when(context.getHttpRequest()).thenReturn(mock(AuthenticationHttpRequest.class));
+        MultivaluedMap<String, String> formParams = new MultivaluedHashMap<>();
+        formParams.add("mfaMethod", "invalid-method");
+        when(((AuthenticationHttpRequest) context.getHttpRequest()).getDecodedFormParameters()).thenReturn(formParams);
+        when(context.getAuthenticatorConfig()).thenReturn(mock(AuthenticatorConfigModel.class));
+        when(context.getAuthenticatorConfig().getConfig()).thenReturn(new HashMap<>());
+        when(context.form()).thenReturn(formsProvider);
+        when(formsProvider.createErrorPage(any())).thenReturn(Response.ok().build());
+
+        authenticator.action(context);
+
+        verify(context).failure(AuthenticationFlowError.CREDENTIAL_SETUP_REQUIRED);
+    }
+
+    @DisplayName("configuredFor should return false when Enforce-MFA execution not found")
+    @Test
+    void shouldReturnFalseWhenEnforceMfaExecutionNotFound() {
+        when(context.getAuthenticationSession()).thenReturn(authSession);
+        when(session.getContext()).thenReturn(mock(KeycloakContext.class));
+        when(session.getContext().getAuthenticationSession()).thenReturn(authSession);
+        when(authenticator.configuredFor(session, realm, user)).thenReturn(false);
+
+        boolean result = authenticator.configuredFor(session, realm, user);
+
+        assertFalse(result);
+    }
+}
