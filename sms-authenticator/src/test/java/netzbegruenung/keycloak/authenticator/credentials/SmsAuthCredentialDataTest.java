@@ -20,7 +20,8 @@ package netzbegruenung.keycloak.authenticator.credentials;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @DisplayName("SmsAuthCredentialData")
 class SmsAuthCredentialDataTest {
@@ -31,7 +32,7 @@ class SmsAuthCredentialDataTest {
 		String mobileNumber = "+491761234567";
 		SmsAuthCredentialData data = new SmsAuthCredentialData(mobileNumber);
 
-		assertThat(data.getMobileNumber()).isEqualTo(mobileNumber);
+		assertEquals(mobileNumber, data.getMobileNumber());
 	}
 
 	@Test
@@ -40,7 +41,7 @@ class SmsAuthCredentialDataTest {
 		String mobileNumber = "";
 		SmsAuthCredentialData data = new SmsAuthCredentialData(mobileNumber);
 
-		assertThat(data.getMobileNumber()).isEmpty();
+		assertEquals("", data.getMobileNumber());
 	}
 
 	@Test
@@ -48,6 +49,6 @@ class SmsAuthCredentialDataTest {
 	void shouldStoreNullMobileNumber() {
 		SmsAuthCredentialData data = new SmsAuthCredentialData(null);
 
-		assertThat(data.getMobileNumber()).isNull();
+		assertNull(data.getMobileNumber());
 	}
 }

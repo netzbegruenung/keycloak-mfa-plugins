@@ -20,7 +20,8 @@ package netzbegruenung.keycloak.app.credentials;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @DisplayName("AppCredentialData")
 class AppCredentialDataTest {
@@ -37,12 +38,12 @@ class AppCredentialDataTest {
 
 		AppCredentialData data = new AppCredentialData(publicKey, deviceId, deviceOs, keyAlgorithm, signatureAlgorithm, devicePushId);
 
-		assertThat(data.getPublicKey()).isEqualTo(publicKey);
-		assertThat(data.getDeviceId()).isEqualTo(deviceId);
-		assertThat(data.getDeviceOs()).isEqualTo(deviceOs);
-		assertThat(data.getKeyAlgorithm()).isEqualTo(keyAlgorithm);
-		assertThat(data.getSignatureAlgorithm()).isEqualTo(signatureAlgorithm);
-		assertThat(data.getDevicePushId()).isEqualTo(devicePushId);
+		assertEquals(publicKey, data.getPublicKey());
+		assertEquals(deviceId, data.getDeviceId());
+		assertEquals(deviceOs, data.getDeviceOs());
+		assertEquals(keyAlgorithm, data.getKeyAlgorithm());
+		assertEquals(signatureAlgorithm, data.getSignatureAlgorithm());
+		assertEquals(devicePushId, data.getDevicePushId());
 	}
 
 	@Test
@@ -52,7 +53,7 @@ class AppCredentialDataTest {
 
 		data.setDevicePushId("push-2");
 
-		assertThat(data.getDevicePushId()).isEqualTo("push-2");
+		assertEquals("push-2", data.getDevicePushId());
 	}
 
 	@Test
@@ -60,8 +61,8 @@ class AppCredentialDataTest {
 	void shouldHandleNullValues() {
 		AppCredentialData data = new AppCredentialData(null, null, null, null, null, null);
 
-		assertThat(data.getPublicKey()).isNull();
-		assertThat(data.getDeviceId()).isNull();
-		assertThat(data.getDeviceOs()).isNull();
+		assertNull(data.getPublicKey());
+		assertNull(data.getDeviceId());
+		assertNull(data.getDeviceOs());
 	}
 }

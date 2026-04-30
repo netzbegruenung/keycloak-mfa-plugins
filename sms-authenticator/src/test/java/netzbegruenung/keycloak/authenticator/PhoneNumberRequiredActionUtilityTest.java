@@ -22,7 +22,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @DisplayName("PhoneNumberRequiredAction utility methods")
 class PhoneNumberRequiredActionUtilityTest {
@@ -34,7 +34,7 @@ class PhoneNumberRequiredActionUtilityTest {
 		@Test
 		@DisplayName("should have correct provider ID")
 		void shouldHaveCorrectProviderId() {
-			assertThat(PhoneNumberRequiredAction.PROVIDER_ID).isEqualTo("mobile_number_config");
+			assertEquals("mobile_number_config", PhoneNumberRequiredAction.PROVIDER_ID);
 		}
 	}
 
@@ -45,19 +45,17 @@ class PhoneNumberRequiredActionUtilityTest {
 		@Test
 		@DisplayName("should have non-digit pattern")
 		void shouldHaveNonDigitPattern() {
-			// Test that the pattern removes non-digit characters
 			String input = "+49-176/1234.567";
 			String result = input.replaceAll("[^0-9+]", "");
-			assertThat(result).isEqualTo("+491761234567");
+			assertEquals("+491761234567", result);
 		}
 
 		@Test
 		@DisplayName("should have whitespace pattern")
 		void shouldHaveWhitespacePattern() {
-			// Test that the pattern matches whitespace
 			String input = "+49 176 1234 567";
 			String result = input.replaceAll("\\s+", "");
-			assertThat(result).isEqualTo("+491761234567");
+			assertEquals("+491761234567", result);
 		}
 	}
 
@@ -68,7 +66,7 @@ class PhoneNumberRequiredActionUtilityTest {
 		@Test
 		@DisplayName("should include SMS authenticator type")
 		void shouldIncludeSmsAuthenticatorType() {
-			assertThat(SmsAuthCredentialModel.TYPE).isEqualTo("mobile-number");
+			assertEquals("mobile-number", SmsAuthCredentialModel.TYPE);
 		}
 	}
 
@@ -81,9 +79,9 @@ class PhoneNumberRequiredActionUtilityTest {
 		void shouldSplitNumberFiltersByDoubleHash() {
 			String input = "MOBILE##FIXED_LINE_OR_MOBILE";
 			String[] parts = input.split("##");
-			assertThat(parts).hasSize(2);
-			assertThat(parts[0]).isEqualTo("MOBILE");
-			assertThat(parts[1]).isEqualTo("FIXED_LINE_OR_MOBILE");
+			assertEquals(2, parts.length);
+			assertEquals("MOBILE", parts[0]);
+			assertEquals("FIXED_LINE_OR_MOBILE", parts[1]);
 		}
 
 		@Test
@@ -91,8 +89,8 @@ class PhoneNumberRequiredActionUtilityTest {
 		void shouldHandleSingleFilter() {
 			String input = "MOBILE";
 			String[] parts = input.split("##");
-			assertThat(parts).hasSize(1);
-			assertThat(parts[0]).isEqualTo("MOBILE");
+			assertEquals(1, parts.length);
+			assertEquals("MOBILE", parts[0]);
 		}
 	}
 }

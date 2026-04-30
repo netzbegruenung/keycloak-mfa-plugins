@@ -27,7 +27,7 @@ import org.keycloak.credential.CredentialProvider;
 import org.keycloak.models.KeycloakSession;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 @DisplayName("SmsAuthCredentialProviderFactory")
@@ -48,7 +48,7 @@ class SmsAuthCredentialProviderFactoryTest {
 		@Test
 		@DisplayName("should return correct provider ID")
 		void shouldReturnCorrectProviderId() {
-			assertThat(factory.getId()).isEqualTo("mobile-number");
+			assertEquals("mobile-number", factory.getId());
 		}
 	}
 
@@ -62,7 +62,7 @@ class SmsAuthCredentialProviderFactoryTest {
 			KeycloakSession mockSession = mock(KeycloakSession.class);
 			CredentialProvider<SmsAuthCredentialModel> provider = factory.create(mockSession);
 
-			assertThat(provider).isInstanceOf(SmsAuthCredentialProvider.class);
+			assertInstanceOf(SmsAuthCredentialProvider.class, provider);
 		}
 	}
 
@@ -76,7 +76,7 @@ class SmsAuthCredentialProviderFactoryTest {
 			KeycloakSession mockSession = mock(KeycloakSession.class);
 			SmsAuthCredentialProvider provider = (SmsAuthCredentialProvider) factory.create(mockSession);
 
-			assertThat(provider.supportsCredentialType("mobile-number")).isTrue();
+			assertTrue(provider.supportsCredentialType("mobile-number"));
 		}
 
 		@Test
@@ -85,7 +85,7 @@ class SmsAuthCredentialProviderFactoryTest {
 			KeycloakSession mockSession = mock(KeycloakSession.class);
 			SmsAuthCredentialProvider provider = (SmsAuthCredentialProvider) factory.create(mockSession);
 
-			assertThat(provider.supportsCredentialType("other-type")).isFalse();
+			assertFalse(provider.supportsCredentialType("other-type"));
 		}
 	}
 
@@ -97,7 +97,6 @@ class SmsAuthCredentialProviderFactoryTest {
 		@DisplayName("should not throw exception on close")
 		void shouldNotThrowExceptionOnClose() {
 			factory.close();
-			// Should not throw
 		}
 	}
 }

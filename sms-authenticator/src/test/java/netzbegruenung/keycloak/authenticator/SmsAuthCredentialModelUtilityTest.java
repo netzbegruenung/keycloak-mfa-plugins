@@ -28,7 +28,7 @@ import org.keycloak.util.JsonSerialization;
 
 import java.io.IOException;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("SmsAuthCredentialModel utility methods")
 class SmsAuthCredentialModelUtilityTest {
@@ -40,7 +40,7 @@ class SmsAuthCredentialModelUtilityTest {
 		@Test
 		@DisplayName("should have type 'mobile-number'")
 		void shouldHaveTypeMobileNumber() {
-			assertThat(SmsAuthCredentialModel.TYPE).isEqualTo("mobile-number");
+			assertEquals("mobile-number", SmsAuthCredentialModel.TYPE);
 		}
 	}
 
@@ -57,7 +57,7 @@ class SmsAuthCredentialModelUtilityTest {
 			String json = JsonSerialization.writeValueAsString(originalData);
 			SmsAuthCredentialData deserializedData = JsonSerialization.readValue(json, SmsAuthCredentialData.class);
 
-			assertThat(deserializedData.getMobileNumber()).isEqualTo(mobileNumber);
+			assertEquals(mobileNumber, deserializedData.getMobileNumber());
 		}
 
 		@Test
@@ -69,7 +69,7 @@ class SmsAuthCredentialModelUtilityTest {
 			String json = JsonSerialization.writeValueAsString(originalData);
 			SmsAuthCredentialData deserializedData = JsonSerialization.readValue(json, SmsAuthCredentialData.class);
 
-			assertThat(deserializedData.getMobileNumber()).isEmpty();
+			assertEquals("", deserializedData.getMobileNumber());
 		}
 
 		@Test
@@ -80,7 +80,7 @@ class SmsAuthCredentialModelUtilityTest {
 			String json = JsonSerialization.writeValueAsString(originalData);
 			SmsAuthCredentialData deserializedData = JsonSerialization.readValue(json, SmsAuthCredentialData.class);
 
-			assertThat(deserializedData.getMobileNumber()).isNull();
+			assertNull(deserializedData.getMobileNumber());
 		}
 	}
 
@@ -95,8 +95,8 @@ class SmsAuthCredentialModelUtilityTest {
 			SmsAuthCredentialModel credential = SmsAuthCredentialModel.createSmsAuthenticator("+491761234567");
 			long afterCreation = System.currentTimeMillis();
 
-			assertThat(credential.getCreatedDate()).isGreaterThanOrEqualTo(beforeCreation);
-			assertThat(credential.getCreatedDate()).isLessThanOrEqualTo(afterCreation + 1000);
+			assertTrue(credential.getCreatedDate() >= beforeCreation);
+			assertTrue(credential.getCreatedDate() <= afterCreation + 1000);
 		}
 
 		@Test
@@ -105,8 +105,8 @@ class SmsAuthCredentialModelUtilityTest {
 			String mobileNumber = "+491761234567";
 			SmsAuthCredentialModel credential = SmsAuthCredentialModel.createSmsAuthenticator(mobileNumber);
 
-			assertThat(credential.getType()).isEqualTo("mobile-number");
-			assertThat(credential.getCredentialData()).contains(mobileNumber);
+			assertEquals("mobile-number", credential.getType());
+			assertTrue(credential.getCredentialData().contains(mobileNumber));
 		}
 	}
 
@@ -126,8 +126,8 @@ class SmsAuthCredentialModelUtilityTest {
 
 			SmsAuthCredentialModel credential = SmsAuthCredentialModel.createFromModel(model);
 
-			assertThat(credential.getUserLabel()).contains("***");
-			assertThat(credential.getUserLabel()).endsWith("567");
+			assertTrue(credential.getUserLabel().contains("***"));
+			assertTrue(credential.getUserLabel().endsWith("567"));
 		}
 
 		@Test
@@ -142,7 +142,7 @@ class SmsAuthCredentialModelUtilityTest {
 
 			SmsAuthCredentialModel credential = SmsAuthCredentialModel.createFromModel(model);
 
-			assertThat(credential.getUserLabel()).contains("123");
+			assertTrue(credential.getUserLabel().contains("123"));
 		}
 	}
 }

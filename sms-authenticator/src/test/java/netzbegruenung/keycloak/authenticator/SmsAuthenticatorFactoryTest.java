@@ -33,7 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 @DisplayName("SmsAuthenticatorFactory")
@@ -56,25 +56,25 @@ class SmsAuthenticatorFactoryTest {
 		@Test
 		@DisplayName("should return correct provider ID")
 		void shouldReturnCorrectProviderId() {
-			assertThat(factory.getId()).isEqualTo("mobile-number-authenticator");
+			assertEquals("mobile-number-authenticator", factory.getId());
 		}
 
 		@Test
 		@DisplayName("should return correct display type")
 		void shouldReturnCorrectDisplayType() {
-			assertThat(factory.getDisplayType()).isEqualTo("SMS Authentication (2FA)");
+			assertEquals("SMS Authentication (2FA)", factory.getDisplayType());
 		}
 
 		@Test
 		@DisplayName("should return correct help text")
 		void shouldReturnCorrectHelpText() {
-			assertThat(factory.getHelpText()).isEqualTo("Validates an OTP sent via SMS to the users mobile phone.");
+			assertEquals("Validates an OTP sent via SMS to the users mobile phone.", factory.getHelpText());
 		}
 
 		@Test
 		@DisplayName("should return correct reference category")
 		void shouldReturnCorrectReferenceCategory() {
-			assertThat(factory.getReferenceCategory()).isEqualTo("mobile-number");
+			assertEquals("mobile-number", factory.getReferenceCategory());
 		}
 	}
 
@@ -87,7 +87,7 @@ class SmsAuthenticatorFactoryTest {
 		void shouldCreateSmsAuthenticatorInstance() {
 			Authenticator authenticator = factory.create(session);
 
-			assertThat(authenticator).isInstanceOf(SmsAuthenticator.class);
+			assertInstanceOf(SmsAuthenticator.class, authenticator);
 		}
 
 		@Test
@@ -96,7 +96,7 @@ class SmsAuthenticatorFactoryTest {
 			Authenticator instance1 = factory.create(session);
 			Authenticator instance2 = factory.create(session);
 
-			assertThat(instance1).isSameAs(instance2);
+			assertSame(instance1, instance2);
 		}
 	}
 
@@ -107,13 +107,13 @@ class SmsAuthenticatorFactoryTest {
 		@Test
 		@DisplayName("should be configurable")
 		void shouldBeConfigurable() {
-			assertThat(factory.isConfigurable()).isTrue();
+			assertTrue(factory.isConfigurable());
 		}
 
 		@Test
 		@DisplayName("should allow user setup")
 		void shouldAllowUserSetup() {
-			assertThat(factory.isUserSetupAllowed()).isTrue();
+			assertTrue(factory.isUserSetupAllowed());
 		}
 
 		@Test
@@ -121,11 +121,9 @@ class SmsAuthenticatorFactoryTest {
 		void shouldReturnRequirementChoices() {
 			AuthenticationExecutionModel.Requirement[] requirements = factory.getRequirementChoices();
 
-			assertThat(requirements).contains(
-				AuthenticationExecutionModel.Requirement.REQUIRED,
-				AuthenticationExecutionModel.Requirement.ALTERNATIVE,
-				AuthenticationExecutionModel.Requirement.DISABLED
-			);
+			assertTrue(List.of(requirements).contains(AuthenticationExecutionModel.Requirement.REQUIRED));
+			assertTrue(List.of(requirements).contains(AuthenticationExecutionModel.Requirement.ALTERNATIVE));
+			assertTrue(List.of(requirements).contains(AuthenticationExecutionModel.Requirement.DISABLED));
 		}
 
 		@Test
@@ -133,18 +131,16 @@ class SmsAuthenticatorFactoryTest {
 		void shouldReturnConfigurationProperties() {
 			List<ProviderConfigProperty> configProperties = factory.getConfigProperties();
 
-			assertThat(configProperties).isNotEmpty();
-			assertThat(configProperties).extracting(ProviderConfigProperty::getName)
-				.contains(
-					"length",
-					"ttl",
-					"senderId",
-					"simulation",
-					"countrycode",
-					"apiurl",
-					"forceSecondFactor",
-					"normalizePhoneNumber"
-				);
+			assertNotNull(configProperties);
+			assertFalse(configProperties.isEmpty());
+			assertTrue(configProperties.stream().anyMatch(p -> "length".equals(p.getName())));
+			assertTrue(configProperties.stream().anyMatch(p -> "ttl".equals(p.getName())));
+			assertTrue(configProperties.stream().anyMatch(p -> "senderId".equals(p.getName())));
+			assertTrue(configProperties.stream().anyMatch(p -> "simulation".equals(p.getName())));
+			assertTrue(configProperties.stream().anyMatch(p -> "countrycode".equals(p.getName())));
+			assertTrue(configProperties.stream().anyMatch(p -> "apiurl".equals(p.getName())));
+			assertTrue(configProperties.stream().anyMatch(p -> "forceSecondFactor".equals(p.getName())));
+			assertTrue(configProperties.stream().anyMatch(p -> "normalizePhoneNumber".equals(p.getName())));
 		}
 
 		@Test
@@ -156,7 +152,7 @@ class SmsAuthenticatorFactoryTest {
 				.findFirst()
 				.orElseThrow();
 
-			assertThat(lengthProperty.getDefaultValue()).isEqualTo(6);
+			assertEquals(6, lengthProperty.getDefaultValue());
 		}
 
 		@Test
@@ -168,7 +164,7 @@ class SmsAuthenticatorFactoryTest {
 				.findFirst()
 				.orElseThrow();
 
-			assertThat(ttlProperty.getDefaultValue()).isEqualTo("300");
+			assertEquals("300", ttlProperty.getDefaultValue());
 		}
 
 		@Test
@@ -180,7 +176,7 @@ class SmsAuthenticatorFactoryTest {
 				.findFirst()
 				.orElseThrow();
 
-			assertThat(simulationProperty.getDefaultValue()).isEqualTo(Boolean.TRUE);
+			assertTrue((Boolean) simulationProperty.getDefaultValue());
 		}
 	}
 
@@ -193,7 +189,6 @@ class SmsAuthenticatorFactoryTest {
 		void shouldNotThrowExceptionOnInit() {
 			Config.Scope scope = mock(Config.Scope.class);
 			factory.init(scope);
-			// Should not throw
 		}
 
 		@Test
@@ -201,14 +196,12 @@ class SmsAuthenticatorFactoryTest {
 		void shouldNotThrowExceptionOnPostInit() {
 			KeycloakSessionFactory sessionFactory = mock(KeycloakSessionFactory.class);
 			factory.postInit(sessionFactory);
-			// Should not throw
 		}
 
 		@Test
 		@DisplayName("should not throw exception on close")
 		void shouldNotThrowExceptionOnClose() {
 			factory.close();
-			// Should not throw
 		}
 	}
 }

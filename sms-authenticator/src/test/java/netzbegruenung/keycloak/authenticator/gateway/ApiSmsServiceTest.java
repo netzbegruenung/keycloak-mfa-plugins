@@ -25,10 +25,11 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("ApiSmsService")
-class ApiSmsServiceShould {
+class ApiSmsServiceTest {
 
 	private Map<String, String> config;
 
@@ -91,10 +92,9 @@ class ApiSmsServiceShould {
 		@DisplayName("should convert 0049 to +49")
 		void shouldConvert0049ToPlus49() {
 			ApiSmsService service = new ApiSmsService(config);
-			// Use reflection to test private method
 			java.lang.reflect.Method cleanMethod = getCleanPhoneNumberMethod();
 			String result = invokeCleanMethod(service, cleanMethod, "00491761234567", "+49");
-			assertThat(result).isEqualTo("+491761234567");
+			assertEquals("+491761234567", result);
 		}
 
 		@Test
@@ -103,7 +103,7 @@ class ApiSmsServiceShould {
 			ApiSmsService service = new ApiSmsService(config);
 			java.lang.reflect.Method cleanMethod = getCleanPhoneNumberMethod();
 			String result = invokeCleanMethod(service, cleanMethod, "491761234567", "+49");
-			assertThat(result).isEqualTo("+491761234567");
+			assertEquals("+491761234567", result);
 		}
 
 		@Test
@@ -112,7 +112,7 @@ class ApiSmsServiceShould {
 			ApiSmsService service = new ApiSmsService(config);
 			java.lang.reflect.Method cleanMethod = getCleanPhoneNumberMethod();
 			String result = invokeCleanMethod(service, cleanMethod, "+4901761234567", "+49");
-			assertThat(result).isEqualTo("+491761234567");
+			assertEquals("+491761234567", result);
 		}
 
 		@Test
@@ -121,7 +121,7 @@ class ApiSmsServiceShould {
 			ApiSmsService service = new ApiSmsService(config);
 			java.lang.reflect.Method cleanMethod = getCleanPhoneNumberMethod();
 			String result = invokeCleanMethod(service, cleanMethod, "01761234567", "+49");
-			assertThat(result).isEqualTo("+491761234567");
+			assertEquals("+491761234567", result);
 		}
 
 		@Test
@@ -131,7 +131,7 @@ class ApiSmsServiceShould {
 			ApiSmsService service = new ApiSmsService(config);
 			java.lang.reflect.Method cleanMethod = getCleanPhoneNumberMethod();
 			String result = invokeCleanMethod(service, cleanMethod, "01761234567", "");
-			assertThat(result).isEqualTo("01761234567");
+			assertEquals("01761234567", result);
 		}
 
 		@Test
@@ -141,7 +141,7 @@ class ApiSmsServiceShould {
 			ApiSmsService service = new ApiSmsService(config);
 			java.lang.reflect.Method cleanMethod = getCleanPhoneNumberMethod();
 			String result = invokeCleanMethod(service, cleanMethod, "01761234567", null);
-			assertThat(result).isEqualTo("01761234567");
+			assertEquals("01761234567", result);
 		}
 	}
 
@@ -155,9 +155,9 @@ class ApiSmsServiceShould {
 			ApiSmsService service = new ApiSmsService(config);
 			java.lang.reflect.Method getJsonMethod = getGetJsonBodyMethod();
 			String result = invokeGetJsonBodyMethod(service, getJsonMethod, "+491761234567", "Test message");
-			assertThat(result).contains("\"text\":\"Test message\"");
-			assertThat(result).contains("\"to\":\"+491761234567\"");
-			assertThat(result).contains("\"from\":\"TestSender\"");
+			assertTrue(result.contains("\"text\":\"Test message\""));
+			assertTrue(result.contains("\"to\":\"+491761234567\""));
+			assertTrue(result.contains("\"from\":\"TestSender\""));
 		}
 
 		@Test
@@ -167,7 +167,7 @@ class ApiSmsServiceShould {
 			ApiSmsService service = new ApiSmsService(config);
 			java.lang.reflect.Method getJsonMethod = getGetJsonBodyMethod();
 			String result = invokeGetJsonBodyMethod(service, getJsonMethod, "+491761234567", "Test message");
-			assertThat(result).isEqualTo("{\"custom_phone\":\"+491761234567\",\"custom_msg\":\"Test message\"}");
+			assertEquals("{\"custom_phone\":\"+491761234567\",\"custom_msg\":\"Test message\"}", result);
 		}
 	}
 }

@@ -29,7 +29,7 @@ import org.keycloak.models.KeycloakSessionFactory;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 @DisplayName("PhoneValidationRequiredActionFactory")
@@ -52,13 +52,13 @@ class PhoneValidationRequiredActionFactoryTest {
 		@Test
 		@DisplayName("should return correct provider ID")
 		void shouldReturnCorrectProviderId() {
-			assertThat(factory.getId()).isEqualTo("phone_validation_config");
+			assertEquals("phone_validation_config", factory.getId());
 		}
 
 		@Test
 		@DisplayName("should return correct display text")
 		void shouldReturnCorrectDisplayText() {
-			assertThat(factory.getDisplayText()).isEqualTo("Phone Validation");
+			assertEquals("Phone Validation", factory.getDisplayText());
 		}
 	}
 
@@ -71,7 +71,7 @@ class PhoneValidationRequiredActionFactoryTest {
 		void shouldCreatePhoneValidationRequiredActionInstance() {
 			RequiredActionProvider action = factory.create(session);
 
-			assertThat(action).isInstanceOf(PhoneValidationRequiredAction.class);
+			assertInstanceOf(PhoneValidationRequiredAction.class, action);
 		}
 
 		@Test
@@ -80,7 +80,7 @@ class PhoneValidationRequiredActionFactoryTest {
 			RequiredActionProvider instance1 = factory.create(session);
 			RequiredActionProvider instance2 = factory.create(session);
 
-			assertThat(instance1).isSameAs(instance2);
+			assertSame(instance1, instance2);
 		}
 	}
 
@@ -93,7 +93,6 @@ class PhoneValidationRequiredActionFactoryTest {
 		void shouldNotThrowExceptionOnInit() {
 			Config.Scope scope = mock(Config.Scope.class);
 			factory.init(scope);
-			// Should not throw
 		}
 
 		@Test
@@ -101,14 +100,12 @@ class PhoneValidationRequiredActionFactoryTest {
 		void shouldNotThrowExceptionOnPostInit() {
 			KeycloakSessionFactory sessionFactory = mock(KeycloakSessionFactory.class);
 			factory.postInit(sessionFactory);
-			// Should not throw
 		}
 
 		@Test
 		@DisplayName("should not throw exception on close")
 		void shouldNotThrowExceptionOnClose() {
 			factory.close();
-			// Should not throw
 		}
 	}
 }

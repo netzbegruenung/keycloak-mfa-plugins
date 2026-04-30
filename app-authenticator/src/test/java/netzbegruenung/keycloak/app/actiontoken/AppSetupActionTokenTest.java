@@ -21,7 +21,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @DisplayName("AppSetupActionToken")
 class AppSetupActionTokenTest {
@@ -33,7 +33,7 @@ class AppSetupActionTokenTest {
 		@Test
 		@DisplayName("should have correct token type")
 		void shouldHaveCorrectTokenType() {
-			assertThat(AppSetupActionToken.TOKEN_TYPE).isEqualTo("app-setup-action-token");
+			assertEquals("app-setup-action-token", AppSetupActionToken.TOKEN_TYPE);
 		}
 	}
 
@@ -51,11 +51,10 @@ class AppSetupActionTokenTest {
 
 			AppSetupActionToken token = new AppSetupActionToken(userId, expiration, authSessionId, clientId);
 
-			assertThat(token.getUserId()).isEqualTo(userId);
-			//assertThat(token.get  getAbsoluteExpirationInSecs()).isEqualTo(expiration);
-			assertThat(token.getOriginalAuthenticationSessionId()).isEqualTo(authSessionId);
-			assertThat(token.getIssuer()).isEqualTo(clientId);
-			assertThat(token.getType()).isEqualTo(AppSetupActionToken.TOKEN_TYPE);
+			assertEquals(userId, token.getUserId());
+			assertEquals(authSessionId, token.getOriginalAuthenticationSessionId());
+			assertEquals(clientId, token.getIssuer());
+			assertEquals(AppSetupActionToken.TOKEN_TYPE, token.getType());
 		}
 	}
 }

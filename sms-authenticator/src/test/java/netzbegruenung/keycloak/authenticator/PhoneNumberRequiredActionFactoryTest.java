@@ -29,7 +29,7 @@ import org.keycloak.models.KeycloakSessionFactory;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 @DisplayName("PhoneNumberRequiredActionFactory")
@@ -52,13 +52,13 @@ class PhoneNumberRequiredActionFactoryTest {
 		@Test
 		@DisplayName("should return correct provider ID")
 		void shouldReturnCorrectProviderId() {
-			assertThat(factory.getId()).isEqualTo("mobile_number_config");
+			assertEquals("mobile_number_config", factory.getId());
 		}
 
 		@Test
 		@DisplayName("should return correct display text")
 		void shouldReturnCorrectDisplayText() {
-			assertThat(factory.getDisplayText()).isEqualTo("Update Mobile Number");
+			assertEquals("Update Mobile Number", factory.getDisplayText());
 		}
 	}
 
@@ -71,7 +71,7 @@ class PhoneNumberRequiredActionFactoryTest {
 		void shouldCreatePhoneNumberRequiredActionInstance() {
 			RequiredActionProvider action = factory.create(session);
 
-			assertThat(action).isInstanceOf(PhoneNumberRequiredAction.class);
+			assertInstanceOf(PhoneNumberRequiredAction.class, action);
 		}
 
 		@Test
@@ -80,7 +80,7 @@ class PhoneNumberRequiredActionFactoryTest {
 			RequiredActionProvider instance1 = factory.create(session);
 			RequiredActionProvider instance2 = factory.create(session);
 
-			assertThat(instance1).isSameAs(instance2);
+			assertSame(instance1, instance2);
 		}
 	}
 
@@ -93,7 +93,6 @@ class PhoneNumberRequiredActionFactoryTest {
 		void shouldNotThrowExceptionOnInit() {
 			Config.Scope scope = mock(Config.Scope.class);
 			factory.init(scope);
-			// Should not throw
 		}
 
 		@Test
@@ -101,14 +100,12 @@ class PhoneNumberRequiredActionFactoryTest {
 		void shouldNotThrowExceptionOnPostInit() {
 			KeycloakSessionFactory sessionFactory = mock(KeycloakSessionFactory.class);
 			factory.postInit(sessionFactory);
-			// Should not throw
 		}
 
 		@Test
 		@DisplayName("should not throw exception on close")
 		void shouldNotThrowExceptionOnClose() {
 			factory.close();
-			// Should not throw
 		}
 	}
 }

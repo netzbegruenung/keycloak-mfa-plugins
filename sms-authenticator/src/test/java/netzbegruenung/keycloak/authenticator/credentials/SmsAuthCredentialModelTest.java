@@ -20,7 +20,7 @@ package netzbegruenung.keycloak.authenticator.credentials;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("SmsAuthCredentialModel")
 class SmsAuthCredentialModelTest {
@@ -31,9 +31,9 @@ class SmsAuthCredentialModelTest {
 		String mobileNumber = "+491761234567";
 		SmsAuthCredentialModel credentialModel = SmsAuthCredentialModel.createSmsAuthenticator(mobileNumber);
 
-		assertThat(credentialModel).isNotNull();
-		assertThat(credentialModel.getType()).isEqualTo("mobile-number");
-		assertThat(credentialModel.getSmsAuthenticatorData().getMobileNumber()).isEqualTo(mobileNumber);
+		assertNotNull(credentialModel);
+		assertEquals("mobile-number", credentialModel.getType());
+		assertEquals(mobileNumber, credentialModel.getSmsAuthenticatorData().getMobileNumber());
 	}
 
 	@Test
@@ -42,7 +42,7 @@ class SmsAuthCredentialModelTest {
 		String mobileNumber = "+491761234567";
 		SmsAuthCredentialModel credentialModel = SmsAuthCredentialModel.createSmsAuthenticator(mobileNumber);
 
-		assertThat(credentialModel.getSmsAuthenticatorData().getMobileNumber()).startsWith("+");
+		assertTrue(credentialModel.getSmsAuthenticatorData().getMobileNumber().startsWith("+"));
 	}
 
 //    @Test
@@ -72,9 +72,9 @@ class SmsAuthCredentialModelTest {
 
 		SmsAuthCredentialModel recreatedModel = SmsAuthCredentialModel.createFromModel(credentialModel);
 
-		assertThat(recreatedModel).isNotNull();
-		assertThat(recreatedModel.getType()).isEqualTo("mobile-number");
-		assertThat(recreatedModel.getSmsAuthenticatorData().getMobileNumber()).isEqualTo(mobileNumber);
+		assertNotNull(recreatedModel);
+		assertEquals("mobile-number", recreatedModel.getType());
+		assertEquals(mobileNumber, recreatedModel.getSmsAuthenticatorData().getMobileNumber());
 	}
 
 //    @Test

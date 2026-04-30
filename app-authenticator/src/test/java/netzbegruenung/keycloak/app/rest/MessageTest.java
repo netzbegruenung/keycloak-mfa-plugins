@@ -21,7 +21,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @DisplayName("Message")
 class MessageTest {
@@ -38,8 +39,8 @@ class MessageTest {
 
 			Message msg = new Message(error, message);
 
-			assertThat(msg.error()).isEqualTo(error);
-			assertThat(msg.message()).isEqualTo(message);
+			assertEquals(error, msg.error());
+			assertEquals(message, msg.message());
 		}
 
 		@Test
@@ -47,8 +48,8 @@ class MessageTest {
 		void shouldHandleNullValues() {
 			Message msg = new Message(null, null);
 
-			assertThat(msg.error()).isNull();
-			assertThat(msg.message()).isNull();
+			assertNull(msg.error());
+			assertNull(msg.message());
 		}
 	}
 }

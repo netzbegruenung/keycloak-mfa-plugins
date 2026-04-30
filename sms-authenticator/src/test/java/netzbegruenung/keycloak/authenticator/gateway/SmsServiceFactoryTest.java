@@ -23,7 +23,8 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+
 
 @DisplayName("SmsServiceFactory")
 class SmsServiceFactoryTest {
@@ -53,7 +54,7 @@ class SmsServiceFactoryTest {
 
 		SmsService service = SmsServiceFactory.get(config);
 
-		assertThat(service).isInstanceOf(ApiSmsService.class);
+		assertInstanceOf(ApiSmsService.class, service);
 	}
 
 	@Test

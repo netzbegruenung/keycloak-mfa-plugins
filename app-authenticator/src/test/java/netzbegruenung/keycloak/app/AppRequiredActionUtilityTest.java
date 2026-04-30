@@ -21,7 +21,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @DisplayName("AppRequiredAction utility methods")
 class AppRequiredActionUtilityTest {
@@ -33,7 +33,7 @@ class AppRequiredActionUtilityTest {
 		@Test
 		@DisplayName("should have correct provider ID")
 		void shouldHaveCorrectProviderId() {
-			assertThat(AppRequiredAction.PROVIDER_ID).isEqualTo("app-register");
+			assertEquals("app-register", AppRequiredAction.PROVIDER_ID);
 		}
 	}
 }

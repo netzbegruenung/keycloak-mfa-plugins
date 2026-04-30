@@ -29,7 +29,7 @@ import org.keycloak.models.KeycloakSessionFactory;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 @DisplayName("AppRequiredActionFactory")
@@ -52,13 +52,13 @@ class AppRequiredActionFactoryTest {
 		@Test
 		@DisplayName("should return correct provider ID")
 		void shouldReturnCorrectProviderId() {
-			assertThat(factory.getId()).isEqualTo("app-register");
+			assertEquals("app-register", factory.getId());
 		}
 
 		@Test
 		@DisplayName("should return correct display text")
 		void shouldReturnCorrectDisplayText() {
-			assertThat(factory.getDisplayText()).isEqualTo("Update App Authenticator");
+			assertEquals("Update App Authenticator", factory.getDisplayText());
 		}
 	}
 
@@ -71,7 +71,7 @@ class AppRequiredActionFactoryTest {
 		void shouldCreateAppRequiredActionInstance() {
 			RequiredActionProvider action = factory.create(session);
 
-			assertThat(action).isInstanceOf(AppRequiredAction.class);
+			assertInstanceOf(AppRequiredAction.class, action);
 		}
 
 		@Test
@@ -80,7 +80,7 @@ class AppRequiredActionFactoryTest {
 			RequiredActionProvider instance1 = factory.create(session);
 			RequiredActionProvider instance2 = factory.create(session);
 
-			assertThat(instance1).isSameAs(instance2);
+			assertSame(instance1, instance2);
 		}
 	}
 

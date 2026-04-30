@@ -21,7 +21,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @DisplayName("ChallengeDto")
 class ChallengeDtoTest {
@@ -54,20 +54,20 @@ class ChallengeDtoTest {
 				clientName, clientUrl, loginId
 			);
 
-			assertThat(dto.userName()).isEqualTo(userName);
-			assertThat(dto.userFirstName()).isEqualTo(userFirstName);
-			assertThat(dto.userLastName()).isEqualTo(userLastName);
-			assertThat(dto.targetUrl()).isEqualTo(targetUrl);
-			assertThat(dto.codeChallenge()).isEqualTo(codeChallenge);
-			assertThat(dto.updatedTimestamp()).isEqualTo(updatedTimestamp);
-			assertThat(dto.ipAddress()).isEqualTo(ipAddress);
-			assertThat(dto.device()).isEqualTo(device);
-			assertThat(dto.browser()).isEqualTo(browser);
-			assertThat(dto.os()).isEqualTo(os);
-			assertThat(dto.osVersion()).isEqualTo(osVersion);
-			assertThat(dto.clientName()).isEqualTo(clientName);
-			assertThat(dto.clientUrl()).isEqualTo(clientUrl);
-			assertThat(dto.loginId()).isEqualTo(loginId);
+			assertEquals(userName, dto.userName());
+			assertEquals(userFirstName, dto.userFirstName());
+			assertEquals(userLastName, dto.userLastName());
+			assertEquals(targetUrl, dto.targetUrl());
+			assertEquals(codeChallenge, dto.codeChallenge());
+			assertEquals(updatedTimestamp, dto.updatedTimestamp());
+			assertEquals(ipAddress, dto.ipAddress());
+			assertEquals(device, dto.device());
+			assertEquals(browser, dto.browser());
+			assertEquals(os, dto.os());
+			assertEquals(osVersion, dto.osVersion());
+			assertEquals(clientName, dto.clientName());
+			assertEquals(clientUrl, dto.clientUrl());
+			assertEquals(loginId, dto.loginId());
 		}
 	}
 }

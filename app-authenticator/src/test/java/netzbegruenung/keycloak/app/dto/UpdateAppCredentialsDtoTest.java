@@ -21,7 +21,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @DisplayName("UpdateAppCredentialsDto")
 class UpdateAppCredentialsDtoTest {
@@ -37,7 +38,7 @@ class UpdateAppCredentialsDtoTest {
 
 			UpdateAppCredentialsDto dto = new UpdateAppCredentialsDto(devicePushId);
 
-			assertThat(dto.devicePushId()).isEqualTo(devicePushId);
+			assertEquals(devicePushId, dto.devicePushId());
 		}
 
 		@Test
@@ -45,7 +46,7 @@ class UpdateAppCredentialsDtoTest {
 		void shouldHandleNullDevicePushId() {
 			UpdateAppCredentialsDto dto = new UpdateAppCredentialsDto(null);
 
-			assertThat(dto.devicePushId()).isNull();
+			assertNull(dto.devicePushId());
 		}
 	}
 }

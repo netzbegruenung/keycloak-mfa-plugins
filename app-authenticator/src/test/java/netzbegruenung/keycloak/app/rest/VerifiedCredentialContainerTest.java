@@ -24,7 +24,8 @@ import org.junit.jupiter.api.Test;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.models.UserModel;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 
 @DisplayName("VerifiedCredentialContainer")
@@ -43,9 +44,9 @@ class VerifiedCredentialContainerTest {
 
 			VerifiedCredentialContainer container = new VerifiedCredentialContainer(user, credential, appCredential);
 
-			assertThat(container.user()).isEqualTo(user);
-			assertThat(container.credential()).isEqualTo(credential);
-			assertThat(container.appCredential()).isEqualTo(appCredential);
+			assertEquals(user, container.user());
+			assertEquals(credential, container.credential());
+			assertEquals(appCredential, container.appCredential());
 		}
 
 		@Test
@@ -53,9 +54,9 @@ class VerifiedCredentialContainerTest {
 		void shouldHandleNullValues() {
 			VerifiedCredentialContainer container = new VerifiedCredentialContainer(null, null, null);
 
-			assertThat(container.user()).isNull();
-			assertThat(container.credential()).isNull();
-			assertThat(container.appCredential()).isNull();
+			assertNull(container.user());
+			assertNull(container.credential());
+			assertNull(container.appCredential());
 		}
 	}
 }

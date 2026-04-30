@@ -21,7 +21,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @DisplayName("PhoneValidationRequiredAction utility methods")
 class PhoneValidationRequiredActionUtilityTest {
@@ -33,7 +33,7 @@ class PhoneValidationRequiredActionUtilityTest {
 		@Test
 		@DisplayName("should have correct provider ID")
 		void shouldHaveCorrectProviderId() {
-			assertThat(PhoneValidationRequiredAction.PROVIDER_ID).isEqualTo("phone_validation_config");
+			assertEquals("phone_validation_config", PhoneValidationRequiredAction.PROVIDER_ID);
 		}
 	}
 
@@ -44,7 +44,7 @@ class PhoneValidationRequiredActionUtilityTest {
 		@Test
 		@DisplayName("should have correct TPL_CODE constant")
 		void shouldHaveCorrectTplCodeConstant() {
-			assertThat(SmsAuthenticator.TPL_CODE).isEqualTo("login-sms.ftl");
+			assertEquals("login-sms.ftl", SmsAuthenticator.TPL_CODE);
 		}
 	}
 }

@@ -33,7 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 @DisplayName("AppAuthenticatorFactory")
@@ -56,25 +56,25 @@ class AppAuthenticatorFactoryTest {
 		@Test
 		@DisplayName("should return correct provider ID")
 		void shouldReturnCorrectProviderId() {
-			assertThat(factory.getId()).isEqualTo("app-authenticator");
+			assertEquals("app-authenticator", factory.getId());
 		}
 
 		@Test
 		@DisplayName("should return correct display type")
 		void shouldReturnCorrectDisplayType() {
-			assertThat(factory.getDisplayType()).isEqualTo("App Authenticator");
+			assertEquals("App Authenticator", factory.getDisplayType());
 		}
 
 		@Test
 		@DisplayName("should return correct reference category")
 		void shouldReturnCorrectReferenceCategory() {
-			assertThat(factory.getReferenceCategory()).isEqualTo("APP_CREDENTIAL");
+			assertEquals("APP_CREDENTIAL", factory.getReferenceCategory());
 		}
 
 		@Test
 		@DisplayName("should return correct help text")
 		void shouldReturnCorrectHelpText() {
-			assertThat(factory.getHelpText()).isEqualTo("Authenticator to grant access by mobile app.");
+			assertEquals("Authenticator to grant access by mobile app.", factory.getHelpText());
 		}
 	}
 
@@ -87,7 +87,7 @@ class AppAuthenticatorFactoryTest {
 		void shouldCreateAppAuthenticatorInstance() {
 			Authenticator authenticator = factory.create(session);
 
-			assertThat(authenticator).isInstanceOf(AppAuthenticator.class);
+			assertInstanceOf(AppAuthenticator.class, authenticator);
 		}
 
 		@Test
@@ -96,7 +96,7 @@ class AppAuthenticatorFactoryTest {
 			Authenticator instance1 = factory.create(session);
 			Authenticator instance2 = factory.create(session);
 
-			assertThat(instance1).isSameAs(instance2);
+			assertSame(instance1, instance2);
 		}
 	}
 
@@ -107,13 +107,13 @@ class AppAuthenticatorFactoryTest {
 		@Test
 		@DisplayName("should be configurable")
 		void shouldBeConfigurable() {
-			assertThat(factory.isConfigurable()).isTrue();
+			assertTrue(factory.isConfigurable());
 		}
 
 		@Test
 		@DisplayName("should allow user setup")
 		void shouldAllowUserSetup() {
-			assertThat(factory.isUserSetupAllowed()).isTrue();
+			assertTrue(factory.isUserSetupAllowed());
 		}
 
 		@Test
@@ -121,11 +121,9 @@ class AppAuthenticatorFactoryTest {
 		void shouldReturnRequirementChoices() {
 			AuthenticationExecutionModel.Requirement[] requirements = factory.getRequirementChoices();
 
-			assertThat(requirements).contains(
-				AuthenticationExecutionModel.Requirement.REQUIRED,
-				AuthenticationExecutionModel.Requirement.ALTERNATIVE,
-				AuthenticationExecutionModel.Requirement.DISABLED
-			);
+			assertTrue(List.of(requirements).contains(AuthenticationExecutionModel.Requirement.REQUIRED));
+			assertTrue(List.of(requirements).contains(AuthenticationExecutionModel.Requirement.ALTERNATIVE));
+			assertTrue(List.of(requirements).contains(AuthenticationExecutionModel.Requirement.DISABLED));
 		}
 
 		@Test
@@ -133,9 +131,10 @@ class AppAuthenticatorFactoryTest {
 		void shouldReturnConfigurationProperties() {
 			List<ProviderConfigProperty> configProperties = factory.getConfigProperties();
 
-			assertThat(configProperties).hasSize(2);
-			assertThat(configProperties).extracting(ProviderConfigProperty::getName)
-				.contains("simulation", "appAuthActionTokenExpiration");
+			assertNotNull(configProperties);
+			assertEquals(2, configProperties.size());
+			assertTrue(configProperties.stream().anyMatch(p -> "simulation".equals(p.getName())));
+			assertTrue(configProperties.stream().anyMatch(p -> "appAuthActionTokenExpiration".equals(p.getName())));
 		}
 
 		@Test
@@ -147,7 +146,7 @@ class AppAuthenticatorFactoryTest {
 				.findFirst()
 				.orElseThrow();
 
-			assertThat(simulationProperty.getDefaultValue()).isEqualTo(Boolean.FALSE);
+			assertEquals(Boolean.FALSE, simulationProperty.getDefaultValue());
 		}
 
 		@Test
@@ -159,7 +158,7 @@ class AppAuthenticatorFactoryTest {
 				.findFirst()
 				.orElseThrow();
 
-			assertThat(expirationProperty.getDefaultValue()).isEqualTo(60);
+			assertEquals(60, expirationProperty.getDefaultValue());
 		}
 	}
 

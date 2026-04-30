@@ -26,7 +26,8 @@ import org.keycloak.credential.CredentialProvider;
 import org.keycloak.models.KeycloakSession;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.mock;
 
 @DisplayName("AppCredentialProviderFactory")
@@ -47,7 +48,7 @@ class AppCredentialProviderFactoryTest {
 		@Test
 		@DisplayName("should return correct provider ID")
 		void shouldReturnCorrectProviderId() {
-			assertThat(factory.getId()).isEqualTo("app-credential");
+			assertEquals("app-credential", factory.getId());
 		}
 	}
 
@@ -61,7 +62,7 @@ class AppCredentialProviderFactoryTest {
 			KeycloakSession mockSession = mock(KeycloakSession.class);
 			CredentialProvider<?> provider = factory.create(mockSession);
 
-			assertThat(provider).isInstanceOf(AppCredentialProvider.class);
+			assertInstanceOf(AppCredentialProvider.class, provider);
 		}
 	}
 
