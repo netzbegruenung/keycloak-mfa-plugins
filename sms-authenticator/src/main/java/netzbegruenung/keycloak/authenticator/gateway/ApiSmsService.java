@@ -21,6 +21,9 @@
 
 package netzbegruenung.keycloak.authenticator.gateway;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -65,6 +68,8 @@ public class ApiSmsService implements SmsService{
 
 	private final String getUrl;
 
+	private final List<String> urlencodeOtherProperties;
+
 	ApiSmsService(Map<String, String> config) {
 		apiurl = config.get("apiurl");
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
@@ -89,6 +94,11 @@ public class ApiSmsService implements SmsService{
 		hideResponsePayload = Boolean.parseBoolean(config.get("hideResponsePayload"));
 
 		getUrl = config.getOrDefault("getUrl", "");
+
+		String otherPropsRaw = config.getOrDefault("urlencodeOtherProperties", "");
+		urlencodeOtherProperties = otherPropsRaw.isBlank()
+			? Collections.emptyList()
+			: Arrays.asList(otherPropsRaw.split("##"));
 	}
 
 	public void send(String phoneNumber, String message) {
@@ -114,6 +124,7 @@ public class ApiSmsService implements SmsService{
 			}else if (apiuser != null && !apiuser.isEmpty()) {
 				request = requestBuilder.setHeader("Authorization", getAuthHeader(apiuser, apitoken)).build();
 			} else {
+
 				request = requestBuilder.build();
 			}
 			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -195,17 +206,30 @@ public class ApiSmsService implements SmsService{
 
 
 	public Builder urlencodedRequest(String phoneNumber, String message) {
-		String body = (apiTokenInHeader ? "" : Optional.ofNullable(apitokenattribute)
-						  .map(it -> String.format("%s=%s&", it, URLEncoder.encode(apitoken, Charset.defaultCharset()))).orElse(""))
-					  + (useUuid ? String.format("%s=%s&", uuidAttribute, URLEncoder.encode(UUID.randomUUID().toString(), Charset.defaultCharset())) : "")
-					  + String.format("%s=%s&", messageattribute, URLEncoder.encode(message, Charset.defaultCharset()))
-					  + String.format("%s=%s&", receiverattribute, URLEncoder.encode(phoneNumber, Charset.defaultCharset()))
-					  + String.format("%s=%s", senderattribute, URLEncoder.encode(senderId, Charset.defaultCharset()));
+		StringBuilder body = new StringBuilder();
+		body.append(apiTokenInHeader ? "" : Optional.ofNullable(apitokenattribute)
+						.map(it -> String.format("%s=%s&", it, URLEncoder.encode(apitoken, Charset.defaultCharset()))).orElse(""));
+		if (useUuid) {
+			body.append(String.format("%s=%s&", uuidAttribute, URLEncoder.encode(UUID.randomUUID().toString(), Charset.defaultCharset())));
+		}
+		body.append(String.format("%s=%s&", messageattribute, URLEncoder.encode(message, Charset.defaultCharset())));
+		body.append(String.format("%s=%s&", receiverattribute, URLEncoder.encode(phoneNumber, Charset.defaultCharset())));
+		body.append(String.format("%s=%s", senderattribute, URLEncoder.encode(senderId, Charset.defaultCharset())));
+
+		for (String prop : urlencodeOtherProperties) {
+			int eqIdx = prop.indexOf('=');
+			if (eqIdx > 0) {
+				String key = prop.substring(0, eqIdx);
+				String value = prop.substring(eqIdx + 1);
+				body.append("&").append(URLEncoder.encode(key, Charset.defaultCharset()))
+					.append("=").append(URLEncoder.encode(value, Charset.defaultCharset()));
+			}
+		}
 
 		return HttpRequest.newBuilder()
 				.uri(URI.create(apiurl))
 				.header("Content-Type", "application/x-www-form-urlencoded")
-				.POST(HttpRequest.BodyPublishers.ofString(body));
+				.POST(HttpRequest.BodyPublishers.ofString(body.toString()));
 	}
 
 	public Builder getRequest(String phoneNumber, String message) {
