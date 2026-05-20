@@ -65,6 +65,8 @@ public class ApiSmsService implements SmsService{
 
 	private final String getUrl;
 
+	private final boolean stripPlusPrefix;
+
 	ApiSmsService(Map<String, String> config) {
 		apiurl = config.get("apiurl");
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
@@ -89,10 +91,15 @@ public class ApiSmsService implements SmsService{
 		hideResponsePayload = Boolean.parseBoolean(config.get("hideResponsePayload"));
 
 		getUrl = config.getOrDefault("getUrl", "");
+
+		stripPlusPrefix = Boolean.parseBoolean(config.getOrDefault("stripPlusPrefix", "false"));
 	}
 
 	public void send(String phoneNumber, String message) {
 		phoneNumber = cleanPhoneNumber(phoneNumber, countrycode);
+		if (stripPlusPrefix && phoneNumber.startsWith("+")) {
+			phoneNumber = phoneNumber.substring(1);
+		}
 		Builder requestBuilder;
 		HttpRequest request = null;
 		String requestPayload = null;
@@ -212,6 +219,7 @@ public class ApiSmsService implements SmsService{
 		String getNewUrl = getUrl.replace("{phone}", URLEncoder.encode(phoneNumber, StandardCharsets.UTF_8));
 		getNewUrl = getNewUrl.replace("{message}", URLEncoder.encode(message, StandardCharsets.UTF_8));
 		getNewUrl = getNewUrl.replace("{apitoken}", URLEncoder.encode(apitoken, StandardCharsets.UTF_8));
+		getNewUrl = getNewUrl.replace("{senderId}", URLEncoder.encode(senderId != null ? senderId : "", StandardCharsets.UTF_8));
 		return HttpRequest.newBuilder()
 				.uri(URI.create(apiurl.concat(getNewUrl)))
 				.GET();
