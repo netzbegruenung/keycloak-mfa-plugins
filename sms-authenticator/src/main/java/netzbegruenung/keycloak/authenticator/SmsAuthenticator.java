@@ -89,7 +89,10 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
 
-			context.challenge(context.form().setAttribute("realm", realm).createForm(TPL_CODE));
+			context.challenge(context.form()
+				.setAttribute("realm", realm)
+				.setAttribute("phoneNumber", mobileNumber)
+				.createForm(TPL_CODE));
 		} catch (Exception e) {
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
 				context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
@@ -123,8 +126,10 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			}
 		} else {
 			// invalid
+			String mobileNumber = getMobileNumber(context);
 			context.getEvent().user(context.getUser()).error("invalid_user_credentials");
 			Response challenge = context.form()
+				.setAttribute("phoneNumber", mobileNumber)
 				.setError("smsAuthCodeInvalid")
 				.createForm("login-sms.ftl");
 			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
@@ -157,5 +162,16 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 	@Override
 	public SmsAuthCredentialProvider getCredentialProvider(KeycloakSession session) {
 		return (SmsAuthCredentialProvider)session.getProvider(CredentialProvider.class, SmsAuthCredentialProviderFactory.PROVIDER_ID);
+	}
+
+	private String getMobileNumber(AuthenticationFlowContext context) {
+		Optional<CredentialModel> model = context.getUser().credentialManager()
+			.getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
+		try {
+			return JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
+		} catch (IOException e) {
+			logger.warn(e.getMessage(), e);
+			return null;
+		}
 	}
 }
