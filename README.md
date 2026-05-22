@@ -24,8 +24,6 @@ The code of this project is Apache 2.0 licensed. Parts of the original code are 
    ```
    A file `target/netzbegruenung.keycloak-2fa-sms-authenticator.jar` should be created.
 
-If building fails and the problem is caused or related to the dev module or tests, try to run `mvn clean install -DskipTests`.
-
 ## Releases
 Deployment is done by github actions: `.github/workflows/release.yml`
 To trigger the release workflow be sure to have proper access rights and follow the steps below.
