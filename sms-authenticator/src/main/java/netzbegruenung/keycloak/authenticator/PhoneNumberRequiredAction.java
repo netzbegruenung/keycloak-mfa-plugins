@@ -34,7 +34,6 @@ import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.authentication.requiredactions.WebAuthnRegisterFactory;
 import org.keycloak.credential.CredentialModel;
-import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RoleModel;
 import org.keycloak.models.UserModel;
@@ -67,20 +66,23 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 
 	@Override
 	public void evaluateTriggers(RequiredActionContext context) {
-		// TODO: get the alias from somewhere else or move config into realm or application scope
-		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
-		if (config == null) {
-			logger.error("Failed to check 2FA enforcement, no config alias sms-2fa found");
+		Map<String, String> config = SmsRegistrationConfigResolver.getMergedRegistrationConfig(context.getRealm());
+		if (config.isEmpty()) {
+			logger.errorf(
+				"Failed to check 2FA enforcement, no SMS registration configuration (legacy alias %s). "
+					+ "Use required action \"Update Mobile Number\" (gear) for inline SMS settings, or create an authenticator config with that alias on your SMS flow step.",
+				SmsRegistrationConfigResolver.LEGACY_DEFAULT_ALIAS
+			);
 			return;
 		}
-		boolean forceSecondFactorEnabled = Boolean.parseBoolean(config.getConfig().get("forceSecondFactor"));
+		boolean forceSecondFactorEnabled = Boolean.parseBoolean(config.get("forceSecondFactor"));
 		if (forceSecondFactorEnabled) {
-			if (config.getConfig().get("whitelist") != null) {
-				RoleModel whitelistRole = context.getRealm().getRole(config.getConfig().get("whitelist"));
+			if (config.get("whitelist") != null) {
+				RoleModel whitelistRole = context.getRealm().getRole(config.get("whitelist"));
 				if (whitelistRole == null) {
 					logger.errorf(
 						"Failed configured whitelist role check [%s], make sure that the role exists",
-						config.getConfig().get("whitelist")
+						config.get("whitelist")
 					);
 				} else if (context.getUser().hasRole(whitelistRole)) {
 					// skip enforcement if user is whitelisted
@@ -89,7 +91,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 			}
 			// add auth note for phone number input placeholder
 			context.getAuthenticationSession().setAuthNote("mobileInputFieldPlaceholder",
-				config.getConfig().getOrDefault("mobileInputFieldPlaceholder", ""));
+				config.getOrDefault("mobileInputFieldPlaceholder", ""));
 
 			// list of accepted 2FA alternatives
 			List<String> secondFactors = Arrays.asList(
@@ -138,8 +140,8 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 	 * @return a list of maps containing country name, code, and emoji
 	 */
 	public List<Map<String, String>> getCountryCodeList(RequiredActionContext context) {
-		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
-		String countryCodeList = config.getConfig().getOrDefault("countryCodeList", "");
+		Map<String, String> config = SmsRegistrationConfigResolver.getMergedRegistrationConfig(context.getRealm());
+		String countryCodeList = config.getOrDefault("countryCodeList", "");
 
 		UserModel user = context.getUser();
 		KeycloakSession session = context.getSession();
@@ -193,13 +195,9 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		}
 
 		// get the phone number formatting values from the config
-		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
-		boolean normalizeNumber = false;
-		boolean forceRetryOnBadFormat = false;
-		if (config != null && config.getConfig() != null) {
-			normalizeNumber = Boolean.parseBoolean(config.getConfig().getOrDefault("normalizePhoneNumber", "false"));
-			forceRetryOnBadFormat = Boolean.parseBoolean(config.getConfig().getOrDefault("forceRetryOnBadFormat", "false"));
-		}
+		Map<String, String> config = SmsRegistrationConfigResolver.getMergedRegistrationConfig(context.getRealm());
+		boolean normalizeNumber = Boolean.parseBoolean(config.getOrDefault("normalizePhoneNumber", "false"));
+		boolean forceRetryOnBadFormat = Boolean.parseBoolean(config.getOrDefault("forceRetryOnBadFormat", "false"));
 
 		// try to format the phone number
 		if (normalizeNumber) {
@@ -230,16 +228,19 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 	 * @return				the formatted mobile phone number, null if the phone number is invalid or mobileNumber if the config was not found
 	 */
 	private String formatPhoneNumber(RequiredActionContext context, String mobileNumber) {
-		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
-		if (config == null || config.getConfig() == null) {
-			logger.error("Failed format phone number, no config alias sms-2fa found");
+		Map<String, String> config = SmsRegistrationConfigResolver.getMergedRegistrationConfig(context.getRealm());
+		if (config.isEmpty()) {
+			logger.errorf(
+				"Failed format phone number, no SMS registration configuration (legacy alias %s)",
+				SmsRegistrationConfigResolver.LEGACY_DEFAULT_ALIAS
+			);
 			return mobileNumber;
 		}
 		final PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.getInstance();
 		int countryNumber;
 		// try to get the country code from the country number in the config, fallback on default DE
 		try {
-			countryNumber = Integer.parseInt(whitespacePattern.matcher(config.getConfig()
+			countryNumber = Integer.parseInt(whitespacePattern.matcher(config
 				.getOrDefault("countrycode", "49").replace("+", ""))
 				.replaceAll(""));
 		} catch (NumberFormatException e) {
@@ -269,7 +270,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		List<PhoneNumberUtil.PhoneNumberType> numberTypeFilters = new ArrayList<>();
 		String numberFiltersString = null;
 		try {
-			numberFiltersString = config.getConfig().getOrDefault("numberTypeFilters", "");
+			numberFiltersString = config.getOrDefault("numberTypeFilters", "");
 			if (!numberFiltersString.isBlank()) {
 				numberFilterSplitter.splitToStream(numberFiltersString).forEach(filterString ->
 					numberTypeFilters.add(PhoneNumberUtil.PhoneNumberType.valueOf(filterString)));

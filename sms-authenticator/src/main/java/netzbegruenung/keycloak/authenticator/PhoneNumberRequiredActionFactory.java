@@ -24,8 +24,15 @@ package netzbegruenung.keycloak.authenticator;
 import org.keycloak.Config;
 import org.keycloak.authentication.RequiredActionFactory;
 import org.keycloak.authentication.RequiredActionProvider;
+import org.keycloak.component.ComponentValidationException;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
+import org.keycloak.models.RealmModel;
+import org.keycloak.models.RequiredActionConfigModel;
+import org.keycloak.provider.ProviderConfigProperty;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -49,6 +56,41 @@ public class PhoneNumberRequiredActionFactory implements RequiredActionFactory {
     public String getDisplayText() {
         return "Update Mobile Number";
     }
+
+	@Override
+	public boolean isConfigurable() {
+		return true;
+	}
+
+	@Override
+	public List<ProviderConfigProperty> getConfigMetadata() {
+		return SmsAuthenticatorFactory.getSmsAuthenticatorConfigProperties();
+	}
+
+	@Override
+	public void validateConfig(KeycloakSession session, RealmModel realm, RequiredActionConfigModel config) {
+		if (config == null || config.getConfig() == null) {
+			return;
+		}
+		Map<String, String> raw = config.getConfig();
+		if (!SmsRegistrationConfigResolver.isInlineSmsRegistration(raw)
+			&& !(raw.containsKey("apiurl") && raw.containsKey("simulation"))) {
+			return;
+		}
+		Map<String, String> effective = SmsRegistrationConfigResolver.materializeInlineRegistrationConfig(raw);
+		if (!Boolean.parseBoolean(effective.get("simulation"))) {
+			String url = effective.get("apiurl");
+			if (url == null || url.isBlank()) {
+				throw new ComponentValidationException("SMS API URL is required unless simulation mode is enabled.");
+			}
+		}
+		try {
+			Integer.parseInt(effective.get("length").trim());
+			Integer.parseInt(effective.get("ttl").trim());
+		} catch (NumberFormatException e) {
+			throw new ComponentValidationException("Code length and TTL must be integers.");
+		}
+	}
 
     @Override
     public void init(Config.Scope config) {

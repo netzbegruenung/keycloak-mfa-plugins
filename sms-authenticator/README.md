@@ -7,42 +7,54 @@ This is a fork of a great demo implementation by [@dasniko](https://github.com/d
 from the original authenticator provider [documentation](https://www.keycloak.org/docs/latest/server_development/index.html#_auth_spi) and [example](https://github.com/keycloak/keycloak/tree/main/examples/providers/authenticator) from Keycloak itself.
 
 # Installing
-1. Go to https://github.com/netzbegruenung/keycloak-mfa-plugins/releases and download
-   the latest .jar file.
-1. Copy the created jar file into the `providers` directory of your Keycloak:
+
+1. Go to https://github.com/netzbegruenung/keycloak-mfa-plugins/releases and download the latest `.jar` file.
+1. Copy the jar into Keycloak’s `providers` directory:
    ```shell
    cp netzbegruenung.keycloak-2fa-sms-authenticator.jar /path/to/keycloak/providers
    ```
-1. Run the `build` command and restart Keycloak:
+1. Run `build` and restart Keycloak:
    ```shell
    /path/to/keycloak/bin/kc.sh build [your-additional-flags]
    systemctl restart keycloak.service
    ```
 
 # Setup
-1. Go to `/admin/master/console/#/realm/authentication/required-actions` and enable required actions "Phone Validation" and "Update Mobile Number"
-1. Navigate to your Authentication flow configuration: https://keycloak.example.com/admin/master/console/#/YOUR-REALM/authentication. Then edit the `Browser flow`.
-1. Add a new step next to the `OTP Form` step. Choose the `SMS Authentication (2FA)` authenticator and set it to `Alternative`.
-1. Make sure that you name the Alias `sms-2fa`. This is currently a hack that will hopefully be fixed. Additional executions with other names can be added. But this first execution will be used for the confirmation SMS when setting up a new phone number.
-1. Go into the config of the execution and configure the plugin so that it works with the API of your SMS proivder HTTP API. The data is always sent in a HTTP POST request. Refer to the API documentation of your provider to choose the correct configuration values. The details of the request can be configured with the following configuration options:
-   1. `SMS API URL`: the URL to which the HTTP POST request should be sent.
-   1. `URL encode data`: When off, the data will be sent as an `application/json` body. When on, the data will be encoded as URL parameters.
-   1. `Put API Secret Token in Authorization Header`: If set, API Secret will be sent as Authorization Header, 'API Secret Token Attribute' and 'Basic Auth Username' will be ignored.
-   1. `API Secret Token Attribute (optional)`: Name of attribute that contains your API token/secret. In some APIs the secret is already configured in the path. In this case, this can be left empty.
-   1. `API Secret (optional)`: Your API secret. If a Basic Auth user is set, this will be the Basic Auth password. If `API Secret Token Attribute` is set, this secret will be sent as the value to the given attribute name.
-   1. `Basic Auth Username (optional)`: If set, Basic Auth will be performed. Leave empty if not required.
-   1. `Message Attribute`: The attribute that contains the SMS message text. For many APIs (i.e. GTX Messaging, SMS Eagle) this is `text`.
-   1. `Receiver Phone Number Attribute`: The attribute that contains the receiver phone number. For many APIs (i.e. GTX Messaging, SMS Eagle) this is `to`.
-   1. `Sender Phone Number Attribute`: The attribute that contains the sender phone number. Leave empty if not required.
-   1. `SenderId`: The sender ID is displayed as the message sender on the receiving device. This is the value for the `Sender Phone Number Attribute`.
-   1. `Use message UUID`: If your API requires UUID for a message, you can generate it with this property.
-   2. `UUID attribute`: The attribute that contains the generated UUID. Only aplicable when `Use message UUID` is set.
-   3. `Request JSON template`: If default JSON template is not enough for your needs, put your custom template here. UUID (if 'Use message UUID' is set), phone number and message (in that order) use placeholders `%s`.
+
+1. **Authentication → Required actions**: enable **Phone Validation** and **Update Mobile Number**.
+1. **Authentication → Flows** (e.g. **Browser**): add **SMS Authentication (2FA)** next to OTP, usually as **Alternative**.
+1. **Configure SMS** (same fields in both places below; labels match the admin UI):
+
+   **Default (new installs)** — open **Update Mobile Number** → **Settings** (gear) and set your provider (API URL, secrets, code length, TTL, etc.). This covers **registering a phone number** (required actions) and, unless you override it below, **login** SMS as well.
+
+   **Legacy (upgrades)** — if you already configured SMS on the Browser flow step with alias **`sms-2fa`**, you can keep that: leave **SMS API URL** and **Simulation mode** empty on *Update Mobile Number* and the plugin still reads the realm config named `sms-2fa` for registration. New projects should use the required-action settings instead.
+
+   **Login-only override (optional)** — if one flow needs different SMS settings than registration, attach a config to the **SMS Authentication (2FA)** execution in that flow; those values apply only at login and override the shared base for keys you set there.
+
+# Provider configuration options
+
+Requests are sent as HTTP POST by default (or GET if you set **SMS API GET URL template**). Match your provider’s API using:
+
+1. **SMS API URL**: URL for the POST request.
+1. **URL encode data**: off = JSON body; on = URL-encoded parameters.
+1. **Put API Secret Token in Authorization Header**: if set, secret goes in `Authorization`; token attribute and Basic Auth username are ignored.
+1. **API Secret Token Attribute (optional)**: JSON field name for the token (leave empty if the secret is only in the URL path).
+1. **API Secret (optional)**: secret value, or Basic Auth password if a username is set.
+1. **Basic Auth Username (optional)**: enable Basic Auth when required.
+1. **Message Attribute**: field for SMS text (e.g. `text`).
+1. **Receiver Phone Number Attribute**: field for the destination number (e.g. `to`).
+1. **Sender Phone Number Attribute**: field for sender number; optional.
+1. **SenderId**: value sent in the sender field.
+1. **Use message UUID** / **UUID attribute**: generate and send a UUID when the API requires it.
+1. **Request JSON template**: custom body with `%s` placeholders (UUID if enabled, then phone, then message).
+
+Other useful fields: **Simulation mode**, **Code length**, **Time-to-live**, **Default country prefix**, **Force 2FA**, **Format phone number**, etc. (see the admin UI on the required action or authenticator config).
 
 # Usage
-After successfully configured the authenticator and the required actions users can set up SMS Authentication in the
-account console `/realms/realm/account/#/account-security/signing-in` by entering and confirming their phone number.
+
+After configuration, users set up SMS in the account console, e.g.  
+`/realms/<realm>/account/#/account-security/signing-in` — enter and confirm their mobile number.
 
 # Enforce SMS 2FA
-If the option `Force 2FA` in the SMS Authenticator config is enabled and a user has no other 2FA method already enabled,
-users will have to set up the SMS Authenticator.
+
+If **Force 2FA** is enabled in your SMS configuration (required action or legacy `sms-2fa` config) and the user has no other second factor yet, they are prompted to set up SMS (or another allowed method).
