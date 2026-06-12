@@ -45,6 +45,7 @@ public class ApiSmsService implements SmsService{
 	private final Boolean urlencode;
 
 	private final Boolean apiTokenInHeader;
+	private final String apiTokenHeaderField;
 	private final String apitoken;
 	private final String apiuser;
 
