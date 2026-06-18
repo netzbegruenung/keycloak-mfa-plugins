@@ -13,7 +13,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * @author <a href="mailto:alistair.doswald@elca.ch">Alistair Doswald</a>
  * @version $Revision: 1 $
  */
