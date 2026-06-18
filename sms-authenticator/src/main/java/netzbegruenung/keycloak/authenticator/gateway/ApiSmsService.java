@@ -117,8 +117,9 @@ public class ApiSmsService implements SmsService{
 			}
 
 			if (apiTokenInHeader) {
-				request = requestBuilder.setHeader("Authorization", apitoken).build();
-			}else if (apiuser != null && !apiuser.isEmpty()) {
+				String headerName = (apitokenattribute != null && !apitokenattribute.isBlank()) ? apitokenattribute : "Authorization";
+				request = requestBuilder.setHeader(headerName, apitoken).build();
+			} else if (apiuser != null && !apiuser.isEmpty()) {
 				request = requestBuilder.setHeader("Authorization", getAuthHeader(apiuser, apitoken)).build();
 			} else {
 				request = requestBuilder.build();
