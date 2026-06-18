@@ -45,6 +45,7 @@ public class ApiSmsService implements SmsService{
 	private final Boolean urlencode;
 
 	private final Boolean apiTokenInHeader;
+	private final String apiTokenHeaderField;
 	private final String apitoken;
 	private final String apiuser;
 
@@ -72,6 +73,8 @@ public class ApiSmsService implements SmsService{
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
 
 		apiTokenInHeader = Boolean.parseBoolean(config.getOrDefault("apiTokenInHeader", "false"));
+		
+		apiTokenHeaderField = config.getOrDefault("apiTokenHeaderField", "Authorization");
 		apitoken = config.getOrDefault("apitoken", "");
 		apiuser = config.getOrDefault("apiuser", "");
 
@@ -115,11 +118,11 @@ public class ApiSmsService implements SmsService{
 					requestBuilder = jsonRequest(requestPayload);
 				}
 			}
-
+					
 			if (apiTokenInHeader) {
-				request = requestBuilder.setHeader("Authorization", apitoken).build();
+				request = requestBuilder.setHeader(apiTokenHeaderField, apitoken).build();
 			}else if (apiuser != null && !apiuser.isEmpty()) {
-				request = requestBuilder.setHeader("Authorization", getAuthHeader(apiuser, apitoken)).build();
+				request = requestBuilder.setHeader(apiTokenHeaderField, getAuthHeader(apiuser, apitoken)).build();
 			} else {
 				request = requestBuilder.build();
 			}
