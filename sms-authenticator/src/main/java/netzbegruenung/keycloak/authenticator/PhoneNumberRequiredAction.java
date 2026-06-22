@@ -264,6 +264,24 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 			return null;
 		}
 
+		// apply allowed-region filter: reject numbers whose region is not in the configured allowlist
+		String allowedRegionsString = config.getConfig().getOrDefault("allowedRegions", "");
+		if (allowedRegionsString != null && !allowedRegionsString.isBlank()) {
+			String region = phoneNumberUtil.getRegionCodeForNumber(originalPhoneNumberParsed);
+			boolean regionAllowed = false;
+			for (String allowedRegion : allowedRegionsString.split("##|,")) {
+				if (allowedRegion.trim().equalsIgnoreCase(region)) {
+					regionAllowed = true;
+					break;
+				}
+			}
+			if (!regionAllowed) {
+				logger.errorf("Phone number region %s is not in the allowed regions [%s]", region, allowedRegionsString);
+				context.getAuthenticationSession().setAuthNote("formatError", "numberFormatRegionNotAllowed");
+				return null;
+			}
+		}
+
 		// apply ValidNumberType filters
 		// try to extract number types from filter string
 		List<PhoneNumberUtil.PhoneNumberType> numberTypeFilters = new ArrayList<>();
