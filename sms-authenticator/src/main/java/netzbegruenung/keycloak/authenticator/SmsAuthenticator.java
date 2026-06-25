@@ -87,7 +87,7 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
 			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
 
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
+			SmsServiceFactory.get(config.getConfig(), session).send(mobileNumber, smsText);
 
 			context.challenge(context.form().setAttribute("realm", realm).createForm(TPL_CODE));
 		} catch (Exception e) {
