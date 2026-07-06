@@ -30,7 +30,15 @@ Keycloak Authentication Provider implementation that sends a one-time code (OTP)
 | Time-to-live | Validity period of the OTP in seconds. | `300` |
 | Force 2FA | If no other 2FA method is configured, the user is forced to verify their email and use Email OTP. | `false` |
 
-The email subject and body are taken from the theme message bundle (keys `emailAuthSubject` and `emailAuthText`) and can be customised per realm/theme. The body supports `%1$s` (code) and `%2$d` (validity in minutes) placeholders.
+The email subject and body are rendered through the realm **email** theme (same pipeline as built-in Keycloak emails). Customize them in your email theme message bundle:
+
+| Key | Description |
+| --- | --- |
+| `emailAuthSubject` | Email subject (`{0}` = code, `{1}` = validity in minutes, optional) |
+| `emailAuthBody` | Plain-text body (`{0}` = code, `{1}` = validity in minutes) |
+| `emailAuthBodyHtml` | HTML body fragment (wrapped by `template.ftl`) |
+
+To change layout or branding, override `email/html/template.ftl` in your realm email theme.
 
 # Usage
 After the authenticator is wired into the flow, users with a verified email address automatically receive a login code on the second-factor step.
