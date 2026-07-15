@@ -15,6 +15,7 @@
         <module>app-authenticator</module>
 		<module>enforce-mfa</module>
 		<module>mfa-dev-runner</module>
+		<module>yubikey-authenticator</module>
 	</modules>
 
 	<properties>
