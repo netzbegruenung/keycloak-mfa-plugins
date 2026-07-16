@@ -31,7 +31,6 @@ import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.credential.CredentialProvider;
-import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserCredentialModel;
@@ -40,6 +39,7 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 
 import java.util.Locale;
+import java.util.Map;
 import jakarta.ws.rs.core.Response;
 
 public class PhoneValidationRequiredAction implements RequiredActionProvider, CredentialRegistrator {
@@ -58,14 +58,32 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 			RealmModel realm = context.getRealm();
 
 			AuthenticationSessionModel authSession = context.getAuthenticationSession();
-			// TODO: get the alias from somewhere else or move config into realm or application scope
-			AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+			Map<String, String> config = SmsRegistrationConfigResolver.getMergedRegistrationConfig(realm);
+			if (config.isEmpty()) {
+				logger.errorf(
+					"Phone validation failed, no SMS registration configuration (legacy alias %s). "
+						+ "Use required action \"Update Mobile Number\" (gear) for inline SMS settings, or create an authenticator config with that alias on your SMS flow step.",
+					SmsRegistrationConfigResolver.LEGACY_DEFAULT_ALIAS
+				);
+				context.failure();
+				return;
+			}
 
 			String mobileNumber = authSession.getAuthNote("mobile_number");
 			logger.infof("Validating phone number: %s of user: %s", mobileNumber, user.getUsername());
 
-			int length = Integer.parseInt(config.getConfig().get("length"));
-			int ttl = Integer.parseInt(config.getConfig().get("ttl"));
+			String lenStr = config.getOrDefault("length", SmsRegistrationConfigResolver.DEFAULT_LENGTH).trim();
+			String ttlStr = config.getOrDefault("ttl", SmsRegistrationConfigResolver.DEFAULT_TTL_SECONDS).trim();
+			int length;
+			int ttl;
+			try {
+				length = Integer.parseInt(lenStr);
+				ttl = Integer.parseInt(ttlStr);
+			} catch (NumberFormatException e) {
+				logger.errorf("Invalid SMS registration length or ttl (length=%s ttl=%s)", lenStr, ttlStr, e);
+				context.failure();
+				return;
+			}
 
 			String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
 			authSession.setAuthNote("code", code);
@@ -76,7 +94,8 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
 			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
 
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
+			SmsRegistrationConfigResolver.logWarningIfUsingLegacySmsAuthenticatorConfig(realm);
+			SmsServiceFactory.get(config).send(mobileNumber, smsText);
 
 			Response challenge = context.form()
 				.setAttribute("realm", realm)
@@ -126,13 +145,11 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 	}
 
 	private void handlePhoneToAttribute(RequiredActionContext context, String mobileNumber) {
-		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
-		if (config == null) {
-			logger.warn("No config alias sms-2fa found, skip phone number to attribute check");
-		} else {
-			if (Boolean.parseBoolean(config.getConfig().get("storeInAttribute"))) {
-				context.getUser().setSingleAttribute("mobile_number", mobileNumber);
-			}
+		Map<String, String> config = SmsRegistrationConfigResolver.getMergedRegistrationConfig(context.getRealm());
+		if (config.isEmpty()) {
+			logger.warn("No SMS registration configuration, skip phone number to attribute check");
+		} else if (Boolean.parseBoolean(config.getOrDefault("storeInAttribute", "false"))) {
+			context.getUser().setSingleAttribute("mobile_number", mobileNumber);
 		}
 	}
 
