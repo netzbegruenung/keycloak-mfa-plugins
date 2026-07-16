@@ -49,6 +49,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class PhoneNumberRequiredAction implements RequiredActionProvider, CredentialRegistrator {
@@ -57,6 +58,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 
 	private static final Logger logger = Logger.getLogger(PhoneNumberRequiredAction.class);
 	private static final Splitter numberFilterSplitter = Splitter.on("##");
+	private static final Splitter countryCodeSplitter = Splitter.on(",");
 	private static final Pattern nonDigitPattern = Pattern.compile("[^0-9+]");
 	private static final Pattern whitespacePattern = Pattern.compile("\\s+");
 
@@ -137,7 +139,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 	 * @param context the current RequiredActionContext
 	 * @return a list of maps containing country name, code, and emoji
 	 */
-	public List<Map<String, String>> getCountryCodeList(RequiredActionContext context) {
+	public List<Map<String, String>> getCountryCodeListMap(RequiredActionContext context) {
 		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
 		String countryCodeList = config.getConfig().getOrDefault("countryCodeList", "");
 
@@ -147,37 +149,156 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 
 		PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
 
-		List<Map<String, String>> countryList = new ArrayList<>();
+		List<String> countryCodes = Arrays.asList(Locale.getISOCountries());
 		if (!countryCodeList.isBlank()) {
-			List<String> countryCodes = Arrays.asList(countryCodeList.split(","));
-			for (String countryCode : countryCodes) {
-				try {
-					String code = "+" + Integer.toString(phoneUtil.getCountryCodeForRegion(countryCode.trim().toUpperCase()));
-					String countryName = new Locale("", countryCode.trim().toUpperCase()).getDisplayCountry(locale);
+			countryCodes = Arrays.asList(countryCodeList.split(","));
+		}
 
-					// generate emoji from country code
-					int offset = 0x1F1E6;  // Base Unicode for regional indicator symbols
-					int codePoint1 = offset + (countryCode.trim().toUpperCase().charAt(0) - 'A');
-					int codePoint2 = offset + (countryCode.trim().toUpperCase().charAt(1) - 'A');
-					String emoji = new String(new int[]{codePoint1, codePoint2}, 0, 2);
+		List<Map<String, String>> countryList = new ArrayList<>();
+		for (String countryCode : countryCodes) {
+			try {
+				String code = "+" + Integer.toString(phoneUtil.getCountryCodeForRegion(countryCode.trim().toUpperCase()));
+				String countryName = new Locale("", countryCode.trim().toUpperCase()).getDisplayCountry(locale);
 
-					countryList.add(Map.of("name", countryName, "code", code, "emoji", emoji));
-					logger.infof("Added country code %s for country %s", code, countryName);
-				} catch (Exception e) {
-					logger.errorf("Failed to get country code for country %s", countryCode, e);
-				}
+				// generate emoji from country code
+				int offset = 0x1F1E6;  // Base Unicode for regional indicator symbols
+				int codePoint1 = offset + (countryCode.trim().toUpperCase().charAt(0) - 'A');
+				int codePoint2 = offset + (countryCode.trim().toUpperCase().charAt(1) - 'A');
+				String emoji = new String(new int[]{codePoint1, codePoint2}, 0, 2);
+
+				countryList.add(Map.of("name", countryName, "code", code, "emoji", emoji));
+				logger.debugf("Added country code %s for country %s", code, countryName);
+			} catch (Exception e) {
+				logger.errorf("Failed to get country code for country %s", countryCode, e);
 			}
 		}
 
 		return countryList;
 	}
 
+	/**
+	 * Generates a list of country codes for International Telephone Input.
+	 *
+	 * @param context the current RequiredActionContext
+	 * @return a list of country codes
+	 */
+	public List<String> getCountryCodeList(RequiredActionContext context) {
+		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		if (config == null || config.getConfig() == null) {
+			logger.error("Failed to get country code list, no config alias sms-2fa found");
+			return List.of();
+		}
+
+		List<String> countryCodes = null;
+		String countryCodeList = config.getConfig().getOrDefault("countryCodeList", null);
+		if (countryCodeList == null) {
+			countryCodes = Arrays.asList(Locale.getISOCountries());
+		} else {
+			countryCodes = countryCodeSplitter.splitToStream(countryCodeList)
+				.collect(Collectors.toList());
+		}
+
+		List<String> countryList = new ArrayList<>();
+		if (null != countryCodes) {
+			countryList = countryCodes.stream()
+				.map(String::trim)
+				.map(String::toUpperCase)
+				.collect(Collectors.toList());
+		}
+
+		//countryList = List.of("FR", "LU");
+		return countryList;
+	}
+
+	/**
+	 * Retrieves the list of number type filters from the authenticator configuration.
+	 *
+	 * @param context the current RequiredActionContext
+	 * @return a list of number type filter strings
+	 */
+	public List<String> getNumberFilterStrings(RequiredActionContext context) {
+		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		if (config == null || config.getConfig() == null) {
+			logger.error("Failed to get number type filters, no config alias sms-2fa found");
+			return List.of();
+		}
+		String numberFiltersString = config.getConfig().getOrDefault("numberTypeFilters", "");
+		List<String> numberTypeFilters = new ArrayList<>();
+		try {
+			if (!numberFiltersString.isBlank()) {
+				numberFilterSplitter.splitToStream(numberFiltersString).forEach(filterString ->
+					numberTypeFilters.add(filterString));
+			}
+		} catch (Exception e) {
+			// if the number type filter configuration is bad, log an error and continue without filtering
+			logger.errorf("Illegal filter found: %s. Filter must be a list of comma delimited Strings of FIXED_LINE, MOBILE, "
+				+ "FIXED_LINE_OR_MOBILE, PAGER, TOLL_FREE, PREMIUM_RATE, SHARED_COST, PERSONAL_NUMBER, VOIP, UAN, VOICEMAIL", numberFiltersString);
+			numberTypeFilters.clear();
+		}
+		return numberTypeFilters;
+	}
+
+	public Boolean getEnableCountryCodeList(RequiredActionContext context) {
+		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		if (config == null || config.getConfig() == null) {
+			logger.error("Failed to get enableCountryCodeList, no config alias sms-2fa found");
+			return false;
+		}
+		return Boolean.parseBoolean(config.getConfig().getOrDefault("enableCountryCodeList", "false"));
+	}
+
+	public Boolean getEnableItelTelInputBoolean(RequiredActionContext context) {
+		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		if (config == null || config.getConfig() == null) {
+			logger.error("Failed to get enableItelTelInput, no config alias sms-2fa found");
+			return false;
+		}
+		return Boolean.parseBoolean(config.getConfig().getOrDefault("enableItelTelInput", "false"));
+	}
+
+	/**
+	 * Generates the options map for International Telephone Input.
+	 *
+	 * @param context
+	 * @return the options map
+	 */
+	private Object getItelTelInputOptions(RequiredActionContext context) {
+		Map<String, Object> itelTelInputOptions = new java.util.HashMap<>();
+
+		// only add options if enabled
+		if (getEnableItelTelInputBoolean(context)) {
+			itelTelInputOptions.put("placeholderNumberType", getNumberFilterStrings(context));
+			itelTelInputOptions.put("separateDialCode", "true");
+			itelTelInputOptions.put("strictMode", "true");
+			itelTelInputOptions.put("nationalMode", "true");
+			itelTelInputOptions.put("autoPlaceholder", "polite");
+			itelTelInputOptions.put("initialCountry", "auto");
+			itelTelInputOptions.put("onlyCountries", getCountryCodeList(context));
+		}
+
+		return itelTelInputOptions;
+	}
+
 	@Override
 	public void requiredActionChallenge(RequiredActionContext context) {
-		Response challenge = context.form()
-			.setAttribute("mobileInputFieldPlaceholder", context.getAuthenticationSession().getAuthNote("mobileInputFieldPlaceholder"))
-			.setAttribute("countryList", getCountryCodeList(context))
-			.createForm("mobile_number_form.ftl");
+		var form = context.form().setAttribute("mobileInputFieldPlaceholder", context.getAuthenticationSession().getAuthNote("mobileInputFieldPlaceholder"));
+
+		// Default value
+		form.setAttribute("enableCountryCodeList", false);
+		form.setAttribute("enableItelTelInput", false);
+
+		if (getEnableCountryCodeList(context)) {
+			form.setAttribute("enableCountryCodeList", true);
+			form.setAttribute("countryList", getCountryCodeListMap(context));
+		}
+
+		if (getEnableItelTelInputBoolean(context)) {
+			form.setAttribute("enableItelTelInput", true);
+			form.setAttribute("enableCountryCodeList", false);     // ← souvent voulu
+			form.setAttribute("itelTelInputOptions", getItelTelInputOptions(context));
+		}
+
+		Response challenge = form.createForm("mobile_number_form.ftl");
 		context.challenge(challenge);
 	}
 
@@ -185,6 +306,11 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 	public void processAction(RequiredActionContext context) {
 		String mobileNumber = nonDigitPattern.matcher(context.getHttpRequest().getDecodedFormParameters().getFirst("mobile_number")).replaceAll("");
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
+
+		// from itel-tel-input plugin, the full phone number is in the "full_phone" parameter
+		if (context.getHttpRequest().getDecodedFormParameters().getFirst("full_phone") != null) {
+			mobileNumber = nonDigitPattern.matcher(context.getHttpRequest().getDecodedFormParameters().getFirst("full_phone")).replaceAll("");
+		}
 
 		// get the country code from the select input if available and add it to the mobile number
 		if (context.getHttpRequest().getDecodedFormParameters().getFirst("country_code") != null) {
