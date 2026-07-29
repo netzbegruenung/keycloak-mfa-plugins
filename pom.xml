@@ -14,6 +14,7 @@
 		<module>email-authenticator</module>
         <module>app-authenticator</module>
 		<module>enforce-mfa</module>
+		<module>trusted-device-authenticator</module>
 		<module>mfa-dev-runner</module>
 	</modules>
 
