@@ -13,7 +13,6 @@ This is an independent reimplementation of the ideas from upstream Keycloak pull
 1. Run the `build` command and restart Keycloak:
    ```shell
    /path/to/keycloak/bin/kc.sh build [your-additional-flags]
-   systemctl restart keycloak.service
    ```
 
 # Setup

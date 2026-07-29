@@ -9,6 +9,7 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 
 import netzbegruenung.keycloak.trusteddevice.credentials.TrustedDeviceCredentialModel;
+import org.jboss.logging.Logger;
 import org.keycloak.Config;
 import org.keycloak.authentication.CredentialRegistrator;
 import org.keycloak.authentication.RequiredActionContext;
@@ -38,6 +39,8 @@ import org.keycloak.userprofile.ValidationException;
 import org.keycloak.validate.ValidationError;
 
 public class TrustedDeviceRegisterRequiredAction implements RequiredActionProvider, RequiredActionFactory, CredentialRegistrator {
+
+    private static final Logger logger = Logger.getLogger(TrustedDeviceRegisterRequiredAction.class);
 
     public static final String PROVIDER_ID = "nb-trust-device";
     public static final String CONF_DURATION = "duration";
@@ -188,8 +191,11 @@ public class TrustedDeviceRegisterRequiredAction implements RequiredActionProvid
             if (days >= 1 && days <= MAX_DURATION_DAYS) {
                 return days;
             }
+            logger.warnf("Configured '%s' value %d is out of range (1-%d), falling back to the %d-day default",
+                    CONF_DURATION, days, MAX_DURATION_DAYS, DEFAULT_DURATION_DAYS);
         } catch (NumberFormatException e) {
-            // fall through to default below
+            logger.warnf("Configured '%s' value '%s' is not a number, falling back to the %d-day default",
+                    CONF_DURATION, value, DEFAULT_DURATION_DAYS);
         }
         return DEFAULT_DURATION_DAYS;
     }
