@@ -26,17 +26,23 @@ import org.keycloak.events.EventType;
 import org.keycloak.locale.LocaleSelectorProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
+import org.keycloak.models.RealmModel;
+import org.keycloak.models.RequiredActionConfigModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.provider.ProviderConfigurationBuilder;
 import org.keycloak.representations.account.DeviceRepresentation;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.DateTimeFormatterUtil;
+import org.keycloak.userprofile.ValidationException;
+import org.keycloak.validate.ValidationError;
 
 public class TrustedDeviceRegisterRequiredAction implements RequiredActionProvider, RequiredActionFactory, CredentialRegistrator {
 
     public static final String PROVIDER_ID = "nb-trust-device";
     public static final String CONF_DURATION = "duration";
+    private static final int DEFAULT_DURATION_DAYS = 7;
+    private static final int MAX_DURATION_DAYS = 365;
     private static final String AUTH_NOTE_TRUSTED_DEVICE_NAME = "trusted-device-name";
 
     @Override
@@ -52,13 +58,31 @@ public class TrustedDeviceRegisterRequiredAction implements RequiredActionProvid
                 .property()
                 .name(CONF_DURATION)
                 .label("Trust duration (days)")
-                .helpText("Duration the device will be trusted in number of days. After this period, the user will be prompted again to trust the device.")
+                .helpText("Duration the device will be trusted in number of days (1-" + MAX_DURATION_DAYS + "). After this period, the user will be prompted again to trust the device.")
                 .type(ProviderConfigProperty.INTEGER_TYPE)
-                .defaultValue(7)
+                .defaultValue(DEFAULT_DURATION_DAYS)
                 .add()
                 .build());
 
         return config;
+    }
+
+    @Override
+    public void validateConfig(KeycloakSession session, RealmModel realm, RequiredActionConfigModel model) {
+        if (!model.containsConfigKey(CONF_DURATION)) {
+            return;
+        }
+
+        long days;
+        try {
+            days = Long.parseLong(model.getConfigValue(CONF_DURATION));
+        } catch (NumberFormatException e) {
+            throw new ValidationException(new ValidationError(getId(), CONF_DURATION, "error-invalid-value"));
+        }
+
+        if (days < 1 || days > MAX_DURATION_DAYS) {
+            throw new ValidationException(new ValidationError(getId(), CONF_DURATION, "error-number-out-of-range", 1, MAX_DURATION_DAYS));
+        }
     }
 
     @Override
@@ -143,12 +167,12 @@ public class TrustedDeviceRegisterRequiredAction implements RequiredActionProvid
                         .deviceRepresentation();
                 deviceName = createDeviceName(deviceRepresentation);
             }
-            int durationInDays = Integer.parseInt(context.getConfig().getConfigValue(CONF_DURATION, "7"));
-            int durationInSeconds = durationInDays * 24 * 60 * 60;
+            long durationInDays = parseDurationDays(context.getConfig().getConfigValue(CONF_DURATION, String.valueOf(DEFAULT_DURATION_DAYS)));
+            long durationInSeconds = durationInDays * 24 * 60 * 60;
 
             TrustedDeviceToken token = createDeviceToken(context, deviceName, durationInSeconds);
 
-            TrustedDeviceCookie.write(context.getSession(), context.getSession().tokens().encode(token), durationInSeconds);
+            TrustedDeviceCookie.write(context.getSession(), context.getSession().tokens().encode(token), (int) durationInSeconds);
         } else {
             event.event(EventType.UPDATE_CREDENTIAL_ERROR);
             event.detail(Details.CREDENTIAL_TYPE, TrustedDeviceCredentialModel.TYPE);
@@ -158,7 +182,19 @@ public class TrustedDeviceRegisterRequiredAction implements RequiredActionProvid
         context.success();
     }
 
-    private TrustedDeviceToken createDeviceToken(RequiredActionContext context, String deviceName, int duration) {
+    private long parseDurationDays(String value) {
+        try {
+            long days = Long.parseLong(value);
+            if (days >= 1 && days <= MAX_DURATION_DAYS) {
+                return days;
+            }
+        } catch (NumberFormatException e) {
+            // fall through to default below
+        }
+        return DEFAULT_DURATION_DAYS;
+    }
+
+    private TrustedDeviceToken createDeviceToken(RequiredActionContext context, String deviceName, long duration) {
         UserModel user = context.getUser();
         String deviceId = Base64Url.encode(SecretGenerator.getInstance().randomBytes(SecretGenerator.SECRET_LENGTH_256_BITS));
         TrustedDeviceCredentialProvider trustedDeviceCredentialProvider =
