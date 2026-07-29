@@ -1,10 +1,8 @@
 package netzbegruenung.keycloak.trusteddevice;
 
-import netzbegruenung.keycloak.trusteddevice.credentials.TrustedDeviceCredentialModel;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.CredentialValidator;
-import org.keycloak.common.util.Time;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -14,8 +12,7 @@ public class TrustedDeviceAuthenticator implements Authenticator, CredentialVali
 
     @Override
     public void authenticate(AuthenticationFlowContext context) {
-        TrustedDeviceCredentialModel credential = validateCookie(context.getSession(), context.getUser());
-        if (credential != null) {
+        if (getCredentialProvider(context.getSession()).isTrustedDevice(context.getSession(), context.getRealm(), context.getUser())) {
             context.success();
         } else {
             context.getAuthenticationSession().addRequiredAction(TrustedDeviceRegisterRequiredAction.PROVIDER_ID);
@@ -25,34 +22,6 @@ public class TrustedDeviceAuthenticator implements Authenticator, CredentialVali
 
     @Override
     public void action(AuthenticationFlowContext context) {
-    }
-
-    public TrustedDeviceCredentialModel validateCookie(KeycloakSession session, UserModel user) {
-        TrustedDeviceToken deviceToken = getToken(session);
-        if (deviceToken == null) {
-            return null;
-        }
-
-        return user.credentialManager().getStoredCredentialsByTypeStream(TrustedDeviceCredentialModel.TYPE)
-                .map(TrustedDeviceCredentialModel::createFromCredentialModel)
-                .filter(c -> c.getDeviceId().equals(deviceToken.getDeviceId()))
-                .filter(c -> c.getExpireTime() > Time.currentTime())
-                .findFirst()
-                .orElse(null);
-    }
-
-    public TrustedDeviceToken getToken(KeycloakSession session) {
-        String tokenString = TrustedDeviceCookie.read(session);
-        if (tokenString == null) {
-            return null;
-        }
-
-        TrustedDeviceToken decoded = session.tokens().decode(tokenString, TrustedDeviceToken.class);
-        if (decoded != null && decoded.getExp() > Time.currentTime()) {
-            return decoded;
-        }
-
-        return null;
     }
 
     @Override

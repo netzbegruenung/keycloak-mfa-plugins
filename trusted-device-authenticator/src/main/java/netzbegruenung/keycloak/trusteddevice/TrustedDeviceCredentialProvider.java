@@ -88,9 +88,32 @@ public class TrustedDeviceCredentialProvider implements CredentialProvider<Trust
         }
 
         CredentialModel credential = user.credentialManager().getStoredCredentialById(credentialInput.getCredentialId());
+        if (credential == null) {
+            return false;
+        }
         TrustedDeviceCredentialModel trustedDeviceCredentialModel = getCredentialFromModel(credential);
         return trustedDeviceCredentialModel != null
                 && challengeResponse.equals(trustedDeviceCredentialModel.getDeviceId())
                 && trustedDeviceCredentialModel.getExpireTime() > Time.currentTime();
+    }
+
+    /**
+     * Reads and validates the trusted-device cookie in one step: decodes the token, checks its
+     * expiry, then validates it against the user's stored credential via isValid() using the
+     * credential id already embedded in the token.
+     */
+    public boolean isTrustedDevice(KeycloakSession session, RealmModel realm, UserModel user) {
+        String tokenString = TrustedDeviceCookie.read(session);
+        if (tokenString == null) {
+            return false;
+        }
+
+        TrustedDeviceToken token = session.tokens().decode(tokenString, TrustedDeviceToken.class);
+        if (token == null || token.getExp() <= Time.currentTime()) {
+            return false;
+        }
+
+        UserCredentialModel input = new UserCredentialModel(token.getId(), TrustedDeviceCredentialModel.TYPE, token.getDeviceId());
+        return isValid(realm, user, input);
     }
 }
