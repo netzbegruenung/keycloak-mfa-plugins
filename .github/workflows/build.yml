@@ -22,6 +22,7 @@ jobs:
           cp email-authenticator/target/*.jar staging
           cp app-authenticator/target/*.jar staging
           cp enforce-mfa/target/*.jar staging
+          cp trusted-device-authenticator/target/*.jar staging
       - name: Create hash files
         run: |
           for jar in *.jar
