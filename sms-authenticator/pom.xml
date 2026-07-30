@@ -12,6 +12,18 @@
         <version>26.6.6</version>
     </parent>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.keycloak.testframework</groupId>
+                <artifactId>keycloak-test-framework-bom</artifactId>
+                <version>${keycloak.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
 		<dependency>
 			<groupId>org.keycloak</groupId>
@@ -47,6 +59,37 @@
 			<groupId>com.googlecode.libphonenumber</groupId>
 			<artifactId>libphonenumber</artifactId>
 			<version>9.0.34</version>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-core</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-junit5-config</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-oauth</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-ui</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-remote</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.tests</groupId>
+			<artifactId>keycloak-tests-utils-shared</artifactId>
+			<version>${keycloak.version}</version>
+			<scope>test</scope>
 		</dependency>
     </dependencies>
 
