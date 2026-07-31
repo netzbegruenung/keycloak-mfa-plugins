@@ -30,7 +30,8 @@ public final class EnforceMfaShared {
 		WebAuthnCredentialProviderFactory.PROVIDER_ID,
 		WebAuthnPasswordlessCredentialProviderFactory.PROVIDER_ID,
 		"email-authenticator", /* from mesutpiskin/keycloak-2fa-email-authenticator */
-		"mobile-number" /* from netzbegruenung/keycloak-mfa-plugins/sms-authenticator */
+		"mobile-number", /* from netzbegruenung/keycloak-mfa-plugins/sms-authenticator */
+		"app-credential"
 	);
 
 	/** Required action ids for {@link ConditionalEnforceMfaAuthenticatorFactory} admin UI. */
@@ -39,7 +40,8 @@ public final class EnforceMfaShared {
 		WebAuthnRegisterFactory.PROVIDER_ID,
 		WebAuthnPasswordlessRegisterFactory.PROVIDER_ID,
 		"email-authenticator-setup", /* from mesutpiskin/keycloak-2fa-email-authenticator */
-		"mobile_number_config" /* from netzbegruenung/keycloak-mfa-plugins/sms-authenticator */
+		"mobile_number_config", /* from netzbegruenung/keycloak-mfa-plugins/sms-authenticator */
+		"app-register"
 	);
 
 	/**
