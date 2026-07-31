@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>netzbegruenung</groupId>
 		<artifactId>keycloak-mfa-tools</artifactId>
-		<version>26.6.6</version>
+		<version>26.7.0-0</version>
 	</parent>
 	<artifactId>mfa-dev-runner</artifactId>
 	<dependencies>
