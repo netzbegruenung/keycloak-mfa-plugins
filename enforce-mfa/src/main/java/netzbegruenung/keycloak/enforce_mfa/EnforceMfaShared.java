@@ -2,11 +2,10 @@ package netzbegruenung.keycloak.enforce_mfa;
 
 import org.keycloak.authentication.requiredactions.WebAuthnPasswordlessRegisterFactory;
 import org.keycloak.authentication.requiredactions.WebAuthnRegisterFactory;
-import org.keycloak.credential.OTPCredentialProviderFactory;
-import org.keycloak.credential.WebAuthnCredentialProviderFactory;
-import org.keycloak.credential.WebAuthnPasswordlessCredentialProviderFactory;
 import org.keycloak.models.Constants;
 import org.keycloak.models.UserModel;
+import org.keycloak.models.credential.OTPCredentialModel;
+import org.keycloak.models.credential.WebAuthnCredentialModel;
 
 import java.util.List;
 import java.util.Map;
@@ -26,9 +25,9 @@ public final class EnforceMfaShared {
 
 	/** Credential type ids for {@link MfaCredentialConditionFactory} admin UI. */
 	public static final List<String> CREDENTIAL_TYPE_OPTIONS = List.of(
-		OTPCredentialProviderFactory.PROVIDER_ID,
-		WebAuthnCredentialProviderFactory.PROVIDER_ID,
-		WebAuthnPasswordlessCredentialProviderFactory.PROVIDER_ID,
+		OTPCredentialModel.TYPE,
+		WebAuthnCredentialModel.TYPE_TWOFACTOR,
+		WebAuthnCredentialModel.TYPE_PASSWORDLESS,
 		"email-authenticator", /* from mesutpiskin/keycloak-2fa-email-authenticator */
 		"mobile-number", /* from netzbegruenung/keycloak-mfa-plugins/sms-authenticator */
 		"APP_CREDENTIAL"
