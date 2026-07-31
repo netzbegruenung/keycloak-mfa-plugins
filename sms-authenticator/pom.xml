@@ -58,7 +58,7 @@
 		<dependency>
 			<groupId>com.googlecode.libphonenumber</groupId>
 			<artifactId>libphonenumber</artifactId>
-			<version>9.0.34</version>
+			<version>9.0.35</version>
 		</dependency>
 		<dependency>
 			<groupId>org.keycloak.testframework</groupId>
