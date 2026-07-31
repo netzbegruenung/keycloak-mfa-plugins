@@ -64,6 +64,12 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		UserModel user = context.getUser();
 		RealmModel realm = context.getRealm();
 
+		if (config == null || config.getConfig() == null) {
+			logger.errorf("No config found for SMS authenticator execution in realm %s, skip SMS authentication", realm.getName());
+			context.attempted();
+			return;
+		}
+
 		Optional<CredentialModel> model = context.getUser().credentialManager().getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
 		String mobileNumber;
 		try {
