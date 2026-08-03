@@ -8,7 +8,7 @@
         <form class="${properties.kcFormClass}" action="${url.loginAction}" method="POST">
             <@field.group name="trusted-device-name-group" label=msg("deviceNameLabel")>
                 <div class="${properties.kcInputWrapperClass!}">
-                    <p id="kc-trusted-device-name" class="${properties.kcFormHelperTextClass!}">${deviceName}</p>
+                    <input id="kc-trusted-device-name" name="trusted-device-name" class="${properties.kcInputClass!}" type="text" value="${deviceName}" />
                 </div>
             </@field.group>
             <@buttons.actionGroup>
