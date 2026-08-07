@@ -10,3 +10,5 @@ dependency-reduced-pom.xml
 .jpb
 
 h2db/*.db
+
+testing/backfill-postgres/jars/
