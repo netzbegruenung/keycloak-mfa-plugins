@@ -1,1 +1,2 @@
 netzbegruenung.keycloak.app.jpa.ChallengeJpaEntityProviderFactory
+netzbegruenung.keycloak.app.jpa.AppAuthCredentialIndexJpaEntityProviderFactory

@@ -1,10 +1,12 @@
 package netzbegruenung.keycloak.app;
 
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
+import netzbegruenung.keycloak.app.rest.AppCredentialService;
 import org.jboss.logging.Logger;
 import org.keycloak.common.util.Time;
 import org.keycloak.credential.*;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.ModelDuplicateException;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 
@@ -29,7 +31,18 @@ public class AppCredentialProvider implements CredentialProvider<AppCredentialMo
 		if (appCredentialModel.getCredentialData() == null) {
 			appCredentialModel.setCreatedDate(Time.currentTimeMillis());
 		}
-		return user.credentialManager().createStoredCredential(appCredentialModel);
+		CredentialModel createdCredential = user.credentialManager().createStoredCredential(appCredentialModel);
+		try {
+			new AppCredentialService(session).indexCredential(
+				realm, user, appCredentialModel.getAppCredentialData().getDeviceId(), createdCredential.getId());
+		} catch (ModelDuplicateException e) {
+			// Lost a race against a concurrent registration of the same device_id - don't leave
+			// an unindexed, permanently unreachable credential behind. The caller sees this
+			// exception and can respond accordingly (e.g. a "duplicate device" response).
+			user.credentialManager().removeStoredCredentialById(createdCredential.getId());
+			throw e;
+		}
+		return createdCredential;
 	}
 
 	@Override
