@@ -23,11 +23,11 @@ public final class EnforceMfaShared {
 	/** Same key as {@link EnforceMfaAuthenticator#CONFIG_OPTIONAL_NAME}. */
 	public static final String CONFIG_OPTIONAL_NAME = "mfaSetupOptional";
 
-	/** Credential type ids for {@link MfaCredentialConditionFactory} admin UI. */
+	/** Stored credential type ids for {@link MfaCredentialConditionFactory} admin UI (not credential provider SPI ids). */
 	public static final List<String> CREDENTIAL_TYPE_OPTIONS = List.of(
-		OTPCredentialModel.TYPE,
-		WebAuthnCredentialModel.TYPE_TWOFACTOR,
-		WebAuthnCredentialModel.TYPE_PASSWORDLESS,
+		OTPCredentialModel.TYPE, // "otp"
+		WebAuthnCredentialModel.TYPE_TWOFACTOR, // "webauthn"
+		WebAuthnCredentialModel.TYPE_PASSWORDLESS, // "webauthn-passwordless"
 		"email-authenticator", /* from mesutpiskin/keycloak-2fa-email-authenticator */
 		"mobile-number", /* from netzbegruenung/keycloak-mfa-plugins/sms-authenticator */
 		"APP_CREDENTIAL"
