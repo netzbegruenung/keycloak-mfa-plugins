@@ -7,7 +7,7 @@ This module is a development utility designed to streamline the development of t
 The `mfa-dev-runner` module leverages the Keycloak Quarkus extension (`keycloak-quarkus-server`) to run Keycloak as a Quarkus application in development mode.
 
 Its `pom.xml` is configured to:
-1.  Include the `sms-authenticator`, `app-authenticator`, and `enforce-mfa` modules as dependencies.
+1.  Include the `sms-authenticator`, `email-authenticator`, `app-authenticator`, and `enforce-mfa` modules as dependencies.
 2.  Include the `keycloak-quarkus-server` dependency.
 3.  Configure the `quarkus-maven-plugin` to launch the Keycloak server.
 

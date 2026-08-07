@@ -1,0 +1,30 @@
+{
+  "name": "Keycloak Core Development",
+  "image": "mcr.microsoft.com/devcontainers/base:debian",
+
+  "features": {
+	"ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "21",
+      "installMaven": "true"
+    },
+    "ghcr.io/devcontainers/features/node:2": {
+      "version": "22",
+      "pnpmVersion": "latest"
+    }
+  },
+
+  "mounts": [
+    "source=claude-code-data,target=/home/vscode/.claude,type=volume",
+    "source=${localEnv:HOME}/.ssh/id_claude_signing,target=/home/vscode/.ssh/id_claude_signing,type=bind",
+  	"source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,type=bind"
+  ],
+
+  "containerEnv": {
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
+		"GH_TOKEN": "${localEnv:GH_TOKEN}"
+  },
+
+  "remoteUser": "vscode"
+}

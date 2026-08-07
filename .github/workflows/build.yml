@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
@@ -19,8 +19,10 @@ jobs:
       - run: |
           mkdir staging
           cp sms-authenticator/target/*.jar staging
+          cp email-authenticator/target/*.jar staging
           cp app-authenticator/target/*.jar staging
           cp enforce-mfa/target/*.jar staging
+          cp trusted-device-authenticator/target/*.jar staging
       - name: Create hash files
         run: |
           for jar in *.jar

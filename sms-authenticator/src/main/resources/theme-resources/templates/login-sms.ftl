@@ -15,7 +15,7 @@
 			<div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
 				<div id="kc-form-options" class="${properties.kcFormOptionsClass!}">
 					<div class="${properties.kcFormOptionsWrapperClass!}">
-						<span><a href="/">${msg("backToApplication")?no_esc}</a></span>
+						<span><a href="/realms/${realm.name}/account">${msg("backToApplication")?no_esc}</a></span>
 					</div>
 				</div>
 

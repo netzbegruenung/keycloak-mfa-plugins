@@ -17,15 +17,23 @@
 					<input type="tel" id="code" pattern="[0-9\+\-\.\ ]" name="mobile_number" class="${properties.kcInputClass!}" placeholder="${mobileInputFieldPlaceholder!}" autofocus />
 				</div>
 			</div>
-			<div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
-				<div id="kc-form-options" class="${properties.kcFormOptionsClass!}">
-					<div class="${properties.kcFormOptionsWrapperClass!}">
-						<span><a href="/">${msg("backToApplication")?no_esc}</a></span>
-					</div>
-				</div>
-
-				<div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
-					<input name="phonenumber" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("doSubmitMobile")}" />
+			<div class="pf-v5-c-form__group pf-m-action">
+				<div class="pf-v5-c-form__actions">
+					<#if isAppInitiatedAction??>
+						<input type="submit"
+							class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonLargeClass!}"
+							value="${msg("doSubmitMobile")}"
+						/>
+						<button type="submit"
+							class="${properties.kcButtonClass!} ${properties.kcButtonDefaultClass!} ${properties.kcButtonLargeClass!} ${properties.kcButtonLargeClass!}"
+							name="cancel-aia" value="true">${msg("doCancel")}
+						</button>
+					<#else>
+						<input type="submit"
+							class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}"
+							value="${msg("doSubmitMobile")}"
+						/>
+					</#if>
 				</div>
 			</div>
 		</form>
