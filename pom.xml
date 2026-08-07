@@ -7,19 +7,20 @@
 	<groupId>netzbegruenung</groupId>
 	<artifactId>keycloak-mfa-tools</artifactId>
 	<packaging>pom</packaging>
-	<version>26.6.5</version>
+	<version>26.7.0-2</version>
 
 	<modules>
 		<module>sms-authenticator</module>
 		<module>email-authenticator</module>
         <module>app-authenticator</module>
 		<module>enforce-mfa</module>
+		<module>trusted-device-authenticator</module>
 		<module>mfa-dev-runner</module>
 	</modules>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<keycloak.version>26.6.3</keycloak.version>
+		<keycloak.version>26.7.1</keycloak.version>
 		<maven.compiler.release>17</maven.compiler.release>
 		<maven.compiler.version>3.15.0</maven.compiler.version>
 		<maven.shade.version>3.6.2</maven.shade.version>

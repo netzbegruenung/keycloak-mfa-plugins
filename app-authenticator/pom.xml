@@ -5,7 +5,7 @@
     <parent>
         <artifactId>keycloak-mfa-tools</artifactId>
         <groupId>netzbegruenung</groupId>
-        <version>26.6.5</version>
+        <version>26.7.0-2</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -16,7 +16,14 @@
 			<dependency>
 				<groupId>com.google.auth</groupId>
 				<artifactId>google-auth-library-bom</artifactId>
-				<version>1.48.0</version>
+				<version>1.49.0</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.keycloak.testframework</groupId>
+				<artifactId>keycloak-test-framework-bom</artifactId>
+				<version>${keycloak.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -45,6 +52,11 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
+			<groupId>org.keycloak</groupId>
+			<artifactId>keycloak-services</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
 			<groupId>org.jboss.logging</groupId>
 			<artifactId>jboss-logging</artifactId>
 			<scope>provided</scope>
@@ -63,6 +75,43 @@
             <groupId>com.google.auth</groupId>
             <artifactId>google-auth-library-oauth2-http</artifactId>
         </dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-core</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-junit5-config</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-oauth</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-ui</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-remote</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.tests</groupId>
+			<artifactId>keycloak-tests-utils-shared</artifactId>
+			<version>${keycloak.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>5.15.2</version>
+			<scope>test</scope>
+		</dependency>
     </dependencies>
 
     <build>

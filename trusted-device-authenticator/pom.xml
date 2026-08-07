@@ -4,13 +4,25 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>email-authenticator</artifactId>
+    <artifactId>trusted-device-authenticator</artifactId>
 
     <parent>
         <groupId>netzbegruenung</groupId>
         <artifactId>keycloak-mfa-tools</artifactId>
         <version>26.7.0-2</version>
     </parent>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.keycloak.testframework</groupId>
+                <artifactId>keycloak-test-framework-bom</artifactId>
+                <version>${keycloak.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
 		<dependency>
@@ -43,22 +55,37 @@
 			<artifactId>jakarta.ws.rs-api</artifactId>
 			<scope>provided</scope>
 		</dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-engine</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>5.15.2</version>
-            <scope>test</scope>
-        </dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-core</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-junit5-config</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-oauth</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-ui</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.testframework</groupId>
+			<artifactId>keycloak-test-framework-remote</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.keycloak.tests</groupId>
+			<artifactId>keycloak-tests-utils-shared</artifactId>
+			<version>${keycloak.version}</version>
+			<scope>test</scope>
+		</dependency>
     </dependencies>
 
     <build>
