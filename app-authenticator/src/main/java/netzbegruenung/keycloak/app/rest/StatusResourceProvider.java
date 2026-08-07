@@ -60,12 +60,11 @@ public class StatusResourceProvider implements RealmResourceProvider {
 			UserModel user = authSession.getAuthenticatedUser();
 
 			if (authSession.getAuthNote(READY) != null) {
-				authSession.setAuthNote(READY, null);
-
 				try {
 					sseEventSink.send(sse.newEvent( "ready"))
 						.toCompletableFuture()
 						.get();
+					authSession.setAuthNote(READY, null);
 				} catch (Exception e) {
 					logger.errorf(e, "Failed to send authentication status for user %s", user == null ? "null" : user.getId());
 				} finally {
@@ -79,8 +78,7 @@ public class StatusResourceProvider implements RealmResourceProvider {
 						.toCompletableFuture()
 						.get();
 				} catch (Exception e) {
-					// should be debug
-					logger.infof(e, "Failed to send keep alive message for user %s", user == null ? "null" : user.getId());
+					logger.debugf(e, "Failed to send keep alive message for user %s", user == null ? "null" : user.getId());
 					break;
 				}
 			}

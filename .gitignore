@@ -1,6 +1,7 @@
 .idea
 *.iml
 target
+.claude/settings.local.json
 copy.sh
 dependency-reduced-pom.xml
 .classpath

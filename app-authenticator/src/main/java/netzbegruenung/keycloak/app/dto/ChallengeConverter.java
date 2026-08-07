@@ -20,7 +20,7 @@ public class ChallengeConverter {
 			challenge.getOsVersion(),
 			// replaced broken property resolver intentionally for something simpler
 			// https://github.com/keycloak/keycloak/pull/36472
-			challenge.getClient().getName().equals("${client_account-console}") ? "Accountkonsole" : challenge.getClient().getName(),
+			"${client_account-console}".equals(challenge.getClient().getName()) ? "Accountkonsole" : challenge.getClient().getName(),
 			ResolveRelative.resolveRelativeUri(session, challenge.getClient().getRootUrl(), challenge.getClient().getBaseUrl()),
 			challenge.getLoginId()
 		);

@@ -46,3 +46,20 @@ account console `/realms/realm/account/#/account-security/signing-in` by enterin
 # Enforce SMS 2FA
 If the option `Force 2FA` in the SMS Authenticator config is enabled and a user has no other 2FA method already enabled,
 users will have to set up the SMS Authenticator.
+
+# Testing
+This module has two kinds of automated tests, both run with `mvn test` from this directory (or `mvn install` from the repo root, which is what CI does):
+
+- **Unit tests** (`ApiSmsServiceTest`) test `ApiSmsService`'s HTTP request building (JSON/urlencoded body, auth header modes, phone number normalization) against a local `HttpServer` stub. No Keycloak involved, runs in well under a second.
+- **Integration tests** (`SmsAuthenticatorFlowTest`) drive the real authenticator through a browser, using [Keycloak's Test Framework](https://www.keycloak.org/docs/latest/server_development/index.html#_testsuite) (`org.keycloak.testframework:*`). It launches a local Keycloak with this module installed as a provider and exercises phone-number setup and login through it, stubbing the outbound SMS gateway call with an in-process `HttpServer` (`@InjectHttpServer`) instead of a real API.
+
+To run only one or the other:
+```shell
+mvn test -Dtest=ApiSmsServiceTest        # unit tests only, fast
+mvn test -Dtest=SmsAuthenticatorFlowTest # integration tests only
+```
+
+Notes on the integration tests:
+- No Docker is required - Keycloak runs as a local process, downloaded and unpacked once into `/tmp/kc-test-framework` and reused across runs.
+- The first run in a clean environment downloads the Keycloak distribution and takes noticeably longer; expect ~30-40s just for Keycloak to boot on top of that.
+- The cached distribution under `/tmp/kc-test-framework` is shared machine-wide across modules. If you switch between testing this module and another one that also uses the Test Framework (e.g. `trusted-device-authenticator`) and hit an unexplained boot failure, delete `/tmp/kc-test-framework` and retry - a stale provider jar from the other module can still be installed alongside this one.

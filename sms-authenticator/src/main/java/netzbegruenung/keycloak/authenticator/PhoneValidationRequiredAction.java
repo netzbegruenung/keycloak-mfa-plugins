@@ -52,7 +52,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 	@Override
 	public void requiredActionChallenge(RequiredActionContext context) {
-		context.getUser().addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
+		context.getAuthenticationSession().addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
 		try {
 			UserModel user = context.getUser();
 			RealmModel realm = context.getRealm();
@@ -116,7 +116,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 					new UserCredentialModel("random_id", "mobile-number", mobileNumber)
 				);
 			}
-			context.getUser().removeRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
+			context.getAuthenticationSession().removeRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
 			handlePhoneToAttribute(context, mobileNumber);
 			context.success();
 		} else {
