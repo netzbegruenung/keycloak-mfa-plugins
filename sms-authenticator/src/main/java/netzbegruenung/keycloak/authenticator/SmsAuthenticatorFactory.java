@@ -94,6 +94,8 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 			new ProviderConfigProperty("jsonTemplate", "Request JSON template", "Custom JSON Body template with \"%s\" placeholders for UUID (if 'Use message UUID' is set), phone number and message (in that order). If empty, default template will be used.", ProviderConfigProperty.TEXT_TYPE, ""),
 			new ProviderConfigProperty("forceSecondFactor", "Force 2FA", "If 2FA authentication is not configured, the user is forced to setup SMS Authentication.", ProviderConfigProperty.BOOLEAN_TYPE, false),
 			new ProviderConfigProperty("whitelist", "Excluded from enforced 2FA", "All users with the here selected role are not forced to setup 2FA.", ProviderConfigProperty.ROLE_TYPE, null),
+			new ProviderConfigProperty("enableByDefault", "Enable 2FA by default", "If enabled, users who have the configured mobile number attribute will have SMS 2FA activated automatically without any manual setup required.", ProviderConfigProperty.BOOLEAN_TYPE, false),
+			new ProviderConfigProperty("mobileNumberAttribute", "Mobile number user attribute", "Name of the user attribute containing the mobile phone number used for auto-enrollment when 'Enable 2FA by default' is active.", ProviderConfigProperty.STRING_TYPE, "mobile_number"),
 			new ProviderConfigProperty("hideResponsePayload", "Redacted API response log message", "Don't log API response body of SMS send request.", ProviderConfigProperty.BOOLEAN_TYPE, false),
 			new ProviderConfigProperty("mobileInputFieldPlaceholder", "Phone number input field placeholder", "The placeholder string user in the phone number input field", ProviderConfigProperty.STRING_TYPE, ""),
 			new ProviderConfigProperty("storeInAttribute", "Set phone number as attribute", "Sets the phone number as a user attribute.", ProviderConfigProperty.BOOLEAN_TYPE, false),
@@ -101,6 +103,7 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 			new ProviderConfigProperty("numberTypeFilters", "Valid number type filters", "A list of valid number types to filter the input phone number by. Possible values are: FIXED_LINE, MOBILE, "
 				+ " FIXED_LINE_OR_MOBILE, PAGER, TOLL_FREE, PREMIUM_RATE, SHARED_COST, PERSONAL_NUMBER, VOIP, UAN, VOICEMAIL.", ProviderConfigProperty.MULTIVALUED_STRING_TYPE, Collections.emptyList()),
 			new ProviderConfigProperty("forceRetryOnBadFormat", "Ask for new number if checks fail", "Sets an error message and asks the user to re-enter phone number if formatting checks are not successfully passed.", ProviderConfigProperty.BOOLEAN_TYPE, false),
+			new ProviderConfigProperty("enforcePhoneNumberUniqueness", "Enforce phone number uniqueness", "If enabled, prevents users from registering a phone number that is already in use by another user.", ProviderConfigProperty.BOOLEAN_TYPE, true)
 			new ProviderConfigProperty("countryCodeList", "List of country code", "Sets the list of country code in a select input to display to the user the supported countries. List separated by commas (ex : FR,DE,GB)", ProviderConfigProperty.STRING_TYPE, "")
 		);
 	}

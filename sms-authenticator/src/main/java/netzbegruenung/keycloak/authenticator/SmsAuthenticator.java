@@ -73,6 +73,23 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			return;
 		}
 
+		// When storeInAttribute is active, the attribute is the source of truth
+		// Allows admins to update the number without requiring the user to re-enroll.
+		boolean storeInAttribute = Boolean.parseBoolean(config.getConfig().getOrDefault("storeInAttribute", "false"));
+		if (storeInAttribute) {
+			String mobileNumberAttribute = config.getConfig().getOrDefault("mobileNumberAttribute", "mobile_number");
+			String attributeNumber = user.getAttributeStream(mobileNumberAttribute)
+				.filter(n -> n != null && !n.isBlank())
+				.findFirst()
+				.orElse(null);
+			if (attributeNumber != null) {
+				mobileNumber = attributeNumber;
+			} else {
+				logger.warnf("storeInAttribute is active but attribute '%s' is empty for user %s, falling back to credential value",
+					mobileNumberAttribute, user.getUsername());
+			}
+		}
+
 		int length = Integer.parseInt(config.getConfig().get("length"));
 		int ttl = Integer.parseInt(config.getConfig().get("ttl"));
 

@@ -2,11 +2,10 @@ package netzbegruenung.keycloak.enforce_mfa;
 
 import org.keycloak.authentication.requiredactions.WebAuthnPasswordlessRegisterFactory;
 import org.keycloak.authentication.requiredactions.WebAuthnRegisterFactory;
-import org.keycloak.credential.OTPCredentialProviderFactory;
-import org.keycloak.credential.WebAuthnCredentialProviderFactory;
-import org.keycloak.credential.WebAuthnPasswordlessCredentialProviderFactory;
 import org.keycloak.models.Constants;
 import org.keycloak.models.UserModel;
+import org.keycloak.models.credential.OTPCredentialModel;
+import org.keycloak.models.credential.WebAuthnCredentialModel;
 
 import java.util.List;
 import java.util.Map;
@@ -24,13 +23,14 @@ public final class EnforceMfaShared {
 	/** Same key as {@link EnforceMfaAuthenticator#CONFIG_OPTIONAL_NAME}. */
 	public static final String CONFIG_OPTIONAL_NAME = "mfaSetupOptional";
 
-	/** Credential type ids for {@link MfaCredentialConditionFactory} admin UI. */
+	/** Stored credential type ids for {@link MfaCredentialConditionFactory} admin UI (not credential provider SPI ids). */
 	public static final List<String> CREDENTIAL_TYPE_OPTIONS = List.of(
-		OTPCredentialProviderFactory.PROVIDER_ID,
-		WebAuthnCredentialProviderFactory.PROVIDER_ID,
-		WebAuthnPasswordlessCredentialProviderFactory.PROVIDER_ID,
+		OTPCredentialModel.TYPE, // "otp"
+		WebAuthnCredentialModel.TYPE_TWOFACTOR, // "webauthn"
+		WebAuthnCredentialModel.TYPE_PASSWORDLESS, // "webauthn-passwordless"
 		"email-authenticator", /* from mesutpiskin/keycloak-2fa-email-authenticator */
-		"mobile-number" /* from netzbegruenung/keycloak-mfa-plugins/sms-authenticator */
+		"mobile-number", /* from netzbegruenung/keycloak-mfa-plugins/sms-authenticator */
+		"APP_CREDENTIAL"
 	);
 
 	/** Required action ids for {@link ConditionalEnforceMfaAuthenticatorFactory} admin UI. */
@@ -39,7 +39,8 @@ public final class EnforceMfaShared {
 		WebAuthnRegisterFactory.PROVIDER_ID,
 		WebAuthnPasswordlessRegisterFactory.PROVIDER_ID,
 		"email-authenticator-setup", /* from mesutpiskin/keycloak-2fa-email-authenticator */
-		"mobile_number_config" /* from netzbegruenung/keycloak-mfa-plugins/sms-authenticator */
+		"mobile_number_config", /* from netzbegruenung/keycloak-mfa-plugins/sms-authenticator */
+		"app-register"
 	);
 
 	/**
