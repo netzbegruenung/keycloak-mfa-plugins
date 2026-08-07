@@ -28,7 +28,7 @@ This is an independent reimplementation of the ideas from upstream Keycloak pull
 | Trust duration (days) | Number of days the device stays trusted before the user is asked again. | `7` |
 
 # Usage
-After a user completes their normal second factor, they're asked whether to trust the current device. If they accept, a signed cookie and a matching `netzbegruenung-trusted-device` credential are stored for the user; as long as both are present and unexpired, the `Trusted Device` step succeeds and the second-factor sub-flow is skipped on that browser. The trusted device also shows up in the account console (`/realms/realm/account/#/account-security/signing-in`) and can be revoked there like any other credential.
+After a user completes their normal second factor, they're asked whether to trust the current device. The device name is automatically detected (e.g. "Windows 10 / Chrome") and can be edited before confirming. If they accept, a signed cookie and a matching `netzbegruenung-trusted-device` credential are stored for the user; as long as both are present and unexpired, the `Trusted Device` step succeeds and the second-factor sub-flow is skipped on that browser. The trusted device also shows up in the account console (`/realms/realm/account/#/account-security/signing-in`) and can be revoked there like any other credential.
 
 # License
 Apache License 2.0
