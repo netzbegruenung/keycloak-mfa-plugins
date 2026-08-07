@@ -15,32 +15,28 @@ import org.junit.jupiter.api.Test;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.email.EmailException;
-import org.keycloak.email.EmailSenderProvider;
+import org.keycloak.email.EmailTemplateProvider;
 import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.http.HttpRequest;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticatorConfigModel;
-import org.keycloak.models.KeycloakContext;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
-import org.keycloak.models.ThemeManager;
 import org.keycloak.models.UserModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
-import org.keycloak.theme.Theme;
 
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 
 import java.util.HashMap;
-import java.util.Locale;
+import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,9 +50,8 @@ public class EmailAuthenticatorTest {
 	private LoginFormsProvider form;
 	private RealmModel realm;
 	private KeycloakSession session;
-	private KeycloakContext keycloakContext;
 	private UserModel user;
-	private EmailSenderProvider emailSenderProvider;
+	private EmailTemplateProvider emailTemplateProvider;
 
 	@BeforeEach
 	public void setup() throws Exception {
@@ -67,9 +62,8 @@ public class EmailAuthenticatorTest {
 		form = mock(LoginFormsProvider.class);
 		realm = mock(RealmModel.class);
 		session = mock(KeycloakSession.class);
-		keycloakContext = mock(KeycloakContext.class);
 		user = mock(UserModel.class);
-		emailSenderProvider = mock(EmailSenderProvider.class);
+		emailTemplateProvider = mock(EmailTemplateProvider.class);
 
 		when(context.getAuthenticationSession()).thenReturn(authSession);
 		when(context.getHttpRequest()).thenReturn(request);
@@ -78,23 +72,15 @@ public class EmailAuthenticatorTest {
 		when(context.getSession()).thenReturn(session);
 		when(context.getUser()).thenReturn(user);
 
-		when(session.getProvider(EmailSenderProvider.class)).thenReturn(emailSenderProvider);
-		when(session.getContext()).thenReturn(keycloakContext);
-		when(keycloakContext.resolveLocale(user)).thenReturn(Locale.ENGLISH);
-
-		ThemeManager themeManager = mock(ThemeManager.class);
-		Theme theme = mock(Theme.class);
-		when(session.theme()).thenReturn(themeManager);
-		when(themeManager.getTheme(Theme.Type.LOGIN)).thenReturn(theme);
-		Properties messages = new Properties();
-		messages.setProperty("emailAuthSubject", "Your login code");
-		messages.setProperty("emailAuthText", "Code: %1$s valid %2$d min");
-		when(theme.getEnhancedMessages(eq(realm), any(Locale.class))).thenReturn(messages);
+		when(session.getProvider(EmailTemplateProvider.class)).thenReturn(emailTemplateProvider);
+		when(emailTemplateProvider.setAuthenticationSession(any())).thenReturn(emailTemplateProvider);
+		when(emailTemplateProvider.setRealm(any())).thenReturn(emailTemplateProvider);
+		when(emailTemplateProvider.setUser(any())).thenReturn(emailTemplateProvider);
 
 		when(user.getEmail()).thenReturn("test@example.com");
 		when(user.isEmailVerified()).thenReturn(true);
 
-		when(form.setAttribute(anyString(), any())).thenReturn(form);
+		when(form.setAttribute(any(), any())).thenReturn(form);
 		when(form.setError(anyString(), any())).thenReturn(form);
 		when(form.setError(anyString(), (Object[]) any())).thenReturn(form);
 		when(form.setError(anyString())).thenReturn(form);
@@ -159,6 +145,14 @@ public class EmailAuthenticatorTest {
 
 		authenticator.authenticate(context);
 
-		verify(emailSenderProvider).send(any(), eq(user), eq("Your login code"), matches("Code: \\d{6} valid 5 min"), matches("Code: \\d{6} valid 5 min"));
+		verify(emailTemplateProvider).send(
+			eq("emailAuthSubject"),
+			argThat((List<Object> subjectAttrs) ->
+				subjectAttrs.size() == 2
+					&& subjectAttrs.get(0).toString().matches("\\d{6}")
+					&& subjectAttrs.get(1).equals(5)),
+			eq("email-auth.ftl"),
+			argThat(attrs -> attrs.get("ttl").equals(5) && attrs.get("code").toString().matches("\\d{6}"))
+		);
 	}
 }
