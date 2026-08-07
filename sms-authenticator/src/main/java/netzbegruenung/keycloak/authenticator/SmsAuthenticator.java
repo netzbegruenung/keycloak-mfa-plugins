@@ -51,6 +51,7 @@ import java.util.Optional;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsAuthCredentialProvider> {
 
@@ -87,7 +88,8 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
 			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
 
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
+			Map<String, String> smsConfig = VaultConfigSecrets.resolve(session, config.getConfig(), SmsAuthenticatorFactory.CONFIG_APITOKEN);
+			SmsServiceFactory.get(smsConfig).send(mobileNumber, smsText);
 
 			context.challenge(context.form().setAttribute("realm", realm).createForm(TPL_CODE));
 		} catch (Exception e) {
