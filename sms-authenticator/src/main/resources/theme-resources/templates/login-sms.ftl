@@ -25,6 +25,11 @@
 			</div>
 		</form>
 	<#elseif section = "info" >
-		${msg("smsAuthInstruction")}
+		<#if phoneNumber?? && phoneNumber?has_content>
+			<#assign maskedPhone = phoneNumber[0..2] + phoneNumber[3..phoneNumber?length-5]?replace(".", "*") + phoneNumber[phoneNumber?length-4..]>
+			${msg("smsAuthInstructionWithPhone", maskedPhone)}
+		<#else>
+			${msg("smsAuthInstruction")}
+		</#if>
 	</#if>
 </@layout.registrationLayout>
