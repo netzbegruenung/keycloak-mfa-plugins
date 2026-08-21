@@ -60,6 +60,13 @@
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
 					<version>${maven.surefire.version}</version>
+					<configuration>
+						<!-- The keycloak test framework pulls in jboss-logmanager, which logs an ERROR if
+						     java.util.logging is initialised before this is set. It has to be on the forked
+						     JVM's command line, not in systemPropertyVariables, to land before the first
+						     JUL access. Harmless in modules with no tests: surefire never forks there. -->
+						<argLine>-Djava.util.logging.manager=org.jboss.logmanager.LogManager</argLine>
+					</configuration>
 				</plugin>
 
 				<plugin>

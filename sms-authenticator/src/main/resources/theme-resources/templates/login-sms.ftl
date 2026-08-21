@@ -21,7 +21,16 @@
 
 				<div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
 					<input name="login" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("doSubmit")}"/>
-					<input class="${properties.kcButtonClass!} ${properties.kcButtonDefaultClass!}" type="button" value="${msg('smsAuthResendCode')}" onclick="window.location.reload();" />
+				</div>
+			</div>
+			<#-- A real submit named "resend": PhoneValidationRequiredAction.processAction sees the parameter
+			     and re-enters the challenge, which re-applies the debounce. Needs no JS, and Keycloak's own
+			     post-redirect-get keeps the browser from offering to resubmit the form.
+			     Secondary + Default: keycloak.v2 defines only the former, the legacy keycloak theme only the
+			     latter, and the undefined one renders empty. Block/Large match the primary button. -->
+			<div class="${properties.kcFormGroupClass!}">
+				<div id="kc-form-buttons-resend" class="${properties.kcFormButtonsClass!}">
+					<input id="kc-sms-resend" name="resend" type="submit" class="${properties.kcButtonClass!} ${properties.kcButtonSecondaryClass!} ${properties.kcButtonDefaultClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" value="${msg("smsAuthResendCode")}"/>
 				</div>
 			</div>
 		</form>

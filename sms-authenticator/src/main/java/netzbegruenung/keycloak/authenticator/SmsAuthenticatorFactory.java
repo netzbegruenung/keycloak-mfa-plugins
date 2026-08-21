@@ -36,6 +36,8 @@ import java.util.List;
 public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 
 	public static final String PROVIDER_ID = "mobile-number-authenticator";
+	public static final String SMS_RESEND_DEBOUNCE_SECONDS = "smsResendDebounceSeconds";
+	public static final String SMS_RESEND_DEBOUNCE_MAX_CAP_SECONDS = "smsResendDebounceMaxCapSeconds";
 	private static final SmsAuthenticator SINGLETON = new SmsAuthenticator();
 
 
@@ -104,7 +106,9 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 				+ " FIXED_LINE_OR_MOBILE, PAGER, TOLL_FREE, PREMIUM_RATE, SHARED_COST, PERSONAL_NUMBER, VOIP, UAN, VOICEMAIL.", ProviderConfigProperty.MULTIVALUED_STRING_TYPE, Collections.emptyList()),
 			new ProviderConfigProperty("forceRetryOnBadFormat", "Ask for new number if checks fail", "Sets an error message and asks the user to re-enter phone number if formatting checks are not successfully passed.", ProviderConfigProperty.BOOLEAN_TYPE, false),
 			new ProviderConfigProperty("enforcePhoneNumberUniqueness", "Enforce phone number uniqueness", "If enabled, prevents users from registering a phone number that is already in use by another user.", ProviderConfigProperty.BOOLEAN_TYPE, true),
-			new ProviderConfigProperty("countryCodeList", "List of country code", "Sets the list of country code in a select input to display to the user the supported countries. List separated by commas (ex : FR,DE,GB)", ProviderConfigProperty.STRING_TYPE, "")
+			new ProviderConfigProperty("countryCodeList", "List of country code", "Sets the list of country code in a select input to display to the user the supported countries. List separated by commas (ex : FR,DE,GB)", ProviderConfigProperty.STRING_TYPE, ""),
+			new ProviderConfigProperty(SMS_RESEND_DEBOUNCE_SECONDS, "SMS resend debounce (seconds)", "Phone validation: initial seconds between the 1st and 2nd SMS; the required wait doubles after each subsequent send until capped (see 'SMS resend debounce max cap'). Enforced per account, not per browser session. Use 0 to disable debouncing.", ProviderConfigProperty.STRING_TYPE, "30"),
+			new ProviderConfigProperty(SMS_RESEND_DEBOUNCE_MAX_CAP_SECONDS, "SMS resend debounce max cap (seconds)", "Phone validation: maximum seconds between consecutive SMS sends once the exponential debounce has grown. Leave empty to use the Keycloak process env " + PhoneValidationRequiredAction.ENV_DEBOUNCE_MAX_CAP_SECONDS + " (seconds), or 21600 when that env var is unset.", ProviderConfigProperty.STRING_TYPE, "3600")
 		);
 	}
 
