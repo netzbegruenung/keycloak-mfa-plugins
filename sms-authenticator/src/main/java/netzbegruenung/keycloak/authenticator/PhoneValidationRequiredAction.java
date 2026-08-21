@@ -65,12 +65,22 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 	/** Form parameter naming the resend submit button in login-sms.ftl. */
 	public static final String RESEND_PARAM = "resend";
 
-	private static final long DEFAULT_DEBOUNCE_SECONDS = 30;
-	private static final long FALLBACK_DEBOUNCE_MAX_CAP_SECONDS = 6L * 60L * 60L;
 	/**
-	 * Keycloak process environment variable: default upper bound (seconds) for the resend debounce when
-	 * the sms-2fa execution leaves {@code smsResendDebounceMaxCapSeconds} unset. Positive integer; unset
-	 * or invalid falls back to 21600 seconds (6 hours).
+	 * Baseline seconds between the 1st and 2nd SMS. Also the value pre-filled into the sms-2fa config
+	 * field, so the admin console and this fallback cannot drift apart.
+	 */
+	public static final long DEFAULT_DEBOUNCE_SECONDS = 30;
+	/**
+	 * Upper bound (seconds) on the grown debounce gap, used when neither the sms-2fa config field nor
+	 * {@link #ENV_DEBOUNCE_MAX_CAP_SECONDS} supplies one. Also the value pre-filled into that config
+	 * field. Six hours: the doubling stops growing there, so a determined abuser is held to a handful of
+	 * SMS per day while a genuinely stuck user still gets a retry window within the same day.
+	 */
+	public static final long FALLBACK_DEBOUNCE_MAX_CAP_SECONDS = 6L * 60L * 60L;
+	/**
+	 * Keycloak process environment variable: upper bound (seconds) for the resend debounce when the
+	 * sms-2fa execution leaves {@code smsResendDebounceMaxCapSeconds} empty. Positive integer; unset or
+	 * invalid falls back to {@link #FALLBACK_DEBOUNCE_MAX_CAP_SECONDS}.
 	 */
 	public static final String ENV_DEBOUNCE_MAX_CAP_SECONDS = "KC_SMS_PHONE_VALIDATION_RESEND_DEBOUNCE_MAX_CAP_SECONDS";
 	private static final long DEFAULT_DEBOUNCE_MAX_CAP_SECONDS = resolveMaxCapFromEnvironment();

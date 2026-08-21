@@ -12,6 +12,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.ThemeManager;
 import org.keycloak.models.UserModel;
+import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 import org.mockito.Mock;
@@ -30,7 +31,9 @@ import static netzbegruenung.keycloak.authenticator.PhoneValidationRequiredActio
 import static netzbegruenung.keycloak.authenticator.PhoneValidationRequiredAction.formatWaitHumanReadable;
 import static netzbegruenung.keycloak.authenticator.PhoneValidationRequiredAction.requiredSecondsBetweenSends;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -236,6 +239,33 @@ class PhoneValidationRequiredActionTest {
 
 	private static Map.Entry<String, String> entry(String k, String v) {
 		return new java.util.AbstractMap.SimpleEntry<>(k, v);
+	}
+
+	/**
+	 * Both defaults are derived from the constants the resolvers fall back to, so they cannot disagree
+	 * by construction. What can still break: the settings being dropped from the admin console, a
+	 * default that is not a parseable number, or a cap set at or below the baseline — which would make
+	 * the very first gap the cap and defeat the backoff entirely.
+	 */
+	@Test
+	void debounceSettingsAreExposedWithUsableDefaults() {
+		Map<String, ProviderConfigProperty> byName = new HashMap<>();
+		for (ProviderConfigProperty p : new SmsAuthenticatorFactory().getConfigProperties()) {
+			byName.put(p.getName(), p);
+		}
+		ProviderConfigProperty baseline = byName.get(SmsAuthenticatorFactory.SMS_RESEND_DEBOUNCE_SECONDS);
+		ProviderConfigProperty cap = byName.get(SmsAuthenticatorFactory.SMS_RESEND_DEBOUNCE_MAX_CAP_SECONDS);
+		assertNotNull(baseline, "debounce baseline must stay configurable in the admin console");
+		assertNotNull(cap, "debounce cap must stay configurable in the admin console");
+
+		assertEquals(PhoneValidationRequiredAction.DEFAULT_DEBOUNCE_SECONDS,
+			Long.parseLong(String.valueOf(baseline.getDefaultValue())));
+		assertEquals(PhoneValidationRequiredAction.FALLBACK_DEBOUNCE_MAX_CAP_SECONDS,
+			Long.parseLong(String.valueOf(cap.getDefaultValue())));
+
+		assertTrue(PhoneValidationRequiredAction.FALLBACK_DEBOUNCE_MAX_CAP_SECONDS
+			> PhoneValidationRequiredAction.DEFAULT_DEBOUNCE_SECONDS,
+			"a cap at or below the baseline defeats the exponential backoff");
 	}
 
 	@Test
