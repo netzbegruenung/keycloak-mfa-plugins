@@ -42,6 +42,7 @@ import java.util.regex.Pattern;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -226,6 +227,49 @@ public class SmsAuthenticatorFlowTest {
 		} finally {
 			SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("ttl", "300"));
 		}
+	}
+
+	@Test
+	public void changeNumberFromCodeStepRestartsPhoneEntry() throws Exception {
+		oauth.openLoginForm();
+		loginPage.fillLogin(user.getUsername(), user.getPassword());
+		loginPage.submit();
+
+		phoneNumberSetupPage.assertCurrent();
+		phoneNumberSetupPage.enterPhoneNumber("+491234567");
+		phoneNumberSetupPage.submit();
+
+		smsCodePage.assertCurrent();
+		assertTrue(smsCodePage.hasChangeNumber());
+		smsRequestBodies.clear();
+		smsCodePage.changeNumber();
+
+		phoneNumberSetupPage.assertCurrent();
+		phoneNumberSetupPage.enterPhoneNumber("+499876543");
+		phoneNumberSetupPage.submit();
+
+		smsCodePage.assertCurrent();
+		smsCodePage.enterCode(awaitSmsCode());
+		smsCodePage.submit();
+
+		boolean hasMobileNumberCredential = managedRealm.admin().users().get(user.getId())
+			.credentials()
+			.stream()
+			.anyMatch(credential -> "mobile-number".equals(credential.getType()));
+		assertTrue(hasMobileNumberCredential, "Expected a mobile-number credential after changing the phone number");
+	}
+
+	@Test
+	public void loginSmsChallengeDoesNotShowEnrollmentActions() throws Exception {
+		registerPhoneNumber();
+		logout();
+
+		oauth.openLoginForm();
+		loginPage.fillLogin(user.getUsername(), user.getPassword());
+		loginPage.submit();
+
+		smsCodePage.assertCurrent();
+		assertFalse(smsCodePage.hasChangeNumber(), "Change number belongs to enrollment, not login 2FA");
 	}
 
 	private void registerPhoneNumber() throws InterruptedException {
