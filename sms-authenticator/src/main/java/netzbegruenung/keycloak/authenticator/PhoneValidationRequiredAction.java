@@ -40,6 +40,7 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 
 import java.util.Locale;
+import java.util.Map;
 import jakarta.ws.rs.core.Response;
 
 public class PhoneValidationRequiredAction implements RequiredActionProvider, CredentialRegistrator {
@@ -76,7 +77,8 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
 			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
 
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
+			Map<String, String> smsConfig = VaultConfigSecrets.resolve(context.getSession(), config.getConfig(), SmsAuthenticatorFactory.CONFIG_APITOKEN);
+			SmsServiceFactory.get(smsConfig).send(mobileNumber, smsText);
 
 			Response challenge = context.form()
 				.setAttribute("realm", realm)

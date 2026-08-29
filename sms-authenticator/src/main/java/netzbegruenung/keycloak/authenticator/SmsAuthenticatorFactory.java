@@ -36,6 +36,7 @@ import java.util.List;
 public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 
 	public static final String PROVIDER_ID = "mobile-number-authenticator";
+	public static final String CONFIG_APITOKEN = "apitoken";
 	private static final SmsAuthenticator SINGLETON = new SmsAuthenticator();
 
 
@@ -83,7 +84,7 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 			new ProviderConfigProperty("urlencode", "URL encode data", "By default send a JSON in HTTP POST body. You can URL encode the data instead.", ProviderConfigProperty.BOOLEAN_TYPE, false),
 			new ProviderConfigProperty("apiTokenInHeader", "Put API Secret Token in Authorization Header", "If set, API Secret will be sent as Authorization Header, 'API Secret Token Attribute' and 'Basic Auth Username' will be ignored.", ProviderConfigProperty.BOOLEAN_TYPE, false),
 			new ProviderConfigProperty("apitokenattribute", "API Secret Token Attribute (optional)", "Name of attribute that contains your API token/secret. In some APIs the secret is already configured in the path. In this case, this can be left empty.", ProviderConfigProperty.STRING_TYPE, ""),
-			new ProviderConfigProperty("apitoken", "API Secret (optional)", "Your API secret. If a Basic Auth user is set, this will be the Basic Auth password.", ProviderConfigProperty.STRING_TYPE, "changeme"),
+			new ProviderConfigProperty(CONFIG_APITOKEN, "API Secret (optional)", "Your API secret. If a Basic Auth user is set, this will be the Basic Auth password. May reference a Keycloak vault secret, e.g. ${vault.smsApiSecret}.", ProviderConfigProperty.STRING_TYPE, "changeme"),
 			new ProviderConfigProperty("apiuser", "Basic Auth Username (optional)", "If set, Basic Auth will be performed. Leave empty if not required.", ProviderConfigProperty.STRING_TYPE, ""),
 			new ProviderConfigProperty("messageattribute", "Message Attribute", "The attribute that contains the SMS message text.", ProviderConfigProperty.STRING_TYPE, "text"),
 			new ProviderConfigProperty("receiverattribute", "Receiver Phone Number Attribute", "The attribute that contains the receiver phone number.", ProviderConfigProperty.STRING_TYPE, "to"),

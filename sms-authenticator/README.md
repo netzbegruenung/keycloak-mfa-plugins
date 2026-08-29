@@ -30,6 +30,7 @@ from the original authenticator provider [documentation](https://www.keycloak.or
    1. `Put API Secret Token in Authorization Header`: If set, API Secret will be sent as Authorization Header, 'API Secret Token Attribute' and 'Basic Auth Username' will be ignored.
    1. `API Secret Token Attribute (optional)`: Name of attribute that contains your API token/secret. In some APIs the secret is already configured in the path. In this case, this can be left empty.
    1. `API Secret (optional)`: Your API secret. If a Basic Auth user is set, this will be the Basic Auth password. If `API Secret Token Attribute` is set, this secret will be sent as the value to the given attribute name.
+      Instead of a plaintext value you may reference a [Keycloak vault](https://www.keycloak.org/server/vault) secret, e.g. `${vault.smsApiSecret}`. The reference is resolved at send time, so the secret is never stored in the Keycloak database.
    1. `Basic Auth Username (optional)`: If set, Basic Auth will be performed. Leave empty if not required.
    1. `Message Attribute`: The attribute that contains the SMS message text. For many APIs (i.e. GTX Messaging, SMS Eagle) this is `text`.
    1. `Receiver Phone Number Attribute`: The attribute that contains the receiver phone number. For many APIs (i.e. GTX Messaging, SMS Eagle) this is `to`.
