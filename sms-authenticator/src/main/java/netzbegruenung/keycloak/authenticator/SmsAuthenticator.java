@@ -50,6 +50,7 @@ import java.util.Optional;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 // Deliberately NOT a CredentialValidator: Keycloak offers CredentialValidator
 // authenticators only when the user has a stored credential of that type
@@ -59,6 +60,8 @@ public class SmsAuthenticator implements Authenticator {
 
 	private static final Logger logger = Logger.getLogger(SmsAuthenticator.class);
 	static final String TPL_CODE = "login-sms.ftl";
+	private static final Pattern ATTRIBUTE_SEPARATORS = Pattern.compile("[\\s().-]");
+	private static final Pattern PHONE_NUMBER = Pattern.compile("^\\+?[0-9]{6,15}$");
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
@@ -210,11 +213,29 @@ public class SmsAuthenticator implements Authenticator {
 		}
 	}
 
+	/**
+	 * The attribute is trusted as a phone number only if it looks like one: optional
+	 * leading '+', then 6-15 digits, after dropping spaces, dashes, dots and
+	 * parentheses. Anything else is treated as "no number" and logged. Unlike an
+	 * enrolled credential (validated during phone validation), an attribute may be
+	 * written by an admin, a federation mapper or a user profile, and it is later
+	 * interpolated into the SMS provider request, so it must not carry arbitrary text.
+	 */
 	private static String getAttributeNumber(AuthenticatorConfigModel config, UserModel user) {
-		return user.getAttributeStream(getMobileNumberAttribute(config))
+		String raw = user.getAttributeStream(getMobileNumberAttribute(config))
 			.filter(n -> n != null && !n.isBlank())
 			.findFirst()
 			.orElse(null);
+		if (raw == null) {
+			return null;
+		}
+		String normalized = ATTRIBUTE_SEPARATORS.matcher(raw.trim()).replaceAll("");
+		if (!PHONE_NUMBER.matcher(normalized).matches()) {
+			logger.warnf("Attribute '%s' of user %s does not look like a phone number, ignoring it",
+				getMobileNumberAttribute(config), user.getUsername());
+			return null;
+		}
+		return normalized;
 	}
 
 	private static boolean isStoreInAttribute(AuthenticatorConfigModel config) {
