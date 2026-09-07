@@ -27,7 +27,6 @@ import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
 import netzbegruenung.keycloak.authenticator.gateway.SmsServiceFactory;
 
 import org.jboss.logging.Logger;
-import org.keycloak.authentication.CredentialValidator;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
@@ -52,7 +51,11 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsAuthCredentialProvider> {
+// Deliberately NOT a CredentialValidator: Keycloak offers CredentialValidator
+// authenticators only when the user has a stored credential of that type
+// (AuthenticationSelectionResolver), which would bypass configuredFor() and
+// make attribute-only users unselectable.
+public class SmsAuthenticator implements Authenticator {
 
 	private static final Logger logger = Logger.getLogger(SmsAuthenticator.class);
 	static final String TPL_CODE = "login-sms.ftl";
@@ -64,30 +67,13 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		UserModel user = context.getUser();
 		RealmModel realm = context.getRealm();
 
-		Optional<CredentialModel> model = context.getUser().credentialManager().getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
-		String mobileNumber;
-		try {
-			mobileNumber = JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
-		} catch (IOException e1) {
-			logger.warn(e1.getMessage(), e1);
+		String mobileNumber = resolveMobileNumber(config, user);
+		if (mobileNumber == null) {
+			logger.warnf("No mobile number available for user %s (no SMS credential and no attribute value)", user.getUsername());
+			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
+				context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
+					.createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
 			return;
-		}
-
-		// When storeInAttribute is active, the attribute is the source of truth
-		// Allows admins to update the number without requiring the user to re-enroll.
-		boolean storeInAttribute = Boolean.parseBoolean(config.getConfig().getOrDefault("storeInAttribute", "false"));
-		if (storeInAttribute) {
-			String mobileNumberAttribute = config.getConfig().getOrDefault("mobileNumberAttribute", "mobile_number");
-			String attributeNumber = user.getAttributeStream(mobileNumberAttribute)
-				.filter(n -> n != null && !n.isBlank())
-				.findFirst()
-				.orElse(null);
-			if (attributeNumber != null) {
-				mobileNumber = attributeNumber;
-			} else {
-				logger.warnf("storeInAttribute is active but attribute '%s' is empty for user %s, falling back to credential value",
-					mobileNumberAttribute, user.getUsername());
-			}
 		}
 
 		int length = Integer.parseInt(config.getConfig().get("length"));
@@ -143,7 +129,7 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			}
 		} else {
 			// invalid
-			String mobileNumber = getMobileNumber(context);
+			String mobileNumber = resolveMobileNumber(context.getAuthenticatorConfig(), context.getUser());
 			context.getEvent().user(context.getUser()).error("invalid_user_credentials");
 			Response challenge = context.form()
 				.setAttribute("phoneNumber", mobileNumber)
@@ -160,7 +146,14 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	@Override
 	public boolean configuredFor(KeycloakSession session, RealmModel realm, UserModel user) {
-		return getCredentialProvider(session).isConfiguredFor(realm, user, getType(session));
+		if (getCredentialProvider(session).isConfiguredFor(realm, user, SmsAuthCredentialModel.TYPE)) {
+			return true;
+		}
+		// When storeInAttribute is active, a populated attribute (e.g. federated from
+		// LDAP) is enough: the user can authenticate without an enrolled credential.
+		// TODO: get the alias from somewhere else or move config into realm or application scope
+		AuthenticatorConfigModel config = realm.getAuthenticatorConfigByAlias("sms-2fa");
+		return isStoreInAttribute(config) && getAttributeNumber(config, user) != null;
 	}
 
 	@Override
@@ -176,19 +169,60 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 	public void close() {
 	}
 
-	@Override
 	public SmsAuthCredentialProvider getCredentialProvider(KeycloakSession session) {
 		return (SmsAuthCredentialProvider)session.getProvider(CredentialProvider.class, SmsAuthCredentialProviderFactory.PROVIDER_ID);
 	}
 
-	private String getMobileNumber(AuthenticationFlowContext context) {
-		Optional<CredentialModel> model = context.getUser().credentialManager()
+	/**
+	 * Resolve the number the code is sent to. The stored SMS credential is used when
+	 * present. When storeInAttribute is active the user attribute is the source of
+	 * truth: it wins over the credential, and a user whose attribute is already
+	 * populated (e.g. via LDAP federation) needs no enrolled credential at all.
+	 * Returns null when neither source has a number.
+	 */
+	static String resolveMobileNumber(AuthenticatorConfigModel config, UserModel user) {
+		String credentialNumber = getCredentialNumber(user);
+		if (!isStoreInAttribute(config)) {
+			return credentialNumber;
+		}
+		String attributeNumber = getAttributeNumber(config, user);
+		if (attributeNumber != null) {
+			return attributeNumber;
+		}
+		if (credentialNumber != null) {
+			logger.warnf("storeInAttribute is active but attribute '%s' is empty for user %s, falling back to credential value",
+				getMobileNumberAttribute(config), user.getUsername());
+		}
+		return credentialNumber;
+	}
+
+	private static String getCredentialNumber(UserModel user) {
+		Optional<CredentialModel> model = user.credentialManager()
 			.getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
+		if (model.isEmpty()) {
+			return null;
+		}
 		try {
-			return JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
+			return JsonSerialization.readValue(model.get().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
 		} catch (IOException e) {
 			logger.warn(e.getMessage(), e);
 			return null;
 		}
+	}
+
+	private static String getAttributeNumber(AuthenticatorConfigModel config, UserModel user) {
+		return user.getAttributeStream(getMobileNumberAttribute(config))
+			.filter(n -> n != null && !n.isBlank())
+			.findFirst()
+			.orElse(null);
+	}
+
+	private static boolean isStoreInAttribute(AuthenticatorConfigModel config) {
+		return config != null && config.getConfig() != null
+			&& Boolean.parseBoolean(config.getConfig().getOrDefault("storeInAttribute", "false"));
+	}
+
+	private static String getMobileNumberAttribute(AuthenticatorConfigModel config) {
+		return config.getConfig().getOrDefault("mobileNumberAttribute", "mobile_number");
 	}
 }
