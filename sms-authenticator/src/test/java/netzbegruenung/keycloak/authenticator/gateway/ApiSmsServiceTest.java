@@ -30,7 +30,7 @@ class ApiSmsServiceTest {
 	private HttpServer server;
 	private final LinkedBlockingQueue<CapturedRequest> requests = new LinkedBlockingQueue<>();
 
-	private record CapturedRequest(String contentType, String authorization, String body) {
+	private record CapturedRequest(String contentType, String authorization, String apiKey, String body) {
 	}
 
 	@BeforeEach
@@ -44,6 +44,7 @@ class ApiSmsServiceTest {
 			requests.add(new CapturedRequest(
 				exchange.getRequestHeaders().getFirst("Content-Type"),
 				exchange.getRequestHeaders().getFirst("Authorization"),
+				exchange.getRequestHeaders().getFirst("X-Api-Key"),
 				body
 			));
 			exchange.sendResponseHeaders(200, -1);
@@ -134,6 +135,38 @@ class ApiSmsServiceTest {
 
 		CapturedRequest request = awaitRequest();
 		assertEquals("my-raw-token", request.authorization());
+	}
+
+	@Test
+	@DisplayName("custom headers are added to the API request")
+	void customHeadersAreAdded() throws Exception {
+		ApiSmsService service = newService(Map.of(
+			"customHeaders", "X-Api-Key: key:value\nAuthorization: Bearer custom-token\ninvalid-line"
+		));
+
+		service.send("+491234567", "code");
+
+		CapturedRequest request = awaitRequest();
+		assertEquals("key:value", request.apiKey());
+		assertEquals("Bearer custom-token", request.authorization());
+	}
+
+	@Test
+	@DisplayName("custom headers cannot replace headers set by the plugin")
+	void customHeadersDoNotReplacePluginHeaders() throws Exception {
+		ApiSmsService service = newService(Map.of(
+			"urlencode", "false",
+			"apiTokenInHeader", "true",
+			"apitokenattribute", "X-Api-Key",
+			"apitoken", "plugin-token",
+			"customHeaders", "content-type: text/plain\nx-api-key: custom-token"
+		));
+
+		service.send("+491234567", "code");
+
+		CapturedRequest request = awaitRequest();
+		assertEquals("application/json", request.contentType());
+		assertEquals("plugin-token", request.apiKey());
 	}
 
 	@Test

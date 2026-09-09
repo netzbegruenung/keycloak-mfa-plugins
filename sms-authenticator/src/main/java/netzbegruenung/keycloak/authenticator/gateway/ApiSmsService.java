@@ -32,6 +32,7 @@ import java.util.Base64;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -66,6 +67,10 @@ public class ApiSmsService implements SmsService{
 	private final String getUrl;
 
 	private final boolean stripPlusPrefix;
+	private final List<CustomHeader> customHeaders;
+
+	private record CustomHeader(String name, String value) {
+	}
 
 	ApiSmsService(Map<String, String> config) {
 		apiurl = config.get("apiurl");
@@ -93,6 +98,7 @@ public class ApiSmsService implements SmsService{
 		getUrl = config.getOrDefault("getUrl", "");
 
 		stripPlusPrefix = Boolean.parseBoolean(config.getOrDefault("stripPlusPrefix", "false"));
+		customHeaders = parseCustomHeaders(config.getOrDefault("customHeaders", ""));
 	}
 
 	public void send(String phoneNumber, String message) {
@@ -116,16 +122,9 @@ public class ApiSmsService implements SmsService{
 				}
 			}
 
-			if (apiTokenInHeader) {
-				String headerName = (apitokenattribute != null && !apitokenattribute.isEmpty())
-					? apitokenattribute
-					: "Authorization";
-				request = requestBuilder.setHeader(headerName, apitoken).build();
-			}else if (apiuser != null && !apiuser.isEmpty()) {
-				request = requestBuilder.setHeader("Authorization", getAuthHeader(apiuser, apitoken)).build();
-			} else {
-				request = requestBuilder.build();
-			}
+			addAuthenticationHeader(requestBuilder);
+			addCustomHeaders(requestBuilder);
+			request = requestBuilder.build();
 			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
 			int statusCode = response.statusCode();
@@ -139,6 +138,53 @@ public class ApiSmsService implements SmsService{
 		} catch (Exception e) {
 			logErrorException(phoneNumber, request, requestPayload);
 		}
+	}
+
+	private void addAuthenticationHeader(Builder requestBuilder) {
+		if (apiTokenInHeader) {
+			String headerName = (apitokenattribute != null && !apitokenattribute.isEmpty())
+				? apitokenattribute
+				: "Authorization";
+			requestBuilder.setHeader(headerName, apitoken);
+		} else if (apiuser != null && !apiuser.isEmpty()) {
+			requestBuilder.setHeader("Authorization", getAuthHeader(apiuser, apitoken));
+		}
+	}
+
+	private void addCustomHeaders(Builder requestBuilder) {
+		var pluginHeaders = requestBuilder.build().headers();
+		for (CustomHeader customHeader : customHeaders) {
+			if (pluginHeaders.firstValue(customHeader.name()).isPresent()) {
+				logger.warnf("Ignoring custom header '%s' because it is already set by the plugin.", customHeader.name());
+				continue;
+			}
+			try {
+				requestBuilder.header(customHeader.name(), customHeader.value());
+			} catch (IllegalArgumentException e) {
+				logger.warnf("Ignoring invalid custom header '%s'.", customHeader.name());
+			}
+		}
+	}
+
+	private static List<CustomHeader> parseCustomHeaders(String configuredHeaders) {
+		return configuredHeaders.lines()
+			.map(String::trim)
+			.filter(line -> !line.isEmpty())
+			.map(ApiSmsService::parseCustomHeader)
+			.flatMap(Optional::stream)
+			.toList();
+	}
+
+	private static Optional<CustomHeader> parseCustomHeader(String configuredHeader) {
+		int separator = configuredHeader.indexOf(':');
+		if (separator <= 0) {
+			logger.warn("Ignoring invalid custom header configuration. Expected 'Header: value'.");
+			return Optional.empty();
+		}
+		return Optional.of(new CustomHeader(
+			configuredHeader.substring(0, separator).trim(),
+			configuredHeader.substring(separator + 1).trim()
+		));
 	}
 
 	private void logErrorStatus(String phoneNumber, String responsePayload, HttpRequest request, String requestPayload, int statusCode) {
