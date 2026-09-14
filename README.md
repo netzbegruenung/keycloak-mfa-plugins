@@ -18,12 +18,28 @@ The code of this project is Apache 2.0 licensed. Parts of the original code are 
 ## Building
 
 1. Clone this repository
-1. Install Apache Maven
+1. Install Apache Maven and a JDK 17
 1. Change into the cloned directory and run
    ```shell
    mvn clean install
    ```
-   A file `target/netzbegruenung.keycloak-2fa-sms-authenticator.jar` should be created.
+   Each module produces its provider jar as `<module>/target/netzbegruenung.<module>-v<version>.jar`,
+   e.g. `sms-authenticator/target/netzbegruenung.sms-authenticator-v26.7.2-1.jar`.
+
+### Building with Docker
+
+Needs Docker with BuildKit (Docker 23 or newer). Builds in a `maven:3.9-eclipse-temurin-17` container and writes
+the provider jars to `dist/`:
+```shell
+docker build --platform linux/amd64 --output type=local,dest=dist .
+```
+The Maven stage runs on the host's native architecture and the jars are platform independent; `--platform` only
+sets the platform of the (empty) result image. Add `--build-arg SKIP_TESTS=false` to run the test suites, which
+takes several minutes because they start an embedded Keycloak. The Maven repository lives in a BuildKit cache
+mount, so repeated builds only download what changed.
+
+This is also the way around a local JDK whose truststore lacks the ISRG roots behind `repo.maven.apache.org`
+(`PKIX path building failed`): the container image ships a current truststore.
 
 ## Releases
 Deployment is done by github actions: `.github/workflows/release.yml`

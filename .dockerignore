@@ -1,0 +1,8 @@
+.git
+.idea
+*.iml
+**/target
+h2db
+dist
+docs
+testing/backfill/jars
