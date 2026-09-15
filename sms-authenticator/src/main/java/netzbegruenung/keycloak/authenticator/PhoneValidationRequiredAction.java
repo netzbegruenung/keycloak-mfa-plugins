@@ -29,8 +29,9 @@ import org.jboss.logging.Logger;
 import org.keycloak.authentication.CredentialRegistrator;
 import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
-import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.credential.CredentialProvider;
+import org.keycloak.forms.login.LoginFormsProvider;
+import org.keycloak.events.Errors;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -40,6 +41,7 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 
 import java.util.Locale;
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 
 public class PhoneValidationRequiredAction implements RequiredActionProvider, CredentialRegistrator {
@@ -60,28 +62,46 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 			AuthenticationSessionModel authSession = context.getAuthenticationSession();
 			// TODO: get the alias from somewhere else or move config into realm or application scope
 			AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+			if (config == null) {
+				logger.error("No authenticator config with alias sms-2fa found, cannot send the phone validation SMS");
+				context.failure();
+				return;
+			}
 
 			String mobileNumber = authSession.getAuthNote("mobile_number");
-			logger.infof("Validating phone number: %s of user: %s", mobileNumber, user.getUsername());
+			logger.infof("Validating phone number of user: %s", user.getUsername());
 
-			int length = Integer.parseInt(config.getConfig().get("length"));
-			int ttl = Integer.parseInt(config.getConfig().get("ttl"));
-
-			String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
-			authSession.setAuthNote("code", code);
-			authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
+			SmsCode.Outcome outcome = new SmsCode(context.getSession(), config.getConfig()).issue(user, mobileNumber);
+			LoginFormsProvider form = context.form()
+				.setAttribute("realm", realm)
+				.setAttribute("resendCooldown", outcome.cooldownSecondsRemaining());
+			if (outcome.blocked()) {
+				context.getEvent().clone().user(user).detail("reason", "sms_resend_limit").error(Errors.USER_TEMPORARILY_DISABLED);
+				context.challenge(form
+					.setError("smsAuthResendBlocked", String.valueOf(outcome.blockedMinutesRemaining()))
+					.createForm(SmsAuthenticator.TPL_CODE));
+				return;
+			}
+			if (outcome.coolingDown()) {
+				context.challenge(form
+					.setInfo("smsAuthResendCooldown", String.valueOf(outcome.cooldownSecondsRemaining()))
+					.createForm(SmsAuthenticator.TPL_CODE));
+				return;
+			}
 
 			Theme theme = context.getSession().theme().getTheme(Theme.Type.LOGIN);
 			Locale locale = context.getSession().getContext().resolveLocale(user);
 			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
-			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
+			String smsText = String.format(smsAuthText, outcome.code(), outcome.remainingMinutes());
 
 			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
 
-			Response challenge = context.form()
-				.setAttribute("realm", realm)
-				.createForm(SmsAuthenticator.TPL_CODE);
-			context.challenge(challenge);
+			if (outcome.resent() && outcome.resendsLeft() == 0) {
+				form.setSuccess("smsAuthCodeResentLast");
+			} else if (outcome.resent()) {
+				form.setSuccess("smsAuthCodeResent", String.valueOf(outcome.resendsLeft()));
+			}
+			context.challenge(form.createForm(SmsAuthenticator.TPL_CODE));
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			context.failure();
@@ -90,22 +110,30 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 	@Override
 	public void processAction(RequiredActionContext context) {
-		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst("code");
+		MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
+		if (formData.containsKey(SmsAuthenticator.RESEND_FIELD)) {
+			requiredActionChallenge(context);
+			return;
+		}
+		String enteredCode = formData.getFirst("code");
 
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
 		String mobileNumber = authSession.getAuthNote("mobile_number");
-		String code = authSession.getAuthNote("code");
-		String ttl = authSession.getAuthNote("ttl");
-
-		if (code == null || ttl == null || enteredCode == null) {
-			logger.warn("Phone number is not set");
-			handleInvalidSmsCode(context);
+		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		if (config == null) {
+			logger.error("No authenticator config with alias sms-2fa found, cannot verify the phone validation SMS");
+			context.failure();
 			return;
 		}
 
-		boolean isValid = enteredCode.equals(code);
-		if (isValid && Long.parseLong(ttl) > System.currentTimeMillis()) {
-			// valid
+		SmsCode.Verification verification = new SmsCode(context.getSession(), config.getConfig()).verify(context.getUser(), enteredCode);
+		if (verification == SmsCode.Verification.NO_CODE) {
+			// Nothing to check against (e.g. the user was blocked and submitted anyway, or the
+			// code was discarded): re-run the challenge, which sends a code or re-shows the block.
+			requiredActionChallenge(context);
+			return;
+		}
+		if (verification == SmsCode.Verification.VALID) {
 			SmsAuthCredentialProvider smnp = (SmsAuthCredentialProvider) context.getSession().getProvider(CredentialProvider.class, "mobile-number");
 			if (!smnp.isConfiguredFor(context.getRealm(), context.getUser(), SmsAuthCredentialModel.TYPE)) {
 				smnp.createCredential(context.getRealm(), context.getUser(), SmsAuthCredentialModel.createSmsAuthenticator(mobileNumber));
@@ -137,6 +165,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 	}
 
 	private void handleInvalidSmsCode(RequiredActionContext context) {
+		context.getEvent().clone().user(context.getUser()).error(Errors.INVALID_USER_CREDENTIALS);
 		Response challenge = context
 			.form()
 			.setAttribute("realm", context.getRealm())

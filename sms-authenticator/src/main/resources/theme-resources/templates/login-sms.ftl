@@ -21,9 +21,38 @@
 
 				<div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
 					<input name="login" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("doSubmit")}"/>
+					<input name="resend" id="kc-sms-resend" class="${properties.kcButtonClass!} ${properties.kcButtonDefaultClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("smsAuthResend")}" formnovalidate/>
 				</div>
 			</div>
 		</form>
+		<#if resendCooldown?? && resendCooldown gt 0>
+			<script>
+				(function () {
+					var button = document.getElementById("kc-sms-resend");
+					var label = button.value;
+					var left = ${resendCooldown?c};
+					var format = function (seconds) {
+						if (seconds < 60) {
+							return String(seconds);
+						}
+						var rest = seconds % 60;
+						return Math.floor(seconds / 60) + ":" + (rest < 10 ? "0" : "") + rest;
+					};
+					var tick = function () {
+						if (left <= 0) {
+							button.disabled = false;
+							button.value = label;
+							return;
+						}
+						button.disabled = true;
+						button.value = label + " (" + format(left) + ")";
+						left--;
+						setTimeout(tick, 1000);
+					};
+					tick();
+				})();
+			</script>
+		</#if>
 	<#elseif section = "info" >
 		<#if phoneNumber?? && phoneNumber?has_content>
 			<#assign maskedPhone = phoneNumber[0..2] + phoneNumber[3..phoneNumber?length-5]?replace(".", "*") + phoneNumber[phoneNumber?length-4..]>
