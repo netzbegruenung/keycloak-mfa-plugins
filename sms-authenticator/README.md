@@ -43,6 +43,14 @@ from the original authenticator provider [documentation](https://www.keycloak.or
 After successfully configured the authenticator and the required actions users can set up SMS Authentication in the
 account console `/realms/realm/account/#/account-security/signing-in` by entering and confirming their phone number.
 
+# Phone number from a user attribute
+With `Set phone number as attribute` enabled in the `sms-2fa` config, the user attribute (default `mobile_number`,
+configurable via `Mobile number attribute`) is the source of truth for the number the code is sent to:
+
+- it wins over the number stored in the SMS credential, so admins can change a number without re-enrollment;
+- a user whose attribute is already populated (e.g. federated from LDAP / Active Directory) counts as configured
+  and can authenticate with SMS right away, without ever enrolling an SMS credential.
+
 # Enforce SMS 2FA
 If the option `Force 2FA` in the SMS Authenticator config is enabled and a user has no other 2FA method already enabled,
 users will have to set up the SMS Authenticator.

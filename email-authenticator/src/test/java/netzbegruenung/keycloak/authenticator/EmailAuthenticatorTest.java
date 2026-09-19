@@ -16,6 +16,7 @@ import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.email.EmailException;
 import org.keycloak.email.EmailSenderProvider;
+import org.keycloak.events.EventBuilder;
 import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.http.HttpRequest;
 import org.keycloak.models.AuthenticationExecutionModel;
@@ -25,6 +26,8 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.ThemeManager;
 import org.keycloak.models.UserModel;
+import org.keycloak.models.credential.OTPCredentialModel;
+import org.keycloak.services.managers.BruteForceProtector;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 
@@ -36,13 +39,16 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 public class EmailAuthenticatorTest {
@@ -57,6 +63,8 @@ public class EmailAuthenticatorTest {
 	private KeycloakContext keycloakContext;
 	private UserModel user;
 	private EmailSenderProvider emailSenderProvider;
+	private EventBuilder event;
+	private BruteForceProtector bruteForceProtector;
 
 	@BeforeEach
 	public void setup() throws Exception {
@@ -70,6 +78,8 @@ public class EmailAuthenticatorTest {
 		keycloakContext = mock(KeycloakContext.class);
 		user = mock(UserModel.class);
 		emailSenderProvider = mock(EmailSenderProvider.class);
+		event = mock(EventBuilder.class);
+		bruteForceProtector = mock(BruteForceProtector.class);
 
 		when(context.getAuthenticationSession()).thenReturn(authSession);
 		when(context.getHttpRequest()).thenReturn(request);
@@ -77,6 +87,9 @@ public class EmailAuthenticatorTest {
 		when(context.getRealm()).thenReturn(realm);
 		when(context.getSession()).thenReturn(session);
 		when(context.getUser()).thenReturn(user);
+		when(context.getEvent()).thenReturn(event);
+		when(event.user(any(UserModel.class))).thenReturn(event);
+		when(session.getProvider(BruteForceProtector.class)).thenReturn(bruteForceProtector);
 
 		when(session.getProvider(EmailSenderProvider.class)).thenReturn(emailSenderProvider);
 		when(session.getContext()).thenReturn(keycloakContext);
@@ -99,6 +112,69 @@ public class EmailAuthenticatorTest {
 		when(form.setError(anyString(), (Object[]) any())).thenReturn(form);
 		when(form.setError(anyString())).thenReturn(form);
 		when(form.createForm(anyString())).thenReturn(mock(Response.class));
+	}
+
+	private void wrongCodeSubmitted() {
+		AuthenticationExecutionModel execution = mock(AuthenticationExecutionModel.class);
+		when(context.getExecution()).thenReturn(execution);
+		when(execution.isRequired()).thenReturn(true);
+		when(authSession.getAuthNote("code")).thenReturn("123456");
+		when(authSession.getAuthNote("ttl")).thenReturn(String.valueOf(System.currentTimeMillis() + 60000));
+		MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+		params.add("code", "654321");
+		when(request.getDecodedFormParameters()).thenReturn(params);
+	}
+
+	@Test
+	public void testAction_InvalidCode_RecordsBruteForceFailure() {
+		when(realm.isBruteForceProtected()).thenReturn(true);
+		wrongCodeSubmitted();
+
+		authenticator.action(context);
+
+		verify(context).failureChallenge(eq(AuthenticationFlowError.INVALID_CREDENTIALS), any());
+		verify(bruteForceProtector).failedLogin(eq(realm), eq(user), any(), any(), eq(Set.of(OTPCredentialModel.TYPE)));
+		verify(context, never()).success();
+	}
+
+	@Test
+	public void testAction_InvalidCode_NoBruteForceWhenRealmUnprotected() {
+		when(realm.isBruteForceProtected()).thenReturn(false);
+		wrongCodeSubmitted();
+
+		authenticator.action(context);
+
+		verify(context).failureChallenge(eq(AuthenticationFlowError.INVALID_CREDENTIALS), any());
+		verifyNoInteractions(bruteForceProtector);
+	}
+
+	@Test
+	public void testAction_TemporarilyDisabledUser_IsRefused() {
+		when(realm.isBruteForceProtected()).thenReturn(true);
+		when(bruteForceProtector.isTemporarilyDisabled(session, realm, user)).thenReturn(true);
+		when(authSession.getAuthNote("code")).thenReturn("123456");
+		when(authSession.getAuthNote("ttl")).thenReturn(String.valueOf(System.currentTimeMillis() + 60000));
+		MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+		params.add("code", "123456");
+		when(request.getDecodedFormParameters()).thenReturn(params);
+
+		authenticator.action(context);
+
+		verify(context).failureChallenge(eq(AuthenticationFlowError.USER_TEMPORARILY_DISABLED), any());
+		verify(context, never()).success();
+		verify(bruteForceProtector, never()).failedLogin(any(), any(), any(), any(), any());
+	}
+
+	@Test
+	public void testAuthenticate_TemporarilyDisabledUser_NoEmailSent() throws EmailException {
+		when(realm.isBruteForceProtected()).thenReturn(true);
+		when(bruteForceProtector.isTemporarilyDisabled(session, realm, user)).thenReturn(true);
+
+		authenticator.authenticate(context);
+
+		verify(context).failureChallenge(eq(AuthenticationFlowError.USER_TEMPORARILY_DISABLED), any());
+		verify(emailSenderProvider, never()).send(any(), any(UserModel.class), anyString(), anyString(), anyString());
+		verify(context, never()).challenge(any());
 	}
 
 	@Test
