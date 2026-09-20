@@ -47,6 +47,27 @@ account console `/realms/realm/account/#/account-security/signing-in` by enterin
 If the option `Force 2FA` in the SMS Authenticator config is enabled and a user has no other 2FA method already enabled,
 users will have to set up the SMS Authenticator.
 
+# Code re-sends
+The code page has a "Resend code" button. It, a page reload, the back button and even a fresh login attempt re-send
+the still-valid code instead of generating a new one, so it does not matter which SMS arrives first. The code, its
+expiry and all counters are kept per user in Keycloak's single-use object store (cluster-wide, self-expiring), not
+in the login session. The expiry is never extended: a code lives at most `Time-to-live`, a re-send with less than a
+minute left issues a fresh code, and five wrong guesses discard the code so a new one has to be requested.
+Verifications of one user's code are throttled to one per second.
+
+For `Re-send cooldown` seconds after each send (default 60; `0` disables it) further requests are ignored: nothing is
+sent, the page says how long to wait and disables the button with a countdown. Requests inside the cooldown do not
+count towards the limit below.
+
+A user may receive at most `Re-send limit` + 1 SMS (default 4 + 1) within one `Time-to-live` window, whether the
+requests re-send the same code, produce fresh codes or come from separate login attempts. The next request blocks
+code requests for `Re-send block duration` seconds (default 900; `0` disables blocking) and records a `LOGIN_ERROR`
+event (`CUSTOM_REQUIRED_ACTION_ERROR` during phone number enrollment) with error `user_temporarily_disabled`. A code
+already delivered stays usable until it expires, so a user who has the SMS can still finish the login; a successful
+verification clears the counters. Anyone holding the user's password can trigger the block and thereby keep that
+user from requesting new codes for the block duration, the same trade-off as Keycloak's brute-force lockout. There
+is no admin unblock; the block expires on its own.
+
 # Testing
 This module has two kinds of automated tests, both run with `mvn test` from this directory (or `mvn install` from the repo root, which is what CI does):
 

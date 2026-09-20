@@ -33,18 +33,19 @@ import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.RequiredActionFactory;
 import org.keycloak.authentication.RequiredActionProvider;
-import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
+import org.keycloak.forms.login.LoginFormsProvider;
+import org.keycloak.events.Errors;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
-import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 import org.keycloak.util.JsonSerialization;
 
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import java.util.Locale;
 import java.util.Optional;
@@ -56,6 +57,8 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	private static final Logger logger = Logger.getLogger(SmsAuthenticator.class);
 	static final String TPL_CODE = "login-sms.ftl";
+	/** Name of the "Resend code" submit button in {@link #TPL_CODE}. */
+	static final String RESEND_FIELD = "resend";
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
@@ -90,26 +93,39 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			}
 		}
 
-		int length = Integer.parseInt(config.getConfig().get("length"));
-		int ttl = Integer.parseInt(config.getConfig().get("ttl"));
-
-		String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
-		AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		authSession.setAuthNote("code", code);
-		authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
+		SmsCode.Outcome outcome = new SmsCode(session, config.getConfig()).issue(user, mobileNumber);
+		LoginFormsProvider form = context.form()
+			.setAttribute("realm", realm)
+			.setAttribute("phoneNumber", mobileNumber)
+			.setAttribute("resendCooldown", outcome.cooldownSecondsRemaining());
+		if (outcome.blocked()) {
+			context.getEvent().clone().user(user).detail("reason", "sms_resend_limit").error(Errors.USER_TEMPORARILY_DISABLED);
+			context.challenge(form
+				.setError("smsAuthResendBlocked", String.valueOf(outcome.blockedMinutesRemaining()))
+				.createForm(TPL_CODE));
+			return;
+		}
+		if (outcome.coolingDown()) {
+			context.challenge(form
+				.setInfo("smsAuthResendCooldown", String.valueOf(outcome.cooldownSecondsRemaining()))
+				.createForm(TPL_CODE));
+			return;
+		}
 
 		try {
 			Theme theme = session.theme().getTheme(Theme.Type.LOGIN);
 			Locale locale = session.getContext().resolveLocale(user);
 			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
-			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
+			String smsText = String.format(smsAuthText, outcome.code(), outcome.remainingMinutes());
 
 			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
 
-			context.challenge(context.form()
-				.setAttribute("realm", realm)
-				.setAttribute("phoneNumber", mobileNumber)
-				.createForm(TPL_CODE));
+			if (outcome.resent() && outcome.resendsLeft() == 0) {
+				form.setSuccess("smsAuthCodeResentLast");
+			} else if (outcome.resent()) {
+				form.setSuccess("smsAuthCodeResent", String.valueOf(outcome.resendsLeft()));
+			}
+			context.challenge(form.createForm(TPL_CODE));
 		} catch (Exception e) {
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
 				context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
@@ -119,37 +135,36 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	@Override
 	public void action(AuthenticationFlowContext context) {
-		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst("code");
-
-		AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		String code = authSession.getAuthNote("code");
-		String ttl = authSession.getAuthNote("ttl");
-
-		if (code == null || ttl == null) {
-			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
-				context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
+		MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
+		if (formData.containsKey(RESEND_FIELD)) {
+			// "Resend code" button: re-run the challenge, which re-sends the current code or
+			// issues a new one, subject to the re-send limit.
+			authenticate(context);
 			return;
 		}
+		// May be null: a GET on the action URL with session_code reaches action() without form data.
+		String enteredCode = formData.getFirst("code");
 
-		boolean isValid = enteredCode.equals(code);
-		if (isValid) {
-			if (Long.parseLong(ttl) < System.currentTimeMillis()) {
-				// expired
-				context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE,
-					context.form().setError("smsAuthCodeExpired").createErrorPage(Response.Status.BAD_REQUEST));
-			} else {
-				// valid
-				context.success();
+		SmsCode smsCode = new SmsCode(context.getSession(), context.getAuthenticatorConfig().getConfig());
+		switch (smsCode.verify(context.getUser(), enteredCode)) {
+			case NO_CODE -> {
+				// Nothing to check against (e.g. the user was blocked on a fresh login and
+				// submitted anyway, or the code was discarded): re-run the challenge, which
+				// sends a code or re-shows the block.
+				authenticate(context);
 			}
-		} else {
-			// invalid
-			String mobileNumber = getMobileNumber(context);
-			context.getEvent().user(context.getUser()).error("invalid_user_credentials");
-			Response challenge = context.form()
-				.setAttribute("phoneNumber", mobileNumber)
-				.setError("smsAuthCodeInvalid")
-				.createForm("login-sms.ftl");
-			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
+			case EXPIRED -> context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE,
+				context.form().setError("smsAuthCodeExpired").createErrorPage(Response.Status.BAD_REQUEST));
+			case VALID -> context.success();
+			case INVALID -> {
+				String mobileNumber = getMobileNumber(context);
+				context.getEvent().user(context.getUser()).error("invalid_user_credentials");
+				Response challenge = context.form()
+					.setAttribute("phoneNumber", mobileNumber)
+					.setError("smsAuthCodeInvalid")
+					.createForm("login-sms.ftl");
+				context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
+			}
 		}
 	}
 

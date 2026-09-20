@@ -134,35 +134,22 @@ public class ApiSmsService implements SmsService{
 			if (statusCode >= 200 && statusCode < 300) {
 				logger.infof("Sent SMS to %s [%s]", phoneNumber, payload);
 			} else {
-				logErrorStatus(phoneNumber, payload, request, requestPayload, statusCode);
+				logErrorStatus(phoneNumber, payload, request, statusCode);
 			}
 		} catch (Exception e) {
-			logErrorException(phoneNumber, request, requestPayload);
+			logErrorException(phoneNumber, request);
 		}
 	}
 
-	private void logErrorStatus(String phoneNumber, String responsePayload, HttpRequest request, String requestPayload, int statusCode) {
-		String logMessage = "Failed to send message to %s [%s] with request: %s [Status: %s]";
-		Object[] logParams = new Object[]{phoneNumber, responsePayload, request != null ? request.toString() : "null", statusCode};
-
-		if (!urlencode && requestPayload != null) {
-			logMessage += ". Payload: %s";
-			logParams = new Object[]{phoneNumber, responsePayload, request != null ? request.toString() : "null", statusCode, requestPayload};
-		}
-		logMessage += ". Validate your config.";
-		logger.errorf(logMessage, logParams);
+	// The request payload is deliberately not logged: it contains the one-time code.
+	private void logErrorStatus(String phoneNumber, String responsePayload, HttpRequest request, int statusCode) {
+		logger.errorf("Failed to send message to %s [%s] with request: %s [Status: %s]. Validate your config.",
+			phoneNumber, responsePayload, request != null ? request.toString() : "null", statusCode);
 	}
 
-	private void logErrorException(String phoneNumber, HttpRequest request, String requestPayload) {
-		String logMessage = "Failed to send message to %s with request: %s";
-		Object[] logParams = new Object[]{phoneNumber, request != null ? request.toString() : "null"};
-
-		if (!urlencode && requestPayload != null) {
-			logMessage += ". Payload: %s";
-			logParams = new Object[]{phoneNumber, request != null ? request.toString() : "null", requestPayload};
-		}
-		logMessage += ". Validate your config.";
-		logger.errorf(logMessage, logParams);
+	private void logErrorException(String phoneNumber, HttpRequest request) {
+		logger.errorf("Failed to send message to %s with request: %s. Validate your config.",
+			phoneNumber, request != null ? request.toString() : "null");
 	}
 
 	private String getJsonBody(String phoneNumber, String message) {
