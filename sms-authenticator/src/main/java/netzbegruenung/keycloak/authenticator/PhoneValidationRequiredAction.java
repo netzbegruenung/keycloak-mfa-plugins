@@ -78,7 +78,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
 
-			Response challenge = context.form()
+			Response challenge = SmsAuthenticator.addCodeFormAttributes(context.form(), config)
 				.setAttribute("realm", realm)
 				.createForm(SmsAuthenticator.TPL_CODE);
 			context.challenge(challenge);
@@ -137,8 +137,9 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 	}
 
 	private void handleInvalidSmsCode(RequiredActionContext context) {
-		Response challenge = context
-			.form()
+		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+		Response challenge = SmsAuthenticator
+			.addCodeFormAttributes(context.form(), config)
 			.setAttribute("realm", context.getRealm())
 			.setError("smsAuthCodeInvalid")
 			.createForm(SmsAuthenticator.TPL_CODE);
