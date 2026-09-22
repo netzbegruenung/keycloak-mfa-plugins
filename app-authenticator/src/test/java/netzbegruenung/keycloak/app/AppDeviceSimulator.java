@@ -1,6 +1,7 @@
 package netzbegruenung.keycloak.app;
 
 import netzbegruenung.keycloak.app.dto.ChallengeDto;
+import netzbegruenung.keycloak.app.dto.UpdateAppCredentialsDto;
 import org.keycloak.util.JsonSerialization;
 
 import java.io.IOException;
@@ -99,6 +100,15 @@ final class AppDeviceSimulator {
 		return send(HttpRequest.newBuilder(URI.create(challenge.targetUrl()))
 			.header(AuthenticationUtil.SIGNATURE_HEADER, signatureHeader)
 			.GET()).statusCode();
+	}
+
+	int updatePushId(String credentialsUrl, String devicePushId) throws IOException, InterruptedException {
+		String body = JsonSerialization.writeValueAsString(new UpdateAppCredentialsDto(devicePushId));
+
+		return send(HttpRequest.newBuilder(URI.create(credentialsUrl))
+			.header(AuthenticationUtil.SIGNATURE_HEADER, identitySignatureHeader())
+			.header("Content-Type", "application/json")
+			.PUT(HttpRequest.BodyPublishers.ofString(body))).statusCode();
 	}
 
 	private String identitySignatureHeader() {

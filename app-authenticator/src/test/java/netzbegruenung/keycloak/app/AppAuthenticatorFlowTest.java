@@ -246,6 +246,39 @@ public class AppAuthenticatorFlowTest {
 		assertFalse(secondUserHasAppCredential, "Expected no APP_CREDENTIAL for the second user after a rejected duplicate device_id");
 	}
 
+	@Test
+	public void pushTokenUpdateSucceedsForMultipleDevicesWithSameOs() throws Exception {
+		AppDeviceSimulator firstDevice = registerDevice();
+		logout();
+		events.clear();
+
+		// A second device for the same user, added via the app-register kc_action after a
+		// Conditional 2FA challenge (same setup as reregisteringSameDeviceIdReplacesOwnCredential),
+		// but with its own device_id so this adds a second credential instead of overwriting the
+		// first. AppDeviceSimulator.register() always sends device_os=test-os, so both credentials
+		// end up sharing the same OS - the precondition for the crash this test guards against.
+		oauth.loginForm().kcAction(AppRequiredAction.PROVIDER_ID).open();
+		loginPage.fillLogin(user.getUsername(), user.getPassword());
+		loginPage.submit();
+
+		appLoginPage.assertCurrent();
+		ChallengeDto loginChallenge = awaitChallenge(firstDevice);
+		assertEquals(204, firstDevice.respond(loginChallenge, true));
+		appLoginPage.submit();
+
+		AppDeviceSimulator secondDevice = completeSetup(new AppDeviceSimulator());
+
+		var appCredentials = managedRealm.admin().users().get(user.getId())
+			.credentials().stream()
+			.filter(credential -> AppCredentialModel.TYPE.equals(credential.getType()))
+			.toList();
+		assertEquals(2, appCredentials.size(), "Expected two independent APP_CREDENTIALs sharing the same device OS");
+
+		String credentialsUrl = keycloakUrls.getBase() + "/realms/" + managedRealm.getName() + "/app-authenticators/x/credentials";
+		assertEquals(204, firstDevice.updatePushId(credentialsUrl, "push-1"), "Expected the first device's push token update to succeed");
+		assertEquals(204, secondDevice.updatePushId(credentialsUrl, "push-2"), "Expected the second device's push token update to succeed despite sharing the first device's OS");
+	}
+
 	private AppDeviceSimulator registerDevice() throws Exception {
 		oauth.openLoginForm();
 		loginPage.fillLogin(user.getUsername(), user.getPassword());
