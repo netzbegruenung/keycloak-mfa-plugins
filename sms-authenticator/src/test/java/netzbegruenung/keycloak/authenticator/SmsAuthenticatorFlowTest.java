@@ -42,6 +42,7 @@ import java.util.regex.Pattern;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -225,6 +226,70 @@ public class SmsAuthenticatorFlowTest {
 			assertTrue(errorPage.getError().contains("expired"), "Expected an expiry error, got: " + errorPage.getError());
 		} finally {
 			SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("ttl", "300"));
+		}
+	}
+
+	@Test
+	public void backToApplicationLinkIsShownByDefault() throws Exception {
+		registerPhoneNumber();
+		logout();
+
+		oauth.openLoginForm();
+		loginPage.fillLogin(user.getUsername(), user.getPassword());
+		loginPage.submit();
+
+		smsCodePage.assertCurrent();
+		assertTrue(smsCodePage.hasBackToApplicationLink(),
+			"Expected the back link on the SMS code form when hideBackToApplicationLink is unset");
+	}
+
+	@Test
+	public void backToApplicationLinkIsHiddenWhenConfigured() throws Exception {
+		registerPhoneNumber();
+		logout();
+
+		SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("hideBackToApplicationLink", "true"));
+		try {
+			oauth.openLoginForm();
+			loginPage.fillLogin(user.getUsername(), user.getPassword());
+			loginPage.submit();
+
+			smsCodePage.assertCurrent();
+			assertFalse(smsCodePage.hasBackToApplicationLink(),
+				"Expected no back link on the SMS code form when hideBackToApplicationLink is true");
+
+			// The form is rendered again on a wrong code, from a different call site.
+			String correctCode = awaitSmsCode();
+			smsCodePage.enterCode("000000".equals(correctCode) ? "111111" : "000000");
+			smsCodePage.submit();
+
+			smsCodePage.assertCurrent();
+			assertFalse(smsCodePage.hasBackToApplicationLink(),
+				"Expected no back link after an invalid code either");
+		} finally {
+			SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("hideBackToApplicationLink", "false"));
+		}
+	}
+
+	@Test
+	public void backToApplicationLinkIsHiddenDuringPhoneNumberEnrollment() throws Exception {
+		SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("hideBackToApplicationLink", "true"));
+		try {
+			oauth.openLoginForm();
+			loginPage.fillLogin(user.getUsername(), user.getPassword());
+			loginPage.submit();
+
+			phoneNumberSetupPage.assertCurrent();
+			phoneNumberSetupPage.enterPhoneNumber("+491234567");
+			phoneNumberSetupPage.submit();
+
+			// Enrollment renders the same template from PhoneValidationRequiredAction,
+			// which reads the config by alias rather than from an AuthenticationFlowContext.
+			smsCodePage.assertCurrent();
+			assertFalse(smsCodePage.hasBackToApplicationLink(),
+				"Expected no back link on the SMS code form shown during enrollment");
+		} finally {
+			SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("hideBackToApplicationLink", "false"));
 		}
 	}
 
