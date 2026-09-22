@@ -1,5 +1,6 @@
 package netzbegruenung.keycloak.app;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
 import netzbegruenung.keycloak.app.dto.ChallengeDto;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,10 +29,17 @@ import org.keycloak.testframework.ui.annotations.InjectPage;
 import org.keycloak.testframework.ui.annotations.InjectWebDriver;
 import org.keycloak.testframework.ui.page.LoginPage;
 import org.keycloak.testframework.ui.webdriver.ManagedWebDriver;
+import org.keycloak.testsuite.util.oauth.AccessTokenResponse;
+import org.keycloak.util.JsonSerialization;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.StreamSupport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -277,6 +285,38 @@ public class AppAuthenticatorFlowTest {
 		String credentialsUrl = keycloakUrls.getBase() + "/realms/" + managedRealm.getName() + "/app-authenticators/x/credentials";
 		assertEquals(204, firstDevice.updatePushId(credentialsUrl, "push-1"), "Expected the first device's push token update to succeed");
 		assertEquals(204, secondDevice.updatePushId(credentialsUrl, "push-2"), "Expected the second device's push token update to succeed despite sharing the first device's OS");
+	}
+
+	@Test
+	public void accountConsoleShowsDeviceOsAsCredentialLabel() throws Exception {
+		registerDevice();
+
+		AccessTokenResponse tokenResponse = oauth.doPasswordGrantRequest(user.getUsername(), user.getPassword());
+		assertTrue(tokenResponse.isSuccess(), "Expected the password grant to succeed: "
+			+ tokenResponse.getError() + " " + tokenResponse.getErrorDescription());
+
+		// The same REST endpoint the Account Console UI calls to list credentials
+		// (AccountRestService#credentials -> AccountCredentialResource#credentialTypes), which
+		// builds each entry via CredentialProvider#getCredentialFromModel - this is what's
+		// actually being verified here, not just our own createFromCredentialModel in isolation.
+		String credentialsUrl = keycloakUrls.getBase() + "/realms/" + managedRealm.getName() + "/account/credentials";
+		HttpResponse<String> response = HttpClient.newHttpClient().send(
+			HttpRequest.newBuilder(URI.create(credentialsUrl))
+				.header("Authorization", "Bearer " + tokenResponse.getAccessToken())
+				.header("Accept", "application/json")
+				.GET()
+				.build(),
+			HttpResponse.BodyHandlers.ofString());
+		assertEquals(200, response.statusCode(), "Expected the account credentials endpoint to succeed: " + response.body());
+
+		JsonNode credentialTypes = JsonSerialization.readValue(response.body(), JsonNode.class);
+		JsonNode appCredentialContainer = StreamSupport.stream(credentialTypes.spliterator(), false)
+			.filter(container -> AppCredentialModel.TYPE.equals(container.get("type").asText()))
+			.findFirst()
+			.orElseThrow(() -> new AssertionError("Expected an APP_CREDENTIAL container in: " + response.body()));
+
+		String userLabel = appCredentialContainer.get("userCredentialMetadatas").get(0).get("credential").get("userLabel").asText();
+		assertEquals("test-os", userLabel, "Expected the Account Console to show the device OS as the credential label");
 	}
 
 	private AppDeviceSimulator registerDevice() throws Exception {
