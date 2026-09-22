@@ -23,7 +23,7 @@
 
   "containerEnv": {
     "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
-		"GH_TOKEN": "${localEnv:GH_TOKEN}"
+	"GH_TOKEN": "${localEnv:GH_TOKEN}"
   },
 
   "postCreateCommand": "sudo chown -R --reference=\"$(npm -g config get prefix)/lib/node_modules\" \"$(npm -g config get prefix)/lib/node_modules/@anthropic-ai\" 2>/dev/null || true",
