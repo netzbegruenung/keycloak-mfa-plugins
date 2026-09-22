@@ -32,6 +32,7 @@ import java.util.Base64;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -67,6 +68,8 @@ public class ApiSmsService implements SmsService{
 
 	private final boolean stripPlusPrefix;
 
+	private final Map<String, String> customHeaders;
+
 	ApiSmsService(Map<String, String> config) {
 		apiurl = config.get("apiurl");
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
@@ -93,6 +96,25 @@ public class ApiSmsService implements SmsService{
 		getUrl = config.getOrDefault("getUrl", "");
 
 		stripPlusPrefix = Boolean.parseBoolean(config.getOrDefault("stripPlusPrefix", "false"));
+
+		customHeaders = parseCustomHeaders(config.getOrDefault("customHeaders", ""));
+	}
+
+	private static Map<String, String> parseCustomHeaders(String raw) {
+		Map<String, String> headers = new LinkedHashMap<>();
+		for (String line : raw.split("\\R")) {
+			line = line.trim();
+			if (line.isEmpty()) {
+				continue;
+			}
+			int separator = line.indexOf(':');
+			if (separator <= 0) {
+				logger.warnf("Ignoring malformed custom header line: %s", line);
+				continue;
+			}
+			headers.put(line.substring(0, separator).trim(), line.substring(separator + 1).trim());
+		}
+		return headers;
 	}
 
 	public void send(String phoneNumber, String message) {
@@ -113,6 +135,14 @@ public class ApiSmsService implements SmsService{
 				} else {
 					requestPayload = getJsonBody(phoneNumber, message);
 					requestBuilder = jsonRequest(requestPayload);
+				}
+			}
+
+			for (Map.Entry<String, String> header : customHeaders.entrySet()) {
+				try {
+					requestBuilder.setHeader(header.getKey(), header.getValue());
+				} catch (IllegalArgumentException e) {
+					logger.warnf("Skipping invalid custom header '%s': %s", header.getKey(), e.getMessage());
 				}
 			}
 
