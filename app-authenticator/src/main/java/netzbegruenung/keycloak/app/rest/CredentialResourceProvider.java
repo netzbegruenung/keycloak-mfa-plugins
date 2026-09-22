@@ -7,6 +7,7 @@ import netzbegruenung.keycloak.app.AuthenticationUtil;
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
 import netzbegruenung.keycloak.app.dto.UpdateAppCredentialsDto;
 import org.jboss.logging.Logger;
+import org.keycloak.credential.CredentialModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.UserModel;
 import org.keycloak.services.resource.RealmResourceProvider;
@@ -60,11 +61,15 @@ public class CredentialResourceProvider implements RealmResourceProvider {
 				return e.getResponse();
 			}
 
-			// Update the push token
+			// appCredential's userLabel is a display-only override (see
+			// AppCredentialModel#createFromCredentialModel); persist via the raw credential instead
+			// to avoid tripping Keycloak's per-user/type userLabel uniqueness check.
 			AppCredentialModel appCredential = verifiedCredentialContainer.appCredential();
 			appCredential.updateDevicePushId(dto.devicePushId());
+			CredentialModel credential = verifiedCredentialContainer.credential();
+			credential.setCredentialData(appCredential.getCredentialData());
 			UserModel user = verifiedCredentialContainer.user();
-			user.credentialManager().updateStoredCredential(appCredential);
+			user.credentialManager().updateStoredCredential(credential);
 
 			return Response.noContent().build();
 
