@@ -30,7 +30,7 @@ import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.email.EmailException;
-import org.keycloak.email.EmailSenderProvider;
+import org.keycloak.email.EmailTemplateProvider;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
@@ -38,17 +38,18 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserModel.RequiredAction;
 import org.keycloak.sessions.AuthenticationSessionModel;
-import org.keycloak.theme.Theme;
 
 import jakarta.ws.rs.core.Response;
 import java.util.Collections;
-import java.util.Locale;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class EmailAuthenticator implements Authenticator {
 
 	private static final Logger logger = Logger.getLogger(EmailAuthenticator.class);
 	static final String TPL_CODE = "login-email.ftl";
+	private static final String EMAIL_TPL_CODE = "email-auth.ftl";
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
@@ -73,19 +74,19 @@ public class EmailAuthenticator implements Authenticator {
 		authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
 
 		try {
-			Theme theme = session.theme().getTheme(Theme.Type.LOGIN);
-			Locale locale = session.getContext().resolveLocale(user);
-			String subjectTemplate = theme.getEnhancedMessages(realm, locale).getProperty("emailAuthSubject");
-			String bodyTemplate = theme.getEnhancedMessages(realm, locale).getProperty("emailAuthText");
+			int ttlMinutes = Math.floorDiv(ttl, 60);
+			Map<String, Object> attributes = new HashMap<>();
+			attributes.put("code", code);
+			attributes.put("ttl", ttlMinutes);
 
-			String subject = String.format(subjectTemplate, code, Math.floorDiv(ttl, 60));
-			String body = String.format(bodyTemplate, code, Math.floorDiv(ttl, 60));
-
-			EmailSenderProvider emailSenderProvider = session.getProvider(EmailSenderProvider.class);
-			emailSenderProvider.send(realm.getSmtpConfig(), user, subject, body, body);
+			session.getProvider(EmailTemplateProvider.class)
+				.setAuthenticationSession(authSession)
+				.setRealm(realm)
+				.setUser(user)
+				.send("emailAuthSubject", List.of(code, ttlMinutes), EMAIL_TPL_CODE, attributes);
 
 			context.challenge(context.form().setAttribute("realm", realm).createForm(TPL_CODE));
-		} catch (EmailException | java.io.IOException e) {
+		} catch (EmailException e) {
 			logger.warn("Failed to send verification email", e);
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
 				context.form().setError("emailAuthEmailNotSent", e.getMessage())
