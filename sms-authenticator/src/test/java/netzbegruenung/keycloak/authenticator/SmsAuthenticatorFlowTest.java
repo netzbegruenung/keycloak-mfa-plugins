@@ -227,6 +227,10 @@ public class SmsAuthenticatorFlowTest {
 			// (createErrorPage), unlike a wrong code which re-challenges the same form.
 			errorPage.assertCurrent();
 			assertTrue(errorPage.getError().contains("expired"), "Expected an expiry error, got: " + errorPage.getError());
+			EventAssertion.assertError(events.poll())
+				.type(EventType.LOGIN_ERROR)
+				.error(SmsAuthenticator.EXPIRED_SMS_CODE)
+				.userId(user.getId());
 		} finally {
 			SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("ttl", "300"));
 		}
