@@ -36,8 +36,6 @@ import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
-import org.keycloak.models.AuthenticationExecutionModel;
-import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
@@ -46,11 +44,12 @@ import org.keycloak.theme.Theme;
 import org.keycloak.util.JsonSerialization;
 
 import jakarta.ws.rs.core.Response;
-import java.util.Locale;
-import java.util.Optional;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 
 public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsAuthCredentialProvider> {
 
@@ -63,10 +62,14 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
-		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
+		RealmModel realm = context.getRealm();
 		KeycloakSession session = context.getSession();
 		UserModel user = context.getUser();
-		RealmModel realm = context.getRealm();
+
+		Map<String, String> cfg = SmsRegistrationConfigResolver.getEffectiveSmsConfigForExecution(
+			realm,
+			context.getAuthenticatorConfig()
+		);
 
 		Optional<CredentialModel> model = context.getUser().credentialManager().getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
 		String mobileNumber;
@@ -79,9 +82,9 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 		// When storeInAttribute is active, the attribute is the source of truth
 		// Allows admins to update the number without requiring the user to re-enroll.
-		boolean storeInAttribute = Boolean.parseBoolean(config.getConfig().getOrDefault("storeInAttribute", "false"));
+		boolean storeInAttribute = Boolean.parseBoolean(cfg.getOrDefault("storeInAttribute", "false"));
 		if (storeInAttribute) {
-			String mobileNumberAttribute = config.getConfig().getOrDefault("mobileNumberAttribute", "mobile_number");
+			String mobileNumberAttribute = cfg.getOrDefault("mobileNumberAttribute", "mobile_number");
 			String attributeNumber = user.getAttributeStream(mobileNumberAttribute)
 				.filter(n -> n != null && !n.isBlank())
 				.findFirst()
@@ -94,8 +97,27 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			}
 		}
 
-		int length = Integer.parseInt(config.getConfig().get("length"));
-		int ttl = Integer.parseInt(config.getConfig().get("ttl"));
+		String lenStr = cfg.get("length");
+		String ttlStr = cfg.get("ttl");
+		if (lenStr == null || lenStr.isBlank() || ttlStr == null || ttlStr.isBlank()) {
+			logger.errorf("SMS authenticator: missing length or ttl in effective config (realm %s). Configure the execution or global SMS on required action \"Update Mobile Number\".", realm.getName());
+			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
+				context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
+					.createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
+			return;
+		}
+		int length;
+		int ttl;
+		try {
+			length = Integer.parseInt(lenStr.trim());
+			ttl = Integer.parseInt(ttlStr.trim());
+		} catch (NumberFormatException e) {
+			logger.error("SMS authenticator: invalid length or ttl", e);
+			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
+				context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
+					.createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
+			return;
+		}
 
 		String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
@@ -105,10 +127,11 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		try {
 			Theme theme = session.theme().getTheme(Theme.Type.LOGIN);
 			Locale locale = session.getContext().resolveLocale(user);
-			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
+			String smsAuthText = theme.getEnhancedMessages(realm, locale).getProperty("smsAuthText");
 			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
 
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
+			SmsRegistrationConfigResolver.logWarningIfUsingLegacySmsAuthenticatorConfig(realm);
+			SmsServiceFactory.get(cfg).send(mobileNumber, smsText);
 
 			context.challenge(context.form()
 				.setAttribute("realm", realm)
