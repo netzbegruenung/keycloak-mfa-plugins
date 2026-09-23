@@ -56,6 +56,8 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	private static final Logger logger = Logger.getLogger(SmsAuthenticator.class);
 	static final String TPL_CODE = "login-sms.ftl";
+	// Dedicated LOGIN_ERROR event error, so a wrong SMS code is distinguishable from a wrong password (invalid_user_credentials)
+	public static final String INVALID_SMS_CODE = "invalid_sms_code";
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
@@ -144,7 +146,7 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		} else {
 			// invalid
 			String mobileNumber = getMobileNumber(context);
-			context.getEvent().user(context.getUser()).error("invalid_user_credentials");
+			context.getEvent().user(context.getUser()).error(INVALID_SMS_CODE);
 			Response challenge = context.form()
 				.setAttribute("phoneNumber", mobileNumber)
 				.setError("smsAuthCodeInvalid")

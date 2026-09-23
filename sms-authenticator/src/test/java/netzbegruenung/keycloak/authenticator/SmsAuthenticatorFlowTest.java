@@ -186,8 +186,12 @@ public class SmsAuthenticatorFlowTest {
 		smsCodePage.enterCode("000000".equals(correctCode) ? "111111" : "000000");
 		smsCodePage.submit();
 
-		// Rejected: still on the SMS code page, no successful login event yet.
+		// Rejected: still on the SMS code page, with an SMS-specific login error event.
 		smsCodePage.assertCurrent();
+		EventAssertion.assertError(events.poll())
+			.type(EventType.LOGIN_ERROR)
+			.error(SmsAuthenticator.INVALID_SMS_CODE)
+			.userId(user.getId());
 		events.clear();
 
 		smsCodePage.enterCode(correctCode);
