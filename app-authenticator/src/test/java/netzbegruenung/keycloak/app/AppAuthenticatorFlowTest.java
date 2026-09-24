@@ -157,8 +157,13 @@ public class AppAuthenticatorFlowTest {
 		appLoginPage.submit();
 
 		// Rejected: AppAuthenticator.action() re-challenges the same page instead of
-		// succeeding, so there's no LOGIN event and the app-login step is shown again.
+		// succeeding, so there's no LOGIN event and the app-login step is shown again,
+		// with an app-specific login error event.
 		appLoginPage.assertCurrent();
+		EventAssertion.assertError(events.poll())
+			.type(EventType.LOGIN_ERROR)
+			.error(AppAuthenticator.APP_AUTH_REJECTED)
+			.userId(user.getId());
 	}
 
 	@Test
