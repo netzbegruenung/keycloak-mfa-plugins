@@ -5,6 +5,7 @@ import netzbegruenung.keycloak.app.actiontoken.AppAuthActionTokenHandler;
 import netzbegruenung.keycloak.app.actiontoken.AppSetupActionTokenHandler;
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
 import netzbegruenung.keycloak.app.dto.ChallengeDto;
+import netzbegruenung.keycloak.app.rest.AppCredentialService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.keycloak.events.Details;
@@ -305,6 +306,23 @@ public class AppAuthenticatorFlowTest {
 			.type(EventType.EXECUTE_ACTION_TOKEN_ERROR)
 			.error(AppSetupActionTokenHandler.APP_SETUP_INVALID_REQUEST)
 			.userId(user.getId());
+	}
+
+	@Test
+	public void pushTokenUpdateWithInvalidSignatureReportsError() throws Exception {
+		AppDeviceSimulator device = registerDevice();
+		events.clear();
+
+		// Knows the device_id but not the device's private key
+		AppDeviceSimulator impostor = new AppDeviceSimulator(device.deviceId());
+		String credentialsUrl = keycloakUrls.getBase() + "/realms/" + managedRealm.getName() + "/app-authenticators/x/credentials";
+		assertEquals(401, impostor.updatePushId(credentialsUrl, "attacker-push-id"));
+
+		EventAssertion.assertError(events.poll())
+			.type(EventType.LOGIN_ERROR)
+			.error(AppCredentialService.APP_DEVICE_INVALID_SIGNATURE)
+			.userId(user.getId())
+			.details("device_id", device.deviceId());
 	}
 
 	@Test

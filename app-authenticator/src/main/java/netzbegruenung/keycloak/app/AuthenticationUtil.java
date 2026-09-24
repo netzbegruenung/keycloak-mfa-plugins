@@ -73,12 +73,13 @@ public class AuthenticationUtil {
 			sign.update(signedData.getBytes());
 
 			if (!sign.verify(Base64.decodeBase64(signature))) {
-				logger.warnv("App authentication rejected: invalid signature for user [{0}]", user.getUsername());
+				// Callers report this as an event, which the jboss-logging listener already logs
+				logger.debugv("App authentication rejected: invalid signature for user [{0}]", user.getUsername());
 				return false;
 			}
 			return true;
 		} catch (NoSuchAlgorithmException | InvalidKeySpecException | SignatureException | InvalidKeyException e) {
-			logger.warnf(
+			logger.debugf(
 				e,
 				"App authentication rejected: signature verification failed for user: [%s], probably due to malformed signature or wrong algorithm",
 				user.getUsername()
