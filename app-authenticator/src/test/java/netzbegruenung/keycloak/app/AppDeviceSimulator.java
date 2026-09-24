@@ -55,12 +55,21 @@ final class AppDeviceSimulator {
 	}
 
 	int register(String actionTokenUrl) throws IOException, InterruptedException {
+		return register(actionTokenUrl, true);
+	}
+
+	// Incomplete registration request, as sent by a broken or tampered app
+	int registerWithoutPublicKey(String actionTokenUrl) throws IOException, InterruptedException {
+		return register(actionTokenUrl, false);
+	}
+
+	private int register(String actionTokenUrl, boolean includePublicKey) throws IOException, InterruptedException {
 		String encodedPublicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
 		String separator = actionTokenUrl.contains("?") ? "&" : "?";
 		String uri = actionTokenUrl + separator
 			+ "device_id=" + encode(deviceId)
 			+ "&device_os=" + encode("test-os")
-			+ "&public_key=" + encode(encodedPublicKey)
+			+ (includePublicKey ? "&public_key=" + encode(encodedPublicKey) : "")
 			+ "&key_algorithm=" + encode(KEY_ALGORITHM)
 			+ "&signature_algorithm=" + encode(SIGNATURE_ALGORITHM)
 			+ "&device_push_id=" + encode("test-push-id");

@@ -10,6 +10,7 @@ import org.keycloak.authentication.actiontoken.ActionTokenContext;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.events.Details;
 import org.keycloak.events.Errors;
+import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
 import org.keycloak.models.ModelDuplicateException;
 import org.keycloak.models.UserModel;
@@ -20,6 +21,12 @@ import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 
 public class AppSetupActionTokenHandler extends AbstractActionTokenHandler<AppSetupActionToken> {
+	// Dedicated EXECUTE_ACTION_TOKEN_ERROR event errors, so failed app registrations are distinguishable
+	// from Keycloak's own action tokens (verify email, reset password, ...)
+	public static final String APP_SETUP_INVALID_REQUEST = "app_setup_invalid_request";
+	public static final String APP_SETUP_SESSION_EXPIRED = "app_setup_session_expired";
+	public static final String APP_SETUP_DUPLICATE_DEVICE_ID = "app_setup_duplicate_device_id";
+
 	public AppSetupActionTokenHandler() {
 		super(
 			AppSetupActionToken.TOKEN_TYPE,
@@ -47,6 +54,7 @@ public class AppSetupActionTokenHandler extends AbstractActionTokenHandler<AppSe
 			|| keyAlgorithm == null
 			|| signatureAlgorithm == null
 		) {
+			tokenContext.getEvent().user(token.getUserId()).error(APP_SETUP_INVALID_REQUEST);
 			return Response.status(400).build();
 		}
 
@@ -61,10 +69,12 @@ public class AppSetupActionTokenHandler extends AbstractActionTokenHandler<AppSe
 		);
 
 		if (authSession == null) {
+			tokenContext.getEvent().user(token.getUserId()).error(APP_SETUP_SESSION_EXPIRED);
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 
 		if (existingIndex != null && !existingIndex.getUser().getId().equals(user.getId())) {
+			tokenContext.getEvent().user(user).detail("device_id", deviceId).error(APP_SETUP_DUPLICATE_DEVICE_ID);
 			authSession.setAuthNote("duplicateDeviceId", Boolean.toString(true));
 			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
 			return Response.status(400).build();
@@ -93,19 +103,20 @@ public class AppSetupActionTokenHandler extends AbstractActionTokenHandler<AppSe
 		} catch (ModelDuplicateException e) {
 			// Lost a race against a concurrent registration of the same device_id.
 			// AppCredentialProvider.createCredential already cleaned up the orphaned credential.
+			tokenContext.getEvent().user(user).detail("device_id", deviceId).error(APP_SETUP_DUPLICATE_DEVICE_ID);
 			authSession.setAuthNote("duplicateDeviceId", Boolean.toString(true));
 			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
 			return Response.status(400).build();
 		}
 
+		EventBuilder event = tokenContext.getEvent().clone().event(EventType.UPDATE_CREDENTIAL)
+			.user(user)
+			.detail(Details.CREDENTIAL_TYPE, AppCredentialModel.TYPE)
+			.detail("device_id", deviceId);
 		if (isOverwrite) {
-			tokenContext.getEvent().clone().event(EventType.UPDATE_CREDENTIAL)
-				.user(user)
-				.detail(Details.CREDENTIAL_TYPE, AppCredentialModel.TYPE)
-				.detail("device_id", deviceId)
-				.detail("replaced_credential_id", existingIndex.getCredentialId())
-				.success();
+			event.detail("replaced_credential_id", existingIndex.getCredentialId());
 		}
+		event.success();
 
 		authSession.setAuthNote("appSetupSuccessful", Boolean.toString(true));
 		authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));

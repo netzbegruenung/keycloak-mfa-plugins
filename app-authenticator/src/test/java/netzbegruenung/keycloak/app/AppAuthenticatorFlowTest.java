@@ -2,6 +2,7 @@ package netzbegruenung.keycloak.app;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import netzbegruenung.keycloak.app.actiontoken.AppAuthActionTokenHandler;
+import netzbegruenung.keycloak.app.actiontoken.AppSetupActionTokenHandler;
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
 import netzbegruenung.keycloak.app.dto.ChallengeDto;
 import org.junit.jupiter.api.BeforeEach;
@@ -278,11 +279,32 @@ public class AppAuthenticatorFlowTest {
 
 		AppDeviceSimulator conflictingDevice = new AppDeviceSimulator(device.deviceId());
 		assertEquals(400, conflictingDevice.register(actionTokenUrl), "Expected duplicate device_id registration to be rejected");
+		EventAssertion.assertError(events.poll())
+			.type(EventType.EXECUTE_ACTION_TOKEN_ERROR)
+			.error(AppSetupActionTokenHandler.APP_SETUP_DUPLICATE_DEVICE_ID)
+			.userId(secondUser.getId())
+			.details("device_id", device.deviceId());
 
 		boolean secondUserHasAppCredential = managedRealm.admin().users().get(secondUser.getId())
 			.credentials().stream()
 			.anyMatch(credential -> AppCredentialModel.TYPE.equals(credential.getType()));
 		assertFalse(secondUserHasAppCredential, "Expected no APP_CREDENTIAL for the second user after a rejected duplicate device_id");
+	}
+
+	@Test
+	public void setupWithMissingParameterReportsError() throws Exception {
+		oauth.openLoginForm();
+		loginPage.fillLogin(user.getUsername(), user.getPassword());
+		loginPage.submit();
+
+		appAuthSetupPage.assertCurrent();
+		String actionTokenUrl = appAuthSetupPage.getActionTokenUrl();
+
+		assertEquals(400, new AppDeviceSimulator().registerWithoutPublicKey(actionTokenUrl));
+		EventAssertion.assertError(events.poll())
+			.type(EventType.EXECUTE_ACTION_TOKEN_ERROR)
+			.error(AppSetupActionTokenHandler.APP_SETUP_INVALID_REQUEST)
+			.userId(user.getId());
 	}
 
 	@Test
@@ -366,9 +388,12 @@ public class AppAuthenticatorFlowTest {
 
 		appAuthSetupPage.submit();
 
-		// AppRequiredAction doesn't fire its own UPDATE_CREDENTIAL event (unlike e.g.
-		// trusted-device-authenticator) - completing the required action itself is what's
-		// observable here; credential creation is verified directly against the admin API.
+		EventAssertion.assertSuccess(events.poll())
+			.type(EventType.UPDATE_CREDENTIAL)
+			.userId(user.getId())
+			.details(Details.CREDENTIAL_TYPE, AppCredentialModel.TYPE)
+			.details("device_id", device.deviceId());
+
 		EventAssertion.assertSuccess(events.poll())
 			.type(EventType.CUSTOM_REQUIRED_ACTION)
 			.userId(user.getId());
