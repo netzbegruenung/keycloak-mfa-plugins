@@ -28,6 +28,10 @@ import java.util.Map;
 public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAuthActionToken> {
 
 	private final Logger logger = Logger.getLogger(AppAuthActionTokenHandler.class);
+	// Dedicated EXECUTE_ACTION_TOKEN_ERROR event errors, so failed app challenge responses are distinguishable
+	// from Keycloak's own action tokens (verify email, reset password, ...)
+	public static final String APP_AUTH_INVALID_SIGNATURE = "app_auth_invalid_signature";
+	public static final String APP_AUTH_SESSION_EXPIRED = "app_auth_session_expired";
 
 	public AppAuthActionTokenHandler() {
 		super(
@@ -48,7 +52,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		);
 
 		if (authSession == null) {
-			logger.errorf("App Authentication rejected: Auth session not found for user [%s]", token.getUserId());
+			tokenContext.getEvent().user(token.getUserId()).error(APP_AUTH_SESSION_EXPIRED);
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 
@@ -61,7 +65,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 
 		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(tokenContext.getRequest().getHttpHeaders().getRequestHeader(AuthenticationUtil.SIGNATURE_HEADER));
 		if (signatureMap == null) {
-			logger.warnf("App authentication rejected: missing or incomplete signature header for user ID [%s]", token.getUserId());
+			tokenContext.getEvent().user(token.getUserId()).error(APP_AUTH_INVALID_SIGNATURE);
 			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
 			return Response.status(Response.Status.BAD_REQUEST).build();
 		}
@@ -87,6 +91,10 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		);
 
 		if (!verified) {
+			tokenContext.getEvent()
+				.user(token.getUserId())
+				.detail("device_id", appCredentialData.getDeviceId())
+				.error(APP_AUTH_INVALID_SIGNATURE);
 			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}

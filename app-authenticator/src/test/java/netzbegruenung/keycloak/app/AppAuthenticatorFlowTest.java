@@ -1,6 +1,7 @@
 package netzbegruenung.keycloak.app;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import netzbegruenung.keycloak.app.actiontoken.AppAuthActionTokenHandler;
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
 import netzbegruenung.keycloak.app.dto.ChallengeDto;
 import org.junit.jupiter.api.BeforeEach;
@@ -164,6 +165,31 @@ public class AppAuthenticatorFlowTest {
 			.type(EventType.LOGIN_ERROR)
 			.error(AppAuthenticator.APP_AUTH_REJECTED)
 			.userId(user.getId());
+	}
+
+	@Test
+	public void secondLoginWithInvalidSignatureReportsError() throws Exception {
+		AppDeviceSimulator device = registerDevice();
+		logout();
+		events.clear();
+
+		oauth.openLoginForm();
+		loginPage.fillLogin(user.getUsername(), user.getPassword());
+		loginPage.submit();
+
+		appLoginPage.assertCurrent();
+
+		ChallengeDto challenge = awaitChallenge(device);
+		assertEquals(403, device.respondWithForgedGrant(challenge));
+
+		EventAssertion.assertError(events.poll())
+			.type(EventType.EXECUTE_ACTION_TOKEN_ERROR)
+			.error(AppAuthActionTokenHandler.APP_AUTH_INVALID_SIGNATURE)
+			.userId(user.getId());
+
+		// The forged grant must not log the user in
+		appLoginPage.submit();
+		appLoginPage.assertCurrent();
 	}
 
 	@Test

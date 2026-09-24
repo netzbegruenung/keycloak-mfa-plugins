@@ -84,18 +84,27 @@ final class AppDeviceSimulator {
 	}
 
 	int respond(ChallengeDto challenge, boolean granted) throws IOException, InterruptedException {
+		return respond(challenge, granted, granted);
+	}
+
+	// Tamper attempt: signs a rejection but claims a grant in the header, so the signature doesn't match
+	int respondWithForgedGrant(ChallengeDto challenge) throws IOException, InterruptedException {
+		return respond(challenge, false, true);
+	}
+
+	private int respond(ChallengeDto challenge, boolean signedGranted, boolean sentGranted) throws IOException, InterruptedException {
 		String created = String.valueOf(System.currentTimeMillis());
 
 		Map<String, String> signedDataMap = new HashMap<>();
 		signedDataMap.put("created", created);
 		signedDataMap.put("secret", challenge.codeChallenge());
-		signedDataMap.put("granted", String.valueOf(granted));
+		signedDataMap.put("granted", String.valueOf(signedGranted));
 		String signedData = AuthenticationUtil.getSignatureString(signedDataMap);
 
 		String signatureHeader = "signature:" + sign(signedData)
 			+ ",keyId:" + deviceId
 			+ ",created:" + created
-			+ ",granted:" + granted;
+			+ ",granted:" + sentGranted;
 
 		return send(HttpRequest.newBuilder(URI.create(challenge.targetUrl()))
 			.header(AuthenticationUtil.SIGNATURE_HEADER, signatureHeader)
