@@ -10,6 +10,8 @@ import netzbegruenung.keycloak.app.jpa.AppAuthCredentialIndex;
 import org.jboss.logging.Logger;
 import org.keycloak.connections.jpa.JpaConnectionProvider;
 import org.keycloak.credential.CredentialModel;
+import org.keycloak.events.EventBuilder;
+import org.keycloak.events.EventType;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
@@ -26,6 +28,10 @@ public class AppCredentialService {
 	private final Logger logger = Logger.getLogger(AppCredentialService.class);
 	public final static String NO_CREDENTIAL = "no_credential";
 	public final static String CHALLENGE_REJECTED = "challenge_rejected";
+	// Dedicated LOGIN_ERROR event error for device requests (challenge polling, push token update) with an
+	// invalid signature. There's no Keycloak event context on these REST endpoints, and LOGIN_ERROR is the
+	// type admins and SIEM rules watch.
+	public final static String APP_DEVICE_INVALID_SIGNATURE = "app_device_invalid_signature";
 
 	public AppCredentialService(KeycloakSession session) {
 		this.session = session;
@@ -76,6 +82,11 @@ public class AppCredentialService {
 		);
 
 		if (!verified) {
+			new EventBuilder(realm, session, session.getContext().getConnection())
+				.event(EventType.LOGIN_ERROR)
+				.user(user)
+				.detail("device_id", deviceId)
+				.error(APP_DEVICE_INVALID_SIGNATURE);
 			throw new VerificationErrorResponseException(Response
 				.status(Response.Status.UNAUTHORIZED)
 				.entity(new Message(CHALLENGE_REJECTED, "Invalid signature"))

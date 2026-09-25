@@ -62,29 +62,38 @@ public class AuthenticationUtil {
 	}
 
 	public static boolean verifyChallenge(UserModel user, AppCredentialData appCredentialData, String signedData, String signature) {
+		Signature verifier;
 		try {
-			KeyFactory keyFactory = KeyFactory.getInstance(appCredentialData.getKeyAlgorithm());
-			byte[] publicKeyBytes = Base64.decodeBase64(appCredentialData.getPublicKey());
-			EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
-			PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
-
-			Signature sign = Signature.getInstance(appCredentialData.getSignatureAlgorithm());
-			sign.initVerify(publicKey);
-			sign.update(signedData.getBytes());
-
-			if (!sign.verify(Base64.decodeBase64(signature))) {
-				logger.warnv("App authentication rejected: invalid signature for user [{0}]", user.getUsername());
-				return false;
-			}
-			return true;
-		} catch (NoSuchAlgorithmException | InvalidKeySpecException | SignatureException | InvalidKeyException e) {
-			logger.warnf(
+			verifier = createVerifier(appCredentialData);
+		} catch (NoSuchAlgorithmException | InvalidKeySpecException | InvalidKeyException e) {
+			// Broken stored credential, not fixable by the client, so an admin has to act
+			logger.errorf(
 				e,
-				"App authentication rejected: signature verification failed for user: [%s], probably due to malformed signature or wrong algorithm",
+				"App authentication rejected: unusable app credential for user [%s], unsupported algorithm or malformed public key",
 				user.getUsername()
 			);
 			return false;
 		}
+
+		try {
+			verifier.update(signedData.getBytes());
+			return verifier.verify(Base64.decodeBase64(signature));
+		} catch (SignatureException e) {
+			// Malformed signature sent by the client, reported by the callers as an event
+			return false;
+		}
+	}
+
+	private static Signature createVerifier(AppCredentialData appCredentialData)
+		throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+		KeyFactory keyFactory = KeyFactory.getInstance(appCredentialData.getKeyAlgorithm());
+		byte[] publicKeyBytes = Base64.decodeBase64(appCredentialData.getPublicKey());
+		EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(publicKeyBytes);
+		PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+
+		Signature verifier = Signature.getInstance(appCredentialData.getSignatureAlgorithm());
+		verifier.initVerify(publicKey);
+		return verifier;
 	}
 
 }

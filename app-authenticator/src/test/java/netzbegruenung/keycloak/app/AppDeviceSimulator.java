@@ -55,12 +55,21 @@ final class AppDeviceSimulator {
 	}
 
 	int register(String actionTokenUrl) throws IOException, InterruptedException {
+		return register(actionTokenUrl, true);
+	}
+
+	// Incomplete registration request, as sent by a broken or tampered app
+	int registerWithoutPublicKey(String actionTokenUrl) throws IOException, InterruptedException {
+		return register(actionTokenUrl, false);
+	}
+
+	private int register(String actionTokenUrl, boolean includePublicKey) throws IOException, InterruptedException {
 		String encodedPublicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
 		String separator = actionTokenUrl.contains("?") ? "&" : "?";
 		String uri = actionTokenUrl + separator
 			+ "device_id=" + encode(deviceId)
 			+ "&device_os=" + encode("test-os")
-			+ "&public_key=" + encode(encodedPublicKey)
+			+ (includePublicKey ? "&public_key=" + encode(encodedPublicKey) : "")
 			+ "&key_algorithm=" + encode(KEY_ALGORITHM)
 			+ "&signature_algorithm=" + encode(SIGNATURE_ALGORITHM)
 			+ "&device_push_id=" + encode("test-push-id");
@@ -84,18 +93,27 @@ final class AppDeviceSimulator {
 	}
 
 	int respond(ChallengeDto challenge, boolean granted) throws IOException, InterruptedException {
+		return respond(challenge, granted, granted);
+	}
+
+	// Tamper attempt: signs a rejection but claims a grant in the header, so the signature doesn't match
+	int respondWithForgedGrant(ChallengeDto challenge) throws IOException, InterruptedException {
+		return respond(challenge, false, true);
+	}
+
+	private int respond(ChallengeDto challenge, boolean signedGranted, boolean sentGranted) throws IOException, InterruptedException {
 		String created = String.valueOf(System.currentTimeMillis());
 
 		Map<String, String> signedDataMap = new HashMap<>();
 		signedDataMap.put("created", created);
 		signedDataMap.put("secret", challenge.codeChallenge());
-		signedDataMap.put("granted", String.valueOf(granted));
+		signedDataMap.put("granted", String.valueOf(signedGranted));
 		String signedData = AuthenticationUtil.getSignatureString(signedDataMap);
 
 		String signatureHeader = "signature:" + sign(signedData)
 			+ ",keyId:" + deviceId
 			+ ",created:" + created
-			+ ",granted:" + granted;
+			+ ",granted:" + sentGranted;
 
 		return send(HttpRequest.newBuilder(URI.create(challenge.targetUrl()))
 			.header(AuthenticationUtil.SIGNATURE_HEADER, signatureHeader)

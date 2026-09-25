@@ -50,6 +50,8 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 	private static final int SECRET_LENGTH = 512 - 11;
 
 	public static final String APP_AUTH_GRANTED_NOTE = "appAuthGranted";
+	// Dedicated LOGIN_ERROR event error, so a login rejected on the phone leaves a trace in the event log
+	public static final String APP_AUTH_REJECTED = "app_auth_rejected";
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
@@ -279,6 +281,7 @@ public class AppAuthenticator implements Authenticator, CredentialValidator<AppC
 			return;
 		}
 		if (!Boolean.parseBoolean(granted)) {
+			context.getEvent().user(context.getUser()).error(APP_AUTH_REJECTED);
 			Response challenge = context.form()
 				.setError("appAuthRejected")
 				.createForm("app-login.ftl");

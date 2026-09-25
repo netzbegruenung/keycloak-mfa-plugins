@@ -19,3 +19,5 @@ Use Conventional Commits: `type(scope): description`. Scope is optional.
 # Committing and creating PRs
 
 Sign commits with the devcontainer's mounted key, inline: `git -c user.signingkey=~/.ssh/id_claude_signing commit -S -m "..."`. Use `gh` (pre-authenticated via `GH_TOKEN`) to push and open PRs. Never persist these as config — no edits to `.git/config` or `~/.gitconfig`, `-c`/env flags only.
+
+The SSH key is for signing only; it has no push access. Since `origin` is an SSH URL, push over HTTPS with gh's credentials: `git -c credential.helper='!gh auth git-credential' push https://github.com/netzbegruenung/keycloak-mfa-plugins.git <branch>`.

@@ -1,8 +1,11 @@
 package netzbegruenung.keycloak.app;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import netzbegruenung.keycloak.app.actiontoken.AppAuthActionTokenHandler;
+import netzbegruenung.keycloak.app.actiontoken.AppSetupActionTokenHandler;
 import netzbegruenung.keycloak.app.credentials.AppCredentialModel;
 import netzbegruenung.keycloak.app.dto.ChallengeDto;
+import netzbegruenung.keycloak.app.rest.AppCredentialService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.keycloak.events.Details;
@@ -157,8 +160,62 @@ public class AppAuthenticatorFlowTest {
 		appLoginPage.submit();
 
 		// Rejected: AppAuthenticator.action() re-challenges the same page instead of
-		// succeeding, so there's no LOGIN event and the app-login step is shown again.
+		// succeeding, so there's no LOGIN event and the app-login step is shown again,
+		// with an app-specific login error event.
 		appLoginPage.assertCurrent();
+		EventAssertion.assertError(events.poll())
+			.type(EventType.LOGIN_ERROR)
+			.error(AppAuthenticator.APP_AUTH_REJECTED)
+			.userId(user.getId());
+	}
+
+	@Test
+	public void secondLoginWithInvalidSignatureReportsError() throws Exception {
+		AppDeviceSimulator device = registerDevice();
+		logout();
+		events.clear();
+
+		oauth.openLoginForm();
+		loginPage.fillLogin(user.getUsername(), user.getPassword());
+		loginPage.submit();
+
+		appLoginPage.assertCurrent();
+
+		ChallengeDto challenge = awaitChallenge(device);
+		assertEquals(403, device.respondWithForgedGrant(challenge));
+
+		EventAssertion.assertError(events.poll())
+			.type(EventType.EXECUTE_ACTION_TOKEN_ERROR)
+			.error(AppAuthActionTokenHandler.APP_AUTH_INVALID_SIGNATURE)
+			.userId(user.getId());
+
+		// The forged grant must not log the user in
+		appLoginPage.submit();
+		appLoginPage.assertCurrent();
+	}
+
+	@Test
+	public void responseAfterLoginRestartReportsError() throws Exception {
+		AppDeviceSimulator device = registerDevice();
+		logout();
+
+		oauth.openLoginForm();
+		loginPage.fillLogin(user.getUsername(), user.getPassword());
+		loginPage.submit();
+
+		appLoginPage.assertCurrent();
+		ChallengeDto challenge = awaitChallenge(device);
+
+		// Restarting keeps the auth session but clears its user and auth notes (resetFlow)
+		appLoginPage.restartLogin();
+		loginPage.assertCurrent();
+		events.clear();
+
+		assertEquals(403, device.respond(challenge, true));
+		EventAssertion.assertError(events.poll())
+			.type(EventType.EXECUTE_ACTION_TOKEN_ERROR)
+			.error(AppAuthActionTokenHandler.APP_AUTH_CHALLENGE_OUTDATED)
+			.userId(user.getId());
 	}
 
 	@Test
@@ -247,11 +304,49 @@ public class AppAuthenticatorFlowTest {
 
 		AppDeviceSimulator conflictingDevice = new AppDeviceSimulator(device.deviceId());
 		assertEquals(400, conflictingDevice.register(actionTokenUrl), "Expected duplicate device_id registration to be rejected");
+		EventAssertion.assertError(events.poll())
+			.type(EventType.EXECUTE_ACTION_TOKEN_ERROR)
+			.error(AppSetupActionTokenHandler.APP_SETUP_DUPLICATE_DEVICE_ID)
+			.userId(secondUser.getId())
+			.details("device_id", device.deviceId());
 
 		boolean secondUserHasAppCredential = managedRealm.admin().users().get(secondUser.getId())
 			.credentials().stream()
 			.anyMatch(credential -> AppCredentialModel.TYPE.equals(credential.getType()));
 		assertFalse(secondUserHasAppCredential, "Expected no APP_CREDENTIAL for the second user after a rejected duplicate device_id");
+	}
+
+	@Test
+	public void setupWithMissingParameterReportsError() throws Exception {
+		oauth.openLoginForm();
+		loginPage.fillLogin(user.getUsername(), user.getPassword());
+		loginPage.submit();
+
+		appAuthSetupPage.assertCurrent();
+		String actionTokenUrl = appAuthSetupPage.getActionTokenUrl();
+
+		assertEquals(400, new AppDeviceSimulator().registerWithoutPublicKey(actionTokenUrl));
+		EventAssertion.assertError(events.poll())
+			.type(EventType.EXECUTE_ACTION_TOKEN_ERROR)
+			.error(AppSetupActionTokenHandler.APP_SETUP_INVALID_REQUEST)
+			.userId(user.getId());
+	}
+
+	@Test
+	public void pushTokenUpdateWithInvalidSignatureReportsError() throws Exception {
+		AppDeviceSimulator device = registerDevice();
+		events.clear();
+
+		// Knows the device_id but not the device's private key
+		AppDeviceSimulator impostor = new AppDeviceSimulator(device.deviceId());
+		String credentialsUrl = keycloakUrls.getBase() + "/realms/" + managedRealm.getName() + "/app-authenticators/x/credentials";
+		assertEquals(401, impostor.updatePushId(credentialsUrl, "attacker-push-id"));
+
+		EventAssertion.assertError(events.poll())
+			.type(EventType.LOGIN_ERROR)
+			.error(AppCredentialService.APP_DEVICE_INVALID_SIGNATURE)
+			.userId(user.getId())
+			.details("device_id", device.deviceId());
 	}
 
 	@Test
@@ -335,9 +430,12 @@ public class AppAuthenticatorFlowTest {
 
 		appAuthSetupPage.submit();
 
-		// AppRequiredAction doesn't fire its own UPDATE_CREDENTIAL event (unlike e.g.
-		// trusted-device-authenticator) - completing the required action itself is what's
-		// observable here; credential creation is verified directly against the admin API.
+		EventAssertion.assertSuccess(events.poll())
+			.type(EventType.UPDATE_CREDENTIAL)
+			.userId(user.getId())
+			.details(Details.CREDENTIAL_TYPE, AppCredentialModel.TYPE)
+			.details("device_id", device.deviceId());
+
 		EventAssertion.assertSuccess(events.poll())
 			.type(EventType.CUSTOM_REQUIRED_ACTION)
 			.userId(user.getId());

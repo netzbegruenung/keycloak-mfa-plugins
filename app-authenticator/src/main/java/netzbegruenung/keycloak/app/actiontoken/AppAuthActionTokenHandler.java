@@ -17,6 +17,7 @@ import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventType;
+import org.keycloak.models.UserModel;
 import org.keycloak.models.jpa.entities.RealmEntity;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.sessions.AuthenticationSessionModel;
@@ -28,6 +29,11 @@ import java.util.Map;
 public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAuthActionToken> {
 
 	private final Logger logger = Logger.getLogger(AppAuthActionTokenHandler.class);
+	// Dedicated EXECUTE_ACTION_TOKEN_ERROR event errors, so failed app challenge responses are distinguishable
+	// from Keycloak's own action tokens (verify email, reset password, ...)
+	public static final String APP_AUTH_INVALID_SIGNATURE = "app_auth_invalid_signature";
+	// The response answers a login that no longer waits for it (auth session expired, login restarted or credential deleted)
+	public static final String APP_AUTH_CHALLENGE_OUTDATED = "app_auth_challenge_outdated";
 
 	public AppAuthActionTokenHandler() {
 		super(
@@ -48,7 +54,7 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		);
 
 		if (authSession == null) {
-			logger.errorf("App Authentication rejected: Auth session not found for user [%s]", token.getUserId());
+			tokenContext.getEvent().user(token.getUserId()).error(APP_AUTH_CHALLENGE_OUTDATED);
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 
@@ -59,9 +65,19 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}
 
+		UserModel user = authSession.getAuthenticatedUser();
+		String credentialId = authSession.getAuthNote("credentialId");
+		String secret = authSession.getAuthNote("secret");
+		if (user == null || credentialId == null || secret == null) {
+			// Login was restarted meanwhile: AuthenticationProcessor.resetFlow keeps the auth session
+			// but clears its authenticated user and auth notes
+			tokenContext.getEvent().user(token.getUserId()).error(APP_AUTH_CHALLENGE_OUTDATED);
+			return Response.status(Response.Status.FORBIDDEN).build();
+		}
+
 		Map<String, String> signatureMap = AuthenticationUtil.getSignatureMap(tokenContext.getRequest().getHttpHeaders().getRequestHeader(AuthenticationUtil.SIGNATURE_HEADER));
 		if (signatureMap == null) {
-			logger.warnf("App authentication rejected: missing or incomplete signature header for user ID [%s]", token.getUserId());
+			tokenContext.getEvent().user(token.getUserId()).error(APP_AUTH_INVALID_SIGNATURE);
 			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
 			return Response.status(Response.Status.BAD_REQUEST).build();
 		}
@@ -69,24 +85,32 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 		AppCredentialProvider appCredentialProvider = (AppCredentialProvider) tokenContext
 			.getSession()
 			.getProvider(CredentialProvider.class, AppCredentialProviderFactory.PROVIDER_ID);
-		CredentialModel appCredentialModel = appCredentialProvider
-			.getCredentialModel(authSession.getAuthenticatedUser(), authSession.getAuthNote("credentialId"));
+		CredentialModel appCredentialModel = appCredentialProvider.getCredentialModel(user, credentialId);
+		if (appCredentialModel == null) {
+			// Credential deleted while the challenge was pending
+			tokenContext.getEvent().user(token.getUserId()).error(APP_AUTH_CHALLENGE_OUTDATED);
+			return Response.status(Response.Status.FORBIDDEN).build();
+		}
 
 		AppCredentialData appCredentialData = AppCredentialModel.createFromCredentialModel(appCredentialModel).getAppCredentialData();
 
 		Map<String, String> signatureStringMap = new HashMap<>();
 		signatureStringMap.put("created", signatureMap.get("created"));
-		signatureStringMap.put("secret", authSession.getAuthNote("secret"));
+		signatureStringMap.put("secret", secret);
 		signatureStringMap.put("granted", signatureMap.get("granted"));
 
 		boolean verified = AuthenticationUtil.verifyChallenge(
-			authSession.getAuthenticatedUser(),
+			user,
 			appCredentialData,
 			AuthenticationUtil.getSignatureString(signatureStringMap),
 			signatureMap.get("signature")
 		);
 
 		if (!verified) {
+			tokenContext.getEvent()
+				.user(token.getUserId())
+				.detail("device_id", appCredentialData.getDeviceId())
+				.error(APP_AUTH_INVALID_SIGNATURE);
 			authSession.setAuthNote(StatusResourceProvider.READY, Boolean.toString(true));
 			return Response.status(Response.Status.FORBIDDEN).build();
 		}

@@ -16,6 +16,7 @@ import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.email.EmailException;
 import org.keycloak.email.EmailSenderProvider;
+import org.keycloak.events.EventBuilder;
 import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.http.HttpRequest;
 import org.keycloak.models.AuthenticationExecutionModel;
@@ -57,6 +58,7 @@ public class EmailAuthenticatorTest {
 	private KeycloakContext keycloakContext;
 	private UserModel user;
 	private EmailSenderProvider emailSenderProvider;
+	private EventBuilder event;
 
 	@BeforeEach
 	public void setup() throws Exception {
@@ -70,6 +72,7 @@ public class EmailAuthenticatorTest {
 		keycloakContext = mock(KeycloakContext.class);
 		user = mock(UserModel.class);
 		emailSenderProvider = mock(EmailSenderProvider.class);
+		event = mock(EventBuilder.class);
 
 		when(context.getAuthenticationSession()).thenReturn(authSession);
 		when(context.getHttpRequest()).thenReturn(request);
@@ -77,6 +80,8 @@ public class EmailAuthenticatorTest {
 		when(context.getRealm()).thenReturn(realm);
 		when(context.getSession()).thenReturn(session);
 		when(context.getUser()).thenReturn(user);
+		when(context.getEvent()).thenReturn(event);
+		when(event.user(any(UserModel.class))).thenReturn(event);
 
 		when(session.getProvider(EmailSenderProvider.class)).thenReturn(emailSenderProvider);
 		when(session.getContext()).thenReturn(keycloakContext);
@@ -130,6 +135,7 @@ public class EmailAuthenticatorTest {
 
 		authenticator.action(context);
 
+		verify(event).error(EmailAuthenticator.INVALID_EMAIL_CODE);
 		verify(context).failureChallenge(eq(AuthenticationFlowError.INVALID_CREDENTIALS), any());
 	}
 
@@ -144,6 +150,7 @@ public class EmailAuthenticatorTest {
 
 		authenticator.action(context);
 
+		verify(event).error(EmailAuthenticator.EXPIRED_EMAIL_CODE);
 		verify(context).failureChallenge(eq(AuthenticationFlowError.EXPIRED_CODE), any());
 	}
 
