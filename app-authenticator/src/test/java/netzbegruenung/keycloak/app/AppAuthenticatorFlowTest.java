@@ -195,6 +195,30 @@ public class AppAuthenticatorFlowTest {
 	}
 
 	@Test
+	public void responseAfterLoginRestartReportsError() throws Exception {
+		AppDeviceSimulator device = registerDevice();
+		logout();
+
+		oauth.openLoginForm();
+		loginPage.fillLogin(user.getUsername(), user.getPassword());
+		loginPage.submit();
+
+		appLoginPage.assertCurrent();
+		ChallengeDto challenge = awaitChallenge(device);
+
+		// Restarting keeps the auth session but clears its user and auth notes (resetFlow)
+		appLoginPage.restartLogin();
+		loginPage.assertCurrent();
+		events.clear();
+
+		assertEquals(403, device.respond(challenge, true));
+		EventAssertion.assertError(events.poll())
+			.type(EventType.EXECUTE_ACTION_TOKEN_ERROR)
+			.error(AppAuthActionTokenHandler.APP_AUTH_CHALLENGE_OUTDATED)
+			.userId(user.getId());
+	}
+
+	@Test
 	public void reregisteringSameDeviceIdReplacesOwnCredential() throws Exception {
 		AppDeviceSimulator firstDevice = registerDevice();
 		String firstCredentialId = getAppCredentialId(user);

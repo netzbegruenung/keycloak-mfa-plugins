@@ -2,6 +2,7 @@ package netzbegruenung.keycloak.app;
 
 import org.keycloak.testframework.ui.page.AbstractLoginPage;
 import org.keycloak.testframework.ui.webdriver.ManagedWebDriver;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 
@@ -16,6 +17,9 @@ public class AppLoginPage extends AbstractLoginPage {
 	@FindBy(id = "kc-app-authentication")
 	private WebElement form;
 
+	@FindBy(id = "reset-login")
+	private WebElement resetLogin;
+
 	public AppLoginPage(ManagedWebDriver driver) {
 		super(driver);
 	}
@@ -27,5 +31,13 @@ public class AppLoginPage extends AbstractLoginPage {
 
 	public void submit() {
 		form.submit();
+	}
+
+	/**
+	 * Clicks Keycloak's "restart login" control next to the attempted username. Via JS, since in
+	 * the keycloak.v2 theme it's a button navigating in its onclick handler.
+	 */
+	public void restartLogin() {
+		((JavascriptExecutor) driver.driver()).executeScript("arguments[0].click();", resetLogin);
 	}
 }
