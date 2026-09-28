@@ -26,7 +26,7 @@
 		</form>
 	<#elseif section = "info" >
 		<#if phoneNumber?? && phoneNumber?has_content>
-			<#assign maskedPhone = phoneNumber[0..2] + phoneNumber[3..phoneNumber?length-5]?replace(".", "*") + phoneNumber[phoneNumber?length-4..]>
+			<#assign maskedPhone = phoneNumber?replace(".(?=.{4})", "*", "r")>
 			${msg("smsAuthInstructionWithPhone", maskedPhone)}
 		<#else>
 			${msg("smsAuthInstruction")}
