@@ -107,7 +107,7 @@ The `Signature` header is used to authenticate requests. It contains a signature
 **Components:**
 
 *   `keyId`: The device ID (authenticator ID) used to identify the key on the server.
-*   `created`: A timestamp indicating when the signature was created to prevent replay attacks.
+*   `created`: A Unix timestamp in milliseconds indicating when the signature was created to prevent replay attacks. It is part of the signed data. Keycloak rejects signatures created more than 60 seconds in the past or more than 10 seconds in the future, so the device clock must be roughly in sync.
 *   `secret` (optional): The challenge value to be signed.
 *   `granted` (optional): A boolean indicating whether the login attempt was granted or not. This is part of the signed data.
     **Note:** `secret` and `granted` must be used when confirming login attempts (e.g., when calling the Reply Challenge Endpoint) and must not be present when fetching challenges.
@@ -186,7 +186,7 @@ The signature is not used for authentication here but rather for a **consistency
 ##### Responses
 
 -   `2xx` Login challenge dtos as array
--   `400 Bad Request` the `Signature` header has a wrong format
+-   `400 Bad Request` the `Signature` header has a wrong format, or its `created` timestamp is expired or in the future
 -   `401 Unauthorized` The `Signature` header is missing or verification failed
 -   `412 Precondition Failed` The referenced `kid` (authenticator ID) in the signature token does not exist
 
@@ -296,7 +296,7 @@ GET /realms/{realmId}/login-actions/action-token
 
 -   `400 Bad Request` Missing or invalid request parameters. This includes:
     -   parsing of the JWT failed (invalid format)
-    -   the `Signature` header has a wrong format
+    -   the `Signature` header has a wrong format, or its `created` timestamp is expired or in the future
 -   `401 Unauthorized`
     -   The `Signature` header is missing or signature verification failed
     -   The required JWT in query parameter `key` is expired or verification of the JWT failed in any other form (missing claims, invalid signature)
@@ -330,6 +330,6 @@ PUT /realms/{realmId}/app-authenticators/{authenticatorId}/credentials
 ##### Responses
 
 -   `204 No Content` The device push ID was successfully updated
--   `400 Bad Request` the `Signature` header has a wrong format or the request body is invalid
+-   `400 Bad Request` the `Signature` header has a wrong format, its `created` timestamp is expired or in the future, or the request body is invalid
 -   `401 Unauthorized` The `Signature` header is missing or verification failed
 -   `412 Precondition Failed` The referenced `kid` (authenticator ID) in the signature token does not exist
