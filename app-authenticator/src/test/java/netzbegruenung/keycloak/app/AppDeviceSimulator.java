@@ -15,7 +15,7 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.Signature;
 import java.util.Base64;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -104,7 +104,7 @@ final class AppDeviceSimulator {
 	private int respond(ChallengeDto challenge, boolean signedGranted, boolean sentGranted) throws IOException, InterruptedException {
 		String created = String.valueOf(System.currentTimeMillis());
 
-		Map<String, String> signedDataMap = new HashMap<>();
+		Map<String, String> signedDataMap = new LinkedHashMap<>();
 		signedDataMap.put("created", created);
 		signedDataMap.put("secret", challenge.codeChallenge());
 		signedDataMap.put("granted", String.valueOf(signedGranted));
@@ -131,7 +131,7 @@ final class AppDeviceSimulator {
 
 	private String identitySignatureHeader() {
 		String created = String.valueOf(System.currentTimeMillis());
-		Map<String, String> signedDataMap = new HashMap<>();
+		Map<String, String> signedDataMap = new LinkedHashMap<>();
 		signedDataMap.put("created", created);
 		String signedData = AuthenticationUtil.getSignatureString(signedDataMap);
 
