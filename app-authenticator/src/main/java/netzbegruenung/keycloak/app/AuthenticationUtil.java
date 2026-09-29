@@ -20,6 +20,10 @@ public class AuthenticationUtil {
 	private static final Logger logger = Logger.getLogger(AuthenticationUtil.class);
 	private static final Splitter.MapSplitter signatureMapSplitter = Splitter.on(",").withKeyValueSeparator(":");
 	public static final String SIGNATURE_HEADER = "Signature";
+	// Tolerated clock skew of a device whose clock runs ahead
+	private static final long MAX_CREATED_FUTURE_MILLIS = 10_000;
+	// Lifetime of a signature: without it, a captured Signature header could be replayed indefinitely
+	public static final long MAX_CREATED_AGE_MILLIS = 60_000;
 
 	public static Map<String, String> getSignatureMap(List<String> signatureHeaders) {
 		if (signatureHeaders.isEmpty()) {
@@ -45,8 +49,14 @@ public class AuthenticationUtil {
 		}
 
 		try {
-			if (Long.parseLong(signatureMap.get("created")) > Time.currentTimeMillis() + 1000 * 10) {
+			long created = Long.parseLong(signatureMap.get("created"));
+			long now = Time.currentTimeMillis();
+			if (created > now + MAX_CREATED_FUTURE_MILLIS) {
 				logger.warnf("Failed to parse signature header: created is in the future device ID [%s]", signatureMap.get("keyId"));
+				return null;
+			}
+			if (created < now - MAX_CREATED_AGE_MILLIS) {
+				logger.warnf("Failed to parse signature header: created is expired device ID [%s]", signatureMap.get("keyId"));
 				return null;
 			}
 		} catch (NumberFormatException e) {

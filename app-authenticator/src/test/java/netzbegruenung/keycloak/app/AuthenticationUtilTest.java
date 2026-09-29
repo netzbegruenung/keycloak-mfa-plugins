@@ -88,6 +88,14 @@ class AuthenticationUtilTest {
 	}
 
 	@Test
+	void getSignatureMapReturnsNullWhenCreatedIsExpired() {
+		long expired = System.currentTimeMillis() - AuthenticationUtil.MAX_CREATED_AGE_MILLIS - 1_000;
+		assertNull(AuthenticationUtil.getSignatureMap(
+			List.of("signature:c2ln,keyId:device-1,created:" + expired)
+		));
+	}
+
+	@Test
 	void getSignatureMapReturnsNullWhenCreatedIsNotANumber() {
 		assertNull(AuthenticationUtil.getSignatureMap(
 			List.of("signature:c2ln,keyId:device-1,created:not-a-number")
