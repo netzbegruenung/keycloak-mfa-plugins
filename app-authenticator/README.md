@@ -113,6 +113,14 @@ The `Signature` header is used to authenticate requests. It contains a signature
     **Note:** `secret` and `granted` must be used when confirming login attempts (e.g., when calling the Reply Challenge Endpoint) and must not be present when fetching challenges.
 *   `signature`: The Base64-encoded signature of the concatenated values. The exact set of values to be signed depends on the endpoint being called.
 
+**Signed data:** `key:value` pairs joined with `,`, in exactly this order:
+
+| Endpoint                     | Signed data                                           |
+| ---------------------------- | ----------------------------------------------------- |
+| Get challenges (sync, async) | `created:<created>`                                   |
+| Reply challenge              | `created:<created>,secret:<secret>,granted:<granted>` |
+| Update device push ID        | `created:<created>`                                   |
+
 **Example:**
 
 ```

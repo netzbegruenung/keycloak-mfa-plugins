@@ -23,7 +23,7 @@ import org.keycloak.services.messages.Messages;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 import jakarta.ws.rs.core.Response;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAuthActionToken> {
@@ -94,7 +94,8 @@ public class AppAuthActionTokenHandler extends AbstractActionTokenHandler<AppAut
 
 		AppCredentialData appCredentialData = AppCredentialModel.createFromCredentialModel(appCredentialModel).getAppCredentialData();
 
-		Map<String, String> signatureStringMap = new HashMap<>();
+		// Explicit order, the device signs exactly this string. It matches the order of the former HashMap.
+		Map<String, String> signatureStringMap = new LinkedHashMap<>();
 		signatureStringMap.put("created", signatureMap.get("created"));
 		signatureStringMap.put("secret", secret);
 		signatureStringMap.put("granted", signatureMap.get("granted"));
