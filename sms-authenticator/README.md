@@ -23,8 +23,8 @@ from the original authenticator provider [documentation](https://www.keycloak.or
 1. Go to `/admin/master/console/#/realm/authentication/required-actions` and enable required actions "Phone Validation" and "Update Mobile Number"
 1. Navigate to your Authentication flow configuration: https://keycloak.example.com/admin/master/console/#/YOUR-REALM/authentication. Then edit the `Browser flow`.
 1. Add a new step next to the `OTP Form` step. Choose the `SMS Authentication (2FA)` authenticator and set it to `Alternative`.
-1. Make sure that you name the Alias `sms-2fa`. This is currently a hack that will hopefully be fixed. Additional executions with other names can be added. But this first execution will be used for the confirmation SMS when setting up a new phone number.
-1. Go into the config of the execution and configure the plugin so that it works with the API of your SMS proivder HTTP API. The data is always sent in a HTTP POST request. Refer to the API documentation of your provider to choose the correct configuration values. The details of the request can be configured with the following configuration options:
+1. Prefer configuring SMS on the required action "Update Mobile Number" (gear / settings). That config is used for phone registration SMS and as the default for login SMS. Legacy: you can still use an authenticator config with alias `sms-2fa`; if the required-action SMS API URL and Simulation mode settings are left empty/untouched, registration still uses `sms-2fa`. Optionally, a config on the SMS Authentication (2FA) execution can override settings for login only. On the required action, Simulation mode defaults to off (the authenticator execution still defaults to on).
+1. Configure the plugin so that it works with the API of your SMS proivder HTTP API. The data is always sent in a HTTP POST request. Refer to the API documentation of your provider to choose the correct configuration values. The details of the request can be configured with the following configuration options:
    1. `SMS API URL`: the URL to which the HTTP POST request should be sent.
    1. `URL encode data`: When off, the data will be sent as an `application/json` body. When on, the data will be encoded as URL parameters.
    1. `Put API Secret Token in Authorization Header`: If set, API Secret will be sent as Authorization Header, 'API Secret Token Attribute' and 'Basic Auth Username' will be ignored.
@@ -44,7 +44,7 @@ After successfully configured the authenticator and the required actions users c
 account console `/realms/realm/account/#/account-security/signing-in` by entering and confirming their phone number.
 
 # Enforce SMS 2FA
-If the option `Force 2FA` in the SMS Authenticator config is enabled and a user has no other 2FA method already enabled,
+If the option `Force 2FA` in the SMS config (on the required action or the authenticator/`sms-2fa` config) is enabled and a user has no other 2FA method already enabled,
 users will have to set up the SMS Authenticator.
 
 # Testing
