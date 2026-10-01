@@ -12,17 +12,32 @@
 					<input type="number" min="0" inputmode="numeric" pattern="[0-9]*" id="code" name="code" class="${properties.kcInputClass!}" autocomplete="off" autofocus />
 				</div>
 			</div>
+			<#if smsEnrollment??>
+			<div class="pf-v5-c-form__group pf-m-action">
+				<div class="pf-v5-c-form__actions" style="display:flex; gap:0.5rem; width:100%">
+					<button type="submit" class="${properties.kcButtonClass!} ${properties.kcButtonDefaultClass!} ${properties.kcButtonLargeClass!}" name="sms-action" value="change-number" style="flex:1 1 0; min-width:0">${msg("smsAuthChangeNumber")}</button>
+					<button type="submit" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonLargeClass!}" name="login" style="flex:1 1 0; min-width:0">${msg("doSubmit")}</button>
+				</div>
+			</div>
 			<div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
 				<div id="kc-form-options" class="${properties.kcFormOptionsClass!}">
 					<div class="${properties.kcFormOptionsWrapperClass!}">
 						<span><a href="/realms/${realm.name}/account">${msg("backToApplication")?no_esc}</a></span>
 					</div>
 				</div>
-
+			</div>
+			<#else>
+			<div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
+				<div id="kc-form-options" class="${properties.kcFormOptionsClass!}">
+					<div class="${properties.kcFormOptionsWrapperClass!}">
+						<span><a href="/realms/${realm.name}/account">${msg("backToApplication")?no_esc}</a></span>
+					</div>
+				</div>
 				<div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
 					<input name="login" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("doSubmit")}"/>
 				</div>
 			</div>
+			</#if>
 		</form>
 	<#elseif section = "info" >
 		<#if phoneNumber?? && phoneNumber?has_content>
