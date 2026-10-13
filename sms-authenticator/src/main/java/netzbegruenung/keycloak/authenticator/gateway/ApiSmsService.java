@@ -40,6 +40,7 @@ public class ApiSmsService implements SmsService{
 
 	private static final Logger logger = Logger.getLogger(SmsServiceFactory.class);
 	private static final Pattern plusPrefixPattern = Pattern.compile("\\+");
+	private static final Pattern nonDigitPattern = Pattern.compile("[^0-9+]");
 
 	private final String apiurl;
 	private final Boolean urlencode;
@@ -67,6 +68,8 @@ public class ApiSmsService implements SmsService{
 
 	private final boolean stripPlusPrefix;
 
+	private final boolean stripFormattingCharacters;
+
 	ApiSmsService(Map<String, String> config) {
 		apiurl = config.get("apiurl");
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
@@ -93,9 +96,14 @@ public class ApiSmsService implements SmsService{
 		getUrl = config.getOrDefault("getUrl", "");
 
 		stripPlusPrefix = Boolean.parseBoolean(config.getOrDefault("stripPlusPrefix", "false"));
+
+		stripFormattingCharacters = Boolean.parseBoolean(config.getOrDefault("stripFormattingCharacters", "true"));
 	}
 
 	public void send(String phoneNumber, String message) {
+		if (stripFormattingCharacters) {
+			phoneNumber = removeFormattingCharacters(phoneNumber);
+		}
 		phoneNumber = cleanPhoneNumber(phoneNumber, countrycode);
 		if (stripPlusPrefix && phoneNumber.startsWith("+")) {
 			phoneNumber = phoneNumber.substring(1);
@@ -232,6 +240,22 @@ public class ApiSmsService implements SmsService{
 		String authString = apiuser + ':' + apitoken;
 		String b64_cred = Base64.getEncoder().encodeToString(authString.getBytes());
 		return "Basic " + b64_cred;
+	}
+
+	private static String removeFormattingCharacters(String phone_number) {
+		/*
+		 * Remove everything that is not a digit or a plus sign, e.g. spaces, non-breaking spaces,
+		 * dashes and parentheses. Numbers taken from a user attribute never pass through the phone
+		 * number required action, so this is the only place that sees every send path.
+		 */
+		if (phone_number == null) {
+			return null;
+		}
+		String stripped = nonDigitPattern.matcher(phone_number).replaceAll("");
+		if (!stripped.equals(phone_number)) {
+			logger.infof("Clean phone number: stripped formatting characters, set phone number to %s", stripped);
+		}
+		return stripped;
 	}
 
 	private static String cleanPhoneNumber(String phone_number, String countrycode) {
