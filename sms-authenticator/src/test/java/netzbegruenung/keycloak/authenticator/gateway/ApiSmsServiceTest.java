@@ -175,4 +175,34 @@ class ApiSmsServiceTest {
 
 		assertEquals("+49176123456", parseFormData(awaitRequest().body()).get("to"));
 	}
+
+	@Test
+	@DisplayName("cleanPhoneNumber: 0043... with default +49 is normalised to +43...")
+	void cleanPhoneNumberKeepsForeignCountryCodeAfterInternationalPrefix() throws Exception {
+		ApiSmsService service = newService(Map.of("urlencode", "true", "countrycode", "+49"));
+
+		service.send("00436641234567", "code");
+
+		assertEquals("+436641234567", parseFormData(awaitRequest().body()).get("to"));
+	}
+
+	@Test
+	@DisplayName("cleanPhoneNumber: national number without trunk prefix gets the default country code")
+	void cleanPhoneNumberAddsCountryCodeWithoutTrunkPrefix() throws Exception {
+		ApiSmsService service = newService(Map.of("urlencode", "true", "countrycode", "+1"));
+
+		service.send("2025550123", "code");
+
+		assertEquals("+12025550123", parseFormData(awaitRequest().body()).get("to"));
+	}
+
+	@Test
+	@DisplayName("cleanPhoneNumber: stripPlusPrefix is applied after normalisation")
+	void cleanPhoneNumberWithStripPlusPrefix() throws Exception {
+		ApiSmsService service = newService(Map.of("urlencode", "true", "countrycode", "+43", "stripPlusPrefix", "true"));
+
+		service.send("06641234567", "code");
+
+		assertEquals("436641234567", parseFormData(awaitRequest().body()).get("to"));
+	}
 }

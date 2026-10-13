@@ -38,6 +38,8 @@ from the original authenticator provider [documentation](https://www.keycloak.or
    1. `Use message UUID`: If your API requires UUID for a message, you can generate it with this property.
    2. `UUID attribute`: The attribute that contains the generated UUID. Only aplicable when `Use message UUID` is set.
    3. `Request JSON template`: If default JSON template is not enough for your needs, put your custom template here. UUID (if 'Use message UUID' is set), phone number and message (in that order) use placeholders `%s`.
+   1. `Default country prefix`: If set, phone numbers are converted to the international format (`+<country code><number>`) before sending, using the dialing rules of this country (e.g. with `+49`, `0176…` and `0049176…` become `+49176…`, `0043…` becomes `+43…`). If empty, phone numbers are sent as stored.
+   1. `Strip + from phone number`: Enable if your SMS API expects the international format without the leading `+`.
 
 # Usage
 After successfully configured the authenticator and the required actions users can set up SMS Authentication in the

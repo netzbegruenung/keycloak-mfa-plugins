@@ -34,12 +34,10 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 public class ApiSmsService implements SmsService{
 
 	private static final Logger logger = Logger.getLogger(SmsServiceFactory.class);
-	private static final Pattern plusPrefixPattern = Pattern.compile("\\+");
 
 	private final String apiurl;
 	private final Boolean urlencode;
@@ -96,7 +94,7 @@ public class ApiSmsService implements SmsService{
 	}
 
 	public void send(String phoneNumber, String message) {
-		phoneNumber = cleanPhoneNumber(phoneNumber, countrycode);
+		phoneNumber = PhoneNumberNormalizer.toE164(phoneNumber, countrycode);
 		if (stripPlusPrefix && phoneNumber.startsWith("+")) {
 			phoneNumber = phoneNumber.substring(1);
 		}
@@ -232,39 +230,5 @@ public class ApiSmsService implements SmsService{
 		String authString = apiuser + ':' + apitoken;
 		String b64_cred = Base64.getEncoder().encodeToString(authString.getBytes());
 		return "Basic " + b64_cred;
-	}
-
-	private static String cleanPhoneNumber(String phone_number, String countrycode) {
-		/*
-		 * This function tries to correct several common user errors. If there is no default country
-		 * prefix, this function does not dare to touch the phone number.
-		 * https://en.wikipedia.org/wiki/List_of_mobile_telephone_prefixes_by_country
-		 */
-		if (countrycode == null || countrycode.isEmpty()) {
-			logger.infof("Clean phone number: no country code set, return %s", phone_number);
-			return phone_number;
-		}
-		String country_number = plusPrefixPattern.matcher(countrycode).replaceFirst("");
-		// convert 49 to +49
-		if (phone_number.startsWith(country_number)) {
-			phone_number = phone_number.replaceFirst(country_number, countrycode);
-			logger.infof("Clean phone number: convert 49 to +49, set phone number to %s", phone_number);
-		}
-		// convert 0049 to +49
-		if (phone_number.startsWith("00" + country_number)) {
-			phone_number = phone_number.replaceFirst("00" + country_number, countrycode);
-			logger.infof("Clean phone number: convert 0049 to +49, set phone number to %s", phone_number);
-		}
-		// convert +490176 to +49176
-		if (phone_number.startsWith(countrycode + '0')) {
-			phone_number = phone_number.replaceFirst("\\+" + country_number + '0', countrycode);
-			logger.infof("Clean phone number: convert +490176 to +49176, set phone number to %s", phone_number);
-		}
-		// convert 0 to +49
-		if (phone_number.startsWith("0")) {
-			phone_number = phone_number.replaceFirst("0", countrycode);
-			logger.infof("Clean phone number: convert 0 to +49, set phone number to %s", phone_number);
-		}
-		return phone_number;
 	}
 }
