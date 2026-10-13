@@ -26,7 +26,7 @@
 		<maven.shade.version>3.6.2</maven.shade.version>
 		<maven.surefire.version>3.6.0</maven.surefire.version>
 		<!-- keep in sync with the version used by keycloak -->
-		<quarkus.version>3.27.3</quarkus.version>
+		<quarkus.version>3.40.1</quarkus.version>
 	</properties>
 
 	<dependencyManagement>
