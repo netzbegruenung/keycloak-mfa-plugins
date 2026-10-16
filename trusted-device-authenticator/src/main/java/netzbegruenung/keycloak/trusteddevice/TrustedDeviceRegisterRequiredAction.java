@@ -162,13 +162,16 @@ public class TrustedDeviceRegisterRequiredAction implements RequiredActionProvid
         if (trustedDevice) {
             event.event(EventType.UPDATE_CREDENTIAL);
             event.detail(Details.CREDENTIAL_TYPE, TrustedDeviceCredentialModel.TYPE);
-            String deviceName = context.getAuthenticationSession().getAuthNote(AUTH_NOTE_TRUSTED_DEVICE_NAME);
-            if (deviceName == null) {
-                DeviceRepresentation deviceRepresentation = context
-                        .getSession()
-                        .getProvider(DeviceRepresentationProvider.class)
-                        .deviceRepresentation();
-                deviceName = createDeviceName(deviceRepresentation);
+            String deviceName = formParameters.getFirst(AUTH_NOTE_TRUSTED_DEVICE_NAME);
+            if (deviceName == null || deviceName.isBlank()) {
+                deviceName = context.getAuthenticationSession().getAuthNote(AUTH_NOTE_TRUSTED_DEVICE_NAME);
+                if (deviceName == null) {
+                    DeviceRepresentation deviceRepresentation = context
+                            .getSession()
+                            .getProvider(DeviceRepresentationProvider.class)
+                            .deviceRepresentation();
+                    deviceName = createDeviceName(deviceRepresentation);
+                }
             }
             long durationInDays = parseDurationDays(context.getConfig().getConfigValue(CONF_DURATION, String.valueOf(DEFAULT_DURATION_DAYS)));
             long durationInSeconds = durationInDays * 24 * 60 * 60;

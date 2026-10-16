@@ -29,7 +29,17 @@ public class TrustedDeviceRegisterPage extends AbstractLoginPage {
         trustButton.click();
     }
 
+    public void confirmDeviceWithName(String name) {
+        deviceName.clear();
+        deviceName.sendKeys(name);
+        trustButton.click();
+    }
+
     public void rejectDevice() {
         rejectButton.click();
+    }
+
+    public String getDeviceName() {
+        return deviceName.getDomProperty("value");
     }
 }
