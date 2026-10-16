@@ -12,3 +12,4 @@ dependency-reduced-pom.xml
 h2db/*.db
 
 testing/backfill/jars/
+dist/
