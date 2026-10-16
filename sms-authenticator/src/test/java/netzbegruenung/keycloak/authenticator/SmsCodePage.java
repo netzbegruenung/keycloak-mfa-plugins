@@ -2,6 +2,7 @@ package netzbegruenung.keycloak.authenticator;
 
 import org.keycloak.testframework.ui.page.AbstractLoginPage;
 import org.keycloak.testframework.ui.webdriver.ManagedWebDriver;
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 
@@ -15,8 +16,11 @@ public class SmsCodePage extends AbstractLoginPage {
 	@FindBy(id = "code")
 	private WebElement codeInput;
 
-	@FindBy(css = "#kc-sms-code-login-form input[type='submit']")
+	@FindBy(css = "#kc-sms-code-login-form [name='login']")
 	private WebElement submitButton;
+
+	@FindBy(css = "button[name='sms-action'][value='change-number']")
+	private WebElement changeNumberButton;
 
 	public SmsCodePage(ManagedWebDriver driver) {
 		super(driver);
@@ -34,5 +38,13 @@ public class SmsCodePage extends AbstractLoginPage {
 
 	public void submit() {
 		submitButton.click();
+	}
+
+	public void changeNumber() {
+		changeNumberButton.click();
+	}
+
+	public boolean hasChangeNumber() {
+		return !driver.driver().findElements(By.cssSelector("button[name='sms-action'][value='change-number']")).isEmpty();
 	}
 }

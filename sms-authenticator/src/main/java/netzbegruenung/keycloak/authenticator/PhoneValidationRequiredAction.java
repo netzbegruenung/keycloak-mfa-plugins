@@ -46,6 +46,9 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 	private static final Logger logger = Logger.getLogger(PhoneValidationRequiredAction.class);
 	public static final String PROVIDER_ID = "phone_validation_config";
 
+	private static final String FORM_ACTION = "sms-action";
+	private static final String ACTION_CHANGE_NUMBER = "change-number";
+
 	@Override
 	public void evaluateTriggers(RequiredActionContext context) {
 	}
@@ -78,10 +81,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
 
-			Response challenge = context.form()
-				.setAttribute("realm", realm)
-				.createForm(SmsAuthenticator.TPL_CODE);
-			context.challenge(challenge);
+			context.challenge(createCodeForm(context, null));
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			context.failure();
@@ -90,6 +90,11 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 	@Override
 	public void processAction(RequiredActionContext context) {
+		if (ACTION_CHANGE_NUMBER.equals(context.getHttpRequest().getDecodedFormParameters().getFirst(FORM_ACTION))) {
+			handleChangeNumber(context);
+			return;
+		}
+
 		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst("code");
 
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
@@ -125,6 +130,27 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 		}
 	}
 
+	private void handleChangeNumber(RequiredActionContext context) {
+		AuthenticationSessionModel authSession = context.getAuthenticationSession();
+		authSession.removeAuthNote("code");
+		authSession.removeAuthNote("ttl");
+		authSession.removeAuthNote("mobile_number");
+		authSession.addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
+		logger.infof("SMS enrollment: user %s requested a phone number change", context.getUser().getUsername());
+		context.success();
+	}
+
+	private Response createCodeForm(RequiredActionContext context, String error) {
+		var form = context.form()
+			.setAttribute("realm", context.getRealm())
+			.setAttribute("smsEnrollment", true)
+			.setAttribute("phoneNumber", context.getAuthenticationSession().getAuthNote("mobile_number"));
+		if (error != null) {
+			form = form.setError(error);
+		}
+		return form.createForm(SmsAuthenticator.TPL_CODE);
+	}
+
 	private void handlePhoneToAttribute(RequiredActionContext context, String mobileNumber) {
 		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
 		if (config == null) {
@@ -137,12 +163,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 	}
 
 	private void handleInvalidSmsCode(RequiredActionContext context) {
-		Response challenge = context
-			.form()
-			.setAttribute("realm", context.getRealm())
-			.setError("smsAuthCodeInvalid")
-			.createForm(SmsAuthenticator.TPL_CODE);
-		context.challenge(challenge);
+		context.challenge(createCodeForm(context, "smsAuthCodeInvalid"));
 	}
 
 	@Override
