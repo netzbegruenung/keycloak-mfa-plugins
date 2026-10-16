@@ -16,6 +16,7 @@
 		<module>enforce-mfa</module>
 		<module>trusted-device-authenticator</module>
 		<module>mfa-dev-runner</module>
+		<module>yubikey-authenticator</module>
 	</modules>
 
 	<properties>
