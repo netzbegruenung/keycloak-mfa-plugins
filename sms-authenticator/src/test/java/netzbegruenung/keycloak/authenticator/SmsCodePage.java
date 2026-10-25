@@ -2,6 +2,7 @@ package netzbegruenung.keycloak.authenticator;
 
 import org.keycloak.testframework.ui.page.AbstractLoginPage;
 import org.keycloak.testframework.ui.webdriver.ManagedWebDriver;
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 
@@ -34,5 +35,13 @@ public class SmsCodePage extends AbstractLoginPage {
 
 	public void submit() {
 		submitButton.click();
+	}
+
+	/**
+	 * The back link is removed from the markup rather than hidden with CSS, so absence is
+	 * checked by counting matches instead of via @FindBy, which would throw.
+	 */
+	public boolean hasBackToApplicationLink() {
+		return !driver.driver().findElements(By.id("backToApplication")).isEmpty();
 	}
 }

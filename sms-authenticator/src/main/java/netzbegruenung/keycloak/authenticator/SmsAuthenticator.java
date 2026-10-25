@@ -36,6 +36,7 @@ import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
+import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
@@ -60,6 +61,22 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 	// (invalid_user_credentials) and from Keycloak's own expired codes (expired_code)
 	public static final String INVALID_SMS_CODE = "invalid_sms_code";
 	public static final String EXPIRED_SMS_CODE = "expired_sms_code";
+
+	/**
+	 * Sets the attributes TPL_CODE needs besides the form specific ones. The template is
+	 * rendered from four places (here and in PhoneValidationRequiredAction), so keep this
+	 * the single point that knows about them.
+	 *
+	 * @param form		the form to add the attributes to
+	 * @param config	the sms-2fa authenticator config, may be null
+	 * @return			the same form, for chaining
+	 */
+	static LoginFormsProvider addCodeFormAttributes(LoginFormsProvider form, AuthenticatorConfigModel config) {
+		boolean hideBackToApplicationLink = config != null
+			&& config.getConfig() != null
+			&& Boolean.parseBoolean(config.getConfig().getOrDefault("hideBackToApplicationLink", "false"));
+		return form.setAttribute("hideBackToApplicationLink", hideBackToApplicationLink);
+	}
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
@@ -110,7 +127,7 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
 
-			context.challenge(context.form()
+			context.challenge(addCodeFormAttributes(context.form(), config)
 				.setAttribute("realm", realm)
 				.setAttribute("phoneNumber", mobileNumber)
 				.createForm(TPL_CODE));
@@ -150,10 +167,10 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 			// invalid
 			String mobileNumber = getMobileNumber(context);
 			context.getEvent().user(context.getUser()).error(INVALID_SMS_CODE);
-			Response challenge = context.form()
+			Response challenge = addCodeFormAttributes(context.form(), context.getAuthenticatorConfig())
 				.setAttribute("phoneNumber", mobileNumber)
 				.setError("smsAuthCodeInvalid")
-				.createForm("login-sms.ftl");
+				.createForm(TPL_CODE);
 			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
 		}
 	}
