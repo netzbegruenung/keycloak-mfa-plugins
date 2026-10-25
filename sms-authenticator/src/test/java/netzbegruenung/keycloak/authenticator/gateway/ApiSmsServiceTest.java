@@ -229,7 +229,8 @@ class ApiSmsServiceTest {
 
 		service.send("0176 123 456", "code");
 
-		assertEquals("+49176 123 456", parseFormData(awaitRequest().body()).get("to"));
+		// PhoneNumberNormalizer ignores the spaces on its own when a countrycode is configured
+		assertEquals("+49176123456", parseFormData(awaitRequest().body()).get("to"));
 	}
 
 	@Test
@@ -243,7 +244,7 @@ class ApiSmsServiceTest {
 	}
 
 	@Test
-	@DisplayName("A spaced number is stripped before cleanPhoneNumber applies the country prefix")
+	@DisplayName("A spaced number is stripped before the country prefix is applied")
 	void stripsFormattingCharactersBeforeCountryCodeNormalisation() throws Exception {
 		ApiSmsService service = newService(Map.of("urlencode", "true", "countrycode", "+49"));
 
@@ -274,5 +275,35 @@ class ApiSmsServiceTest {
 		service.send("+49 176 123 456", "code");
 
 		assertEquals("49176123456", parseFormData(awaitRequest().body()).get("to"));
+	}
+
+	@Test
+	@DisplayName("cleanPhoneNumber: 0043... with default +49 is normalised to +43...")
+	void cleanPhoneNumberKeepsForeignCountryCodeAfterInternationalPrefix() throws Exception {
+		ApiSmsService service = newService(Map.of("urlencode", "true", "countrycode", "+49"));
+
+		service.send("00436641234567", "code");
+
+		assertEquals("+436641234567", parseFormData(awaitRequest().body()).get("to"));
+	}
+
+	@Test
+	@DisplayName("cleanPhoneNumber: national number without trunk prefix gets the default country code")
+	void cleanPhoneNumberAddsCountryCodeWithoutTrunkPrefix() throws Exception {
+		ApiSmsService service = newService(Map.of("urlencode", "true", "countrycode", "+1"));
+
+		service.send("2025550123", "code");
+
+		assertEquals("+12025550123", parseFormData(awaitRequest().body()).get("to"));
+	}
+
+	@Test
+	@DisplayName("cleanPhoneNumber: stripPlusPrefix is applied after normalisation")
+	void cleanPhoneNumberWithStripPlusPrefix() throws Exception {
+		ApiSmsService service = newService(Map.of("urlencode", "true", "countrycode", "+43", "stripPlusPrefix", "true"));
+
+		service.send("06641234567", "code");
+
+		assertEquals("436641234567", parseFormData(awaitRequest().body()).get("to"));
 	}
 }

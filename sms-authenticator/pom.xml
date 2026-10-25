@@ -9,7 +9,7 @@
     <parent>
         <groupId>netzbegruenung</groupId>
         <artifactId>keycloak-mfa-tools</artifactId>
-        <version>26.7.4-3</version>
+        <version>26.8.0-1</version>
     </parent>
 
     <dependencyManagement>
@@ -58,7 +58,7 @@
 		<dependency>
 			<groupId>com.googlecode.libphonenumber</groupId>
 			<artifactId>libphonenumber</artifactId>
-			<version>9.0.40</version>
+			<version>9.0.41</version>
 		</dependency>
 		<dependency>
 			<groupId>org.keycloak.testframework</groupId>
