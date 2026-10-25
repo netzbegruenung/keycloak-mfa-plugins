@@ -177,6 +177,107 @@ class ApiSmsServiceTest {
 	}
 
 	@Test
+	@DisplayName("Formatting characters are stripped even when no countrycode is configured")
+	void stripsFormattingCharactersWithoutCountryCode() throws Exception {
+		ApiSmsService service = newService(Map.of("urlencode", "true", "countrycode", ""));
+
+		service.send("+49 (0176) 123-456", "code");
+
+		assertEquals("+490176123456", parseFormData(awaitRequest().body()).get("to"));
+	}
+
+	@Test
+	@DisplayName("stripFormattingCharacters defaults to enabled when the option is absent from the config")
+	void stripsFormattingCharactersByDefault() throws Exception {
+		Map<String, String> config = new HashMap<>();
+		config.put("apiurl", apiUrl());
+		config.put("messageattribute", "body");
+		config.put("receiverattribute", "to");
+		config.put("senderattribute", "sender");
+		config.put("senderId", "test-sender");
+		config.put("countrycode", "");
+		config.put("urlencode", "true");
+		ApiSmsService service = new ApiSmsService(config);
+
+		service.send("+49 176 123 456", "code");
+
+		assertEquals("+49176123456", parseFormData(awaitRequest().body()).get("to"));
+	}
+
+	@Test
+	@DisplayName("stripFormattingCharacters=false leaves the number untouched")
+	void keepsFormattingCharactersWhenDisabled() throws Exception {
+		ApiSmsService service = newService(Map.of(
+			"urlencode", "true",
+			"countrycode", "",
+			"stripFormattingCharacters", "false"
+		));
+
+		service.send("+49 (0176) 123-456", "code");
+
+		assertEquals("+49 (0176) 123-456", parseFormData(awaitRequest().body()).get("to"));
+	}
+
+	@Test
+	@DisplayName("stripFormattingCharacters=false does not disable the country prefix normalisation")
+	void keepsCountryCodeNormalisationWhenStrippingDisabled() throws Exception {
+		ApiSmsService service = newService(Map.of(
+			"urlencode", "true",
+			"countrycode", "+49",
+			"stripFormattingCharacters", "false"
+		));
+
+		service.send("0176 123 456", "code");
+
+		// PhoneNumberNormalizer ignores the spaces on its own when a countrycode is configured
+		assertEquals("+49176123456", parseFormData(awaitRequest().body()).get("to"));
+	}
+
+	@Test
+	@DisplayName("Non-breaking spaces are stripped as well")
+	void stripsNonBreakingSpaces() throws Exception {
+		ApiSmsService service = newService(Map.of("urlencode", "true", "countrycode", ""));
+
+		service.send("+49 176 123456", "code");
+
+		assertEquals("+49176123456", parseFormData(awaitRequest().body()).get("to"));
+	}
+
+	@Test
+	@DisplayName("A spaced number is stripped before the country prefix is applied")
+	void stripsFormattingCharactersBeforeCountryCodeNormalisation() throws Exception {
+		ApiSmsService service = newService(Map.of("urlencode", "true", "countrycode", "+49"));
+
+		service.send("0049 176 123 456", "code");
+
+		assertEquals("+49176123456", parseFormData(awaitRequest().body()).get("to"));
+	}
+
+	@Test
+	@DisplayName("Formatting characters are stripped in JSON mode too")
+	void stripsFormattingCharactersInJsonMode() throws Exception {
+		ApiSmsService service = newService(Map.of("urlencode", "false", "countrycode", ""));
+
+		service.send("+49 176 123 456", "code");
+
+		assertTrue(awaitRequest().body().contains("\"to\":\"+49176123456\""));
+	}
+
+	@Test
+	@DisplayName("stripPlusPrefix still applies after formatting characters are removed")
+	void stripsFormattingCharactersBeforeStrippingPlusPrefix() throws Exception {
+		ApiSmsService service = newService(Map.of(
+			"urlencode", "true",
+			"countrycode", "",
+			"stripPlusPrefix", "true"
+		));
+
+		service.send("+49 176 123 456", "code");
+
+		assertEquals("49176123456", parseFormData(awaitRequest().body()).get("to"));
+	}
+
+	@Test
 	@DisplayName("cleanPhoneNumber: 0043... with default +49 is normalised to +43...")
 	void cleanPhoneNumberKeepsForeignCountryCodeAfterInternationalPrefix() throws Exception {
 		ApiSmsService service = newService(Map.of("urlencode", "true", "countrycode", "+49"));
