@@ -36,8 +36,6 @@ import java.util.List;
 public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 
 	public static final String PROVIDER_ID = "mobile-number-authenticator";
-	public static final String SMS_RESEND_DEBOUNCE_SECONDS = "smsResendDebounceSeconds";
-	public static final String SMS_RESEND_DEBOUNCE_MAX_CAP_SECONDS = "smsResendDebounceMaxCapSeconds";
 	private static final SmsAuthenticator SINGLETON = new SmsAuthenticator();
 
 
@@ -76,6 +74,7 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 		return List.of(
 			new ProviderConfigProperty("length", "Code length", "The number of digits of the generated code.", ProviderConfigProperty.STRING_TYPE, 6),
 			new ProviderConfigProperty("ttl", "Time-to-live", "The time to live in seconds for the code to be valid.", ProviderConfigProperty.STRING_TYPE, "300"),
+			new ProviderConfigProperty("resendCooldown", "Resend cooldown", "Seconds a user must wait before requesting another code.", ProviderConfigProperty.STRING_TYPE, "60"),
 			new ProviderConfigProperty("senderId", "SenderId", "The sender ID is displayed as the message sender on the receiving device.", ProviderConfigProperty.STRING_TYPE, "Keycloak"),
 			new ProviderConfigProperty("simulation", "Simulation mode", "In simulation mode, the SMS won't be sent, but printed to the server logs", ProviderConfigProperty.BOOLEAN_TYPE, true),
 			new ProviderConfigProperty("countrycode", "Default country prefix", "Default country prefix that is assumed if user does not provide one.", ProviderConfigProperty.STRING_TYPE, "+49"),
@@ -106,9 +105,7 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 				+ " FIXED_LINE_OR_MOBILE, PAGER, TOLL_FREE, PREMIUM_RATE, SHARED_COST, PERSONAL_NUMBER, VOIP, UAN, VOICEMAIL.", ProviderConfigProperty.MULTIVALUED_STRING_TYPE, Collections.emptyList()),
 			new ProviderConfigProperty("forceRetryOnBadFormat", "Ask for new number if checks fail", "Sets an error message and asks the user to re-enter phone number if formatting checks are not successfully passed.", ProviderConfigProperty.BOOLEAN_TYPE, false),
 			new ProviderConfigProperty("enforcePhoneNumberUniqueness", "Enforce phone number uniqueness", "If enabled, prevents users from registering a phone number that is already in use by another user.", ProviderConfigProperty.BOOLEAN_TYPE, true),
-			new ProviderConfigProperty("countryCodeList", "List of country code", "Sets the list of country code in a select input to display to the user the supported countries. List separated by commas (ex : FR,DE,GB)", ProviderConfigProperty.STRING_TYPE, ""),
-			new ProviderConfigProperty(SMS_RESEND_DEBOUNCE_SECONDS, "SMS resend debounce (seconds)", "Phone validation: initial seconds between the 1st and 2nd SMS; the required wait doubles after each subsequent send until capped (see 'SMS resend debounce max cap'). Enforced per account, not per browser session. Use 0 to disable debouncing. Leave empty to use the built-in default of " + PhoneValidationRequiredAction.DEFAULT_DEBOUNCE_SECONDS + " seconds.", ProviderConfigProperty.STRING_TYPE, String.valueOf(PhoneValidationRequiredAction.DEFAULT_DEBOUNCE_SECONDS)),
-			new ProviderConfigProperty(SMS_RESEND_DEBOUNCE_MAX_CAP_SECONDS, "SMS resend debounce max cap (seconds)", "Phone validation: maximum seconds between consecutive SMS sends once the exponential debounce has grown. Leave empty to use the Keycloak process env " + PhoneValidationRequiredAction.ENV_DEBOUNCE_MAX_CAP_SECONDS + " (seconds), or the built-in default of " + PhoneValidationRequiredAction.FALLBACK_DEBOUNCE_MAX_CAP_SECONDS + " seconds when that env var is unset.", ProviderConfigProperty.STRING_TYPE, String.valueOf(PhoneValidationRequiredAction.FALLBACK_DEBOUNCE_MAX_CAP_SECONDS))
+			new ProviderConfigProperty("countryCodeList", "List of country code", "Sets the list of country code in a select input to display to the user the supported countries. List separated by commas (ex : FR,DE,GB)", ProviderConfigProperty.STRING_TYPE, "")
 		);
 	}
 

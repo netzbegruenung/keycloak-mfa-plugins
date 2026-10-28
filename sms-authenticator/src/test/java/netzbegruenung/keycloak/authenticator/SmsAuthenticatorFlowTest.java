@@ -43,6 +43,7 @@ import java.util.regex.Pattern;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -233,6 +234,89 @@ public class SmsAuthenticatorFlowTest {
 				.userId(user.getId());
 		} finally {
 			SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("ttl", "300"));
+		}
+	}
+
+	@Test
+	public void resendDuringLoginSendsNewCodeWithoutFailedAttempt() throws Exception {
+		registerPhoneNumber();
+		logout();
+		events.clear();
+
+		SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("resendCooldown", "0"));
+		try {
+			oauth.openLoginForm();
+			loginPage.fillLogin(user.getUsername(), user.getPassword());
+			loginPage.submit();
+
+			smsCodePage.assertCurrent();
+			awaitSmsCode();
+			smsCodePage.resend();
+
+			smsCodePage.assertCurrent();
+			smsCodePage.enterCode(awaitSmsCode());
+			smsCodePage.submit();
+
+			// A LOGIN_ERROR from the resend would be polled first.
+			EventAssertion.assertSuccess(events.poll())
+				.type(EventType.LOGIN)
+				.userId(user.getId());
+		} finally {
+			SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("resendCooldown", "60"));
+		}
+	}
+
+	@Test
+	public void resendWithinCooldownKeepsCurrentCode() throws Exception {
+		registerPhoneNumber();
+		logout();
+		events.clear();
+
+		oauth.openLoginForm();
+		loginPage.fillLogin(user.getUsername(), user.getPassword());
+		loginPage.submit();
+
+		smsCodePage.assertCurrent();
+		String code = awaitSmsCode();
+		smsCodePage.resend();
+
+		smsCodePage.assertCurrent();
+		assertTrue(driver.driver().getPageSource().contains("Please wait"), "Expected the cooldown message");
+		assertNull(smsRequestBodies.poll(2, TimeUnit.SECONDS), "Expected no SMS during the cooldown");
+
+		smsCodePage.enterCode(code);
+		smsCodePage.submit();
+
+		EventAssertion.assertSuccess(events.poll())
+			.type(EventType.LOGIN)
+			.userId(user.getId());
+	}
+
+	@Test
+	public void resendDuringPhoneValidationSendsNewCode() throws Exception {
+		SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("resendCooldown", "0"));
+		try {
+			oauth.openLoginForm();
+			loginPage.fillLogin(user.getUsername(), user.getPassword());
+			loginPage.submit();
+
+			phoneNumberSetupPage.assertCurrent();
+			phoneNumberSetupPage.enterPhoneNumber("+491234567");
+			phoneNumberSetupPage.submit();
+
+			smsCodePage.assertCurrent();
+			awaitSmsCode();
+			smsCodePage.resend();
+
+			smsCodePage.assertCurrent();
+			smsCodePage.enterCode(awaitSmsCode());
+			smsCodePage.submit();
+
+			assertTrue(managedRealm.admin().users().get(user.getId()).credentials().stream()
+				.anyMatch(credential -> "mobile-number".equals(credential.getType())),
+				"Expected a mobile-number credential after phone number setup");
+		} finally {
+			SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("resendCooldown", "60"));
 		}
 	}
 
