@@ -255,6 +255,8 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		}
 
 		authSession.setAuthNote("mobile_number", mobileNumber);
+		// A code sent to an earlier number must not verify this one.
+		SmsAuthenticator.clearCode(authSession);
 		logger.infof("Add required action for phone validation: [%s], user: %s", mobileNumber, context.getUser().getUsername());
 		context.getAuthenticationSession().addRequiredAction(PhoneValidationRequiredAction.PROVIDER_ID);
 		context.success();

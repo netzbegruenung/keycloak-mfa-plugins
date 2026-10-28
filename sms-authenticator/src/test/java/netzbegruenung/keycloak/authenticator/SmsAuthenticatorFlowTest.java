@@ -26,7 +26,6 @@ import org.keycloak.testframework.server.KeycloakServerConfigBuilder;
 import org.keycloak.testframework.server.KeycloakUrls;
 import org.keycloak.testframework.ui.annotations.InjectPage;
 import org.keycloak.testframework.ui.annotations.InjectWebDriver;
-import org.keycloak.testframework.ui.page.ErrorPage;
 import org.keycloak.testframework.ui.page.LoginPage;
 import org.keycloak.testframework.ui.webdriver.ManagedWebDriver;
 
@@ -42,6 +41,8 @@ import java.util.regex.Pattern;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -82,9 +83,6 @@ public class SmsAuthenticatorFlowTest {
 
 	@InjectPage
 	SmsCodePage smsCodePage;
-
-	@InjectPage
-	ErrorPage errorPage;
 
 	@InjectKeycloakUrls
 	KeycloakUrls keycloakUrls;
@@ -205,56 +203,94 @@ public class SmsAuthenticatorFlowTest {
 	}
 
 	@Test
-	public void expiredSmsCodeIsRejected() throws Exception {
+	public void expiredCodeCanBeReplacedByResend() throws Exception {
 		registerPhoneNumber();
 		logout();
-		events.clear();
 
-		SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("ttl", "2"));
+		SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("ttl", "2", "resendCooldown", "0"));
 		try {
-			oauth.openLoginForm();
-			loginPage.fillLogin(user.getUsername(), user.getPassword());
-			loginPage.submit();
-
-			smsCodePage.assertCurrent();
-			String code = awaitSmsCode();
-
+			String code = loginUntilSmsCode();
 			Thread.sleep(3000);
 
 			smsCodePage.enterCode(code);
 			smsCodePage.submit();
 
-			// SmsAuthenticator.action() treats an expired code as a terminal failure
-			// (createErrorPage), unlike a wrong code which re-challenges the same form.
-			errorPage.assertCurrent();
-			assertTrue(errorPage.getError().contains("expired"), "Expected an expiry error, got: " + errorPage.getError());
+			// Stays on the form, so the user can resend instead of starting over.
+			smsCodePage.assertCurrent();
+			assertPageContains("expired");
 			EventAssertion.assertError(events.poll())
 				.type(EventType.LOGIN_ERROR)
 				.error(SmsAuthenticator.EXPIRED_SMS_CODE)
 				.userId(user.getId());
+
+			smsCodePage.resend();
+			String newCode = awaitSmsCode();
+			events.clear();
+			smsCodePage.enterCode(newCode);
+			smsCodePage.submit();
+
+			EventAssertion.assertSuccess(events.poll())
+				.type(EventType.LOGIN)
+				.userId(user.getId());
 		} finally {
-			SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("ttl", "300"));
+			SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("ttl", "300", "resendCooldown", "60"));
 		}
 	}
 
 	@Test
-	public void resendDuringLoginSendsNewCodeWithoutFailedAttempt() throws Exception {
+	public void tooManyWrongCodesInvalidateTheCode() throws Exception {
 		registerPhoneNumber();
 		logout();
-		events.clear();
+
+		String code = loginUntilSmsCode();
+		String wrongCode = "000000".equals(code) ? "111111" : "000000";
+		for (int i = 0; i < 5; i++) {
+			smsCodePage.enterCode(wrongCode);
+			smsCodePage.submit();
+		}
+		assertPageContains("Too many");
+
+		smsCodePage.enterCode(code);
+		smsCodePage.submit();
+
+		smsCodePage.assertCurrent();
+		assertPageContains("expired");
+	}
+
+	@Test
+	public void reloadDoesNotSendAnotherSms() throws Exception {
+		registerPhoneNumber();
+		logout();
+
+		String code = loginUntilSmsCode();
+		driver.driver().navigate().refresh();
+
+		smsCodePage.assertCurrent();
+		assertNull(smsRequestBodies.poll(2, TimeUnit.SECONDS), "Expected no SMS on reload");
+
+		smsCodePage.enterCode(code);
+		smsCodePage.submit();
+
+		EventAssertion.assertSuccess(events.poll())
+			.type(EventType.LOGIN)
+			.userId(user.getId());
+	}
+
+	@Test
+	public void resendSendsStillValidCodeAgain() throws Exception {
+		registerPhoneNumber();
+		logout();
 
 		SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("resendCooldown", "0"));
 		try {
-			oauth.openLoginForm();
-			loginPage.fillLogin(user.getUsername(), user.getPassword());
-			loginPage.submit();
-
-			smsCodePage.assertCurrent();
-			awaitSmsCode();
+			String code = loginUntilSmsCode();
 			smsCodePage.resend();
 
-			smsCodePage.assertCurrent();
-			smsCodePage.enterCode(awaitSmsCode());
+			// The same code, so an SMS that arrives late still works.
+			assertEquals(code, awaitSmsCode());
+			assertPageContains("on its way");
+
+			smsCodePage.enterCode(code);
 			smsCodePage.submit();
 
 			// A LOGIN_ERROR from the resend would be polled first.
@@ -267,21 +303,17 @@ public class SmsAuthenticatorFlowTest {
 	}
 
 	@Test
-	public void resendWithinCooldownKeepsCurrentCode() throws Exception {
+	public void resendWithinCooldownIsBlocked() throws Exception {
 		registerPhoneNumber();
 		logout();
-		events.clear();
 
-		oauth.openLoginForm();
-		loginPage.fillLogin(user.getUsername(), user.getPassword());
-		loginPage.submit();
+		String code = loginUntilSmsCode();
+		assertFalse(smsCodePage.isResendEnabled(), "Expected the resend button to wait for the cooldown");
 
+		// A client without JS can still submit it, so the server must refuse too.
+		smsCodePage.forceResend();
 		smsCodePage.assertCurrent();
-		String code = awaitSmsCode();
-		smsCodePage.resend();
-
-		smsCodePage.assertCurrent();
-		assertTrue(driver.driver().getPageSource().contains("Please wait"), "Expected the cooldown message");
+		assertPageContains("Please wait");
 		assertNull(smsRequestBodies.poll(2, TimeUnit.SECONDS), "Expected no SMS during the cooldown");
 
 		smsCodePage.enterCode(code);
@@ -293,7 +325,7 @@ public class SmsAuthenticatorFlowTest {
 	}
 
 	@Test
-	public void resendDuringPhoneValidationSendsNewCode() throws Exception {
+	public void resendDuringPhoneValidationWorks() throws Exception {
 		SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("resendCooldown", "0"));
 		try {
 			oauth.openLoginForm();
@@ -318,6 +350,21 @@ public class SmsAuthenticatorFlowTest {
 		} finally {
 			SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("resendCooldown", "60"));
 		}
+	}
+
+	private String loginUntilSmsCode() throws InterruptedException {
+		events.clear();
+		oauth.openLoginForm();
+		loginPage.fillLogin(user.getUsername(), user.getPassword());
+		loginPage.submit();
+
+		smsCodePage.assertCurrent();
+		return awaitSmsCode();
+	}
+
+	private void assertPageContains(String text) {
+		String page = driver.driver().getPageSource();
+		assertTrue(page.contains(text), "Expected \"" + text + "\" on the page");
 	}
 
 	private void registerPhoneNumber() throws InterruptedException {
