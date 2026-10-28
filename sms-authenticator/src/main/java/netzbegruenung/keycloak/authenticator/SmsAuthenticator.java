@@ -36,6 +36,7 @@ import org.keycloak.authentication.RequiredActionProvider;
 import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
+import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
@@ -45,12 +46,16 @@ import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 import org.keycloak.util.JsonSerialization;
 
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import java.util.Locale;
 import java.util.Optional;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsAuthCredentialProvider> {
 
@@ -60,21 +65,35 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 	// (invalid_user_credentials) and from Keycloak's own expired codes (expired_code)
 	public static final String INVALID_SMS_CODE = "invalid_sms_code";
 	public static final String EXPIRED_SMS_CODE = "expired_sms_code";
+	static final String RESEND = "resend";
+	// Prefixed because the email authenticator uses plain "code" and "ttl" in the same auth session.
+	static final String CODE = "sms_code";
+	static final String TTL = "sms_ttl";
+	static final String SENT_AT = "sms_sent_at";
+	static final String ATTEMPTS = "sms_attempts";
+	// Caps guessing even when the realm has brute force detection turned off (the default).
+	private static final int MAX_ATTEMPTS = 5;
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
-		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
-		KeycloakSession session = context.getSession();
-		UserModel user = context.getUser();
-		RealmModel realm = context.getRealm();
+		String mobileNumber = resolveMobileNumber(context);
+		if (mobileNumber == null) {
+			return;
+		}
+		sendCodeAndChallenge(context, mobileNumber, false);
+	}
 
-		Optional<CredentialModel> model = context.getUser().credentialManager().getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
+	private String resolveMobileNumber(AuthenticationFlowContext context) {
+		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
+		UserModel user = context.getUser();
+
+		Optional<CredentialModel> model = user.credentialManager().getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
 		String mobileNumber;
 		try {
 			mobileNumber = JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
 		} catch (IOException e1) {
 			logger.warn(e1.getMessage(), e1);
-			return;
+			return null;
 		}
 
 		// When storeInAttribute is active, the attribute is the source of truth
@@ -93,27 +112,21 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 					mobileNumberAttribute, user.getUsername());
 			}
 		}
+		return mobileNumber;
+	}
 
-		int length = Integer.parseInt(config.getConfig().get("length"));
-		int ttl = Integer.parseInt(config.getConfig().get("ttl"));
-
-		String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
-		AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		authSession.setAuthNote("code", code);
-		authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
-
+	private void sendCodeAndChallenge(AuthenticationFlowContext context, String mobileNumber, boolean resend) {
 		try {
-			Theme theme = session.theme().getTheme(Theme.Type.LOGIN);
-			Locale locale = session.getContext().resolveLocale(user);
-			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
-			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
-
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
-
-			context.challenge(context.form()
-				.setAttribute("realm", realm)
-				.setAttribute("phoneNumber", mobileNumber)
-				.createForm(TPL_CODE));
+			Map<String, String> config = context.getAuthenticatorConfig().getConfig();
+			AuthenticationSessionModel authSession = context.getAuthenticationSession();
+			long wait = sendCode(context.getSession(), context.getRealm(), context.getUser(), authSession, config, mobileNumber, resend);
+			LoginFormsProvider form = codeForm(context.form(), context.getRealm(), authSession, config, mobileNumber);
+			if (wait > 0) {
+				form.setError("smsResendCooldown", wait);
+			} else if (resend) {
+				form.setSuccess("smsAuthCodeResent");
+			}
+			context.challenge(form.createForm(TPL_CODE));
 		} catch (Exception e) {
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
 				context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
@@ -121,41 +134,120 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		}
 	}
 
+	/**
+	 * Sends the code by SMS, at most once per resend cooldown, so neither the resend button nor
+	 * reloading the page can be used to send SMS in bulk.
+	 * Returns the seconds the user must wait for a new SMS when they need to be told, otherwise 0.
+	 */
+	static long sendCode(KeycloakSession session, RealmModel realm, UserModel user, AuthenticationSessionModel authSession,
+						 Map<String, String> config, String mobileNumber, boolean resend) throws IOException {
+		String code = authSession.getAuthNote(CODE);
+		long wait = resendIn(authSession, config);
+		if (wait > 0) {
+			// A reload or a return to this step keeps the code already sent.
+			return resend || code == null ? wait : 0;
+		}
+
+		int ttl = Integer.parseInt(config.get("ttl"));
+		// Sending the same code again means a first SMS that arrives late still works.
+		if (code == null || isExpired(authSession)) {
+			code = SecretGenerator.getInstance().randomString(Integer.parseInt(config.get("length")), SecretGenerator.DIGITS);
+			authSession.removeAuthNote(ATTEMPTS);
+		}
+
+		Theme theme = session.theme().getTheme(Theme.Type.LOGIN);
+		Locale locale = session.getContext().resolveLocale(user);
+		String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
+		String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
+
+		SmsServiceFactory.get(config).send(mobileNumber, smsText);
+
+		authSession.setAuthNote(CODE, code);
+		authSession.setAuthNote(TTL, Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
+		authSession.setAuthNote(SENT_AT, Long.toString(System.currentTimeMillis()));
+		return 0;
+	}
+
+	/** Seconds until another SMS may be sent. */
+	static long resendIn(AuthenticationSessionModel authSession, Map<String, String> config) {
+		String sentAt = authSession.getAuthNote(SENT_AT);
+		if (sentAt == null) {
+			return 0;
+		}
+		String cooldown = config.get("resendCooldown");
+		long cooldownMillis = (cooldown == null || cooldown.isBlank() ? 60 : Long.parseLong(cooldown.trim())) * 1000L;
+		long waitMillis = Long.parseLong(sentAt) + cooldownMillis - System.currentTimeMillis();
+		return waitMillis > 0 ? (waitMillis + 999) / 1000 : 0;
+	}
+
+	/** Returns null if the entered code is right, otherwise the error message key. */
+	static String verifyCode(AuthenticationSessionModel authSession, String enteredCode) {
+		String code = authSession.getAuthNote(CODE);
+		if (code == null || isExpired(authSession)) {
+			clearCode(authSession);
+			return "smsAuthCodeExpired";
+		}
+		if (enteredCode != null && MessageDigest.isEqual(code.getBytes(StandardCharsets.UTF_8),
+			enteredCode.trim().getBytes(StandardCharsets.UTF_8))) {
+			clearCode(authSession);
+			return null;
+		}
+		String attemptsNote = authSession.getAuthNote(ATTEMPTS);
+		int attempts = (attemptsNote == null ? 0 : Integer.parseInt(attemptsNote)) + 1;
+		if (attempts >= MAX_ATTEMPTS) {
+			clearCode(authSession);
+			return "smsAuthCodeTooManyAttempts";
+		}
+		authSession.setAuthNote(ATTEMPTS, Integer.toString(attempts));
+		return "smsAuthCodeInvalid";
+	}
+
+	/** Invalidates the current code. Keeps the send time, so the cooldown still holds. */
+	static void clearCode(AuthenticationSessionModel authSession) {
+		authSession.removeAuthNote(CODE);
+		authSession.removeAuthNote(TTL);
+		authSession.removeAuthNote(ATTEMPTS);
+	}
+
+	private static boolean isExpired(AuthenticationSessionModel authSession) {
+		String ttl = authSession.getAuthNote(TTL);
+		return ttl == null || Long.parseLong(ttl) < System.currentTimeMillis();
+	}
+
+	static LoginFormsProvider codeForm(LoginFormsProvider form, RealmModel realm, AuthenticationSessionModel authSession,
+									   Map<String, String> config, String mobileNumber) {
+		return form
+			.setAttribute("realm", realm)
+			.setAttribute("phoneNumber", mobileNumber)
+			.setAttribute("resendIn", resendIn(authSession, config));
+	}
+
 	@Override
 	public void action(AuthenticationFlowContext context) {
-		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst("code");
-
+		MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
+		// Resend shares the code form, so it must not count as a failed attempt.
+		if (formData.containsKey(RESEND)) {
+			String mobileNumber = resolveMobileNumber(context);
+			if (mobileNumber != null) {
+				sendCodeAndChallenge(context, mobileNumber, true);
+			}
+			return;
+		}
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		String code = authSession.getAuthNote("code");
-		String ttl = authSession.getAuthNote("ttl");
-
-		if (code == null || ttl == null) {
-			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
-				context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
+		String error = verifyCode(authSession, formData.getFirst("code"));
+		if (error == null) {
+			context.success();
 			return;
 		}
 
-		boolean isValid = enteredCode.equals(code);
-		if (isValid) {
-			if (Long.parseLong(ttl) < System.currentTimeMillis()) {
-				// expired
-				context.getEvent().user(context.getUser()).error(EXPIRED_SMS_CODE);
-				context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE,
-					context.form().setError("smsAuthCodeExpired").createErrorPage(Response.Status.BAD_REQUEST));
-			} else {
-				// valid
-				context.success();
-			}
-		} else {
-			// invalid
-			String mobileNumber = getMobileNumber(context);
-			context.getEvent().user(context.getUser()).error(INVALID_SMS_CODE);
-			Response challenge = context.form()
-				.setAttribute("phoneNumber", mobileNumber)
-				.setError("smsAuthCodeInvalid")
-				.createForm("login-sms.ftl");
-			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
-		}
+		boolean expired = "smsAuthCodeExpired".equals(error);
+		context.getEvent().user(context.getUser()).error(expired ? EXPIRED_SMS_CODE : INVALID_SMS_CODE);
+		// Back to the form rather than an error page, so the user can resend instead of starting over.
+		Response challenge = codeForm(context.form(), context.getRealm(), authSession,
+			context.getAuthenticatorConfig().getConfig(), resolveMobileNumber(context))
+			.setError(error)
+			.createForm(TPL_CODE);
+		context.failureChallenge(expired ? AuthenticationFlowError.EXPIRED_CODE : AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
 	}
 
 	@Override
@@ -184,16 +276,5 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 	@Override
 	public SmsAuthCredentialProvider getCredentialProvider(KeycloakSession session) {
 		return (SmsAuthCredentialProvider)session.getProvider(CredentialProvider.class, SmsAuthCredentialProviderFactory.PROVIDER_ID);
-	}
-
-	private String getMobileNumber(AuthenticationFlowContext context) {
-		Optional<CredentialModel> model = context.getUser().credentialManager()
-			.getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
-		try {
-			return JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
-		} catch (IOException e) {
-			logger.warn(e.getMessage(), e);
-			return null;
-		}
 	}
 }

@@ -23,24 +23,21 @@
 package netzbegruenung.keycloak.authenticator;
 
 import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
-import netzbegruenung.keycloak.authenticator.gateway.SmsServiceFactory;
 
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.CredentialRegistrator;
 import org.keycloak.authentication.RequiredActionContext;
 import org.keycloak.authentication.RequiredActionProvider;
-import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.credential.CredentialProvider;
+import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
-import org.keycloak.theme.Theme;
 
-import java.util.Locale;
-import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.MultivaluedMap;
 
 public class PhoneValidationRequiredAction implements RequiredActionProvider, CredentialRegistrator {
 	private static final Logger logger = Logger.getLogger(PhoneValidationRequiredAction.class);
@@ -52,6 +49,10 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 	@Override
 	public void requiredActionChallenge(RequiredActionContext context) {
+		sendCodeAndChallenge(context, false);
+	}
+
+	private void sendCodeAndChallenge(RequiredActionContext context, boolean resend) {
 		context.getAuthenticationSession().addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
 		try {
 			UserModel user = context.getUser();
@@ -64,24 +65,15 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 			String mobileNumber = authSession.getAuthNote("mobile_number");
 			logger.infof("Validating phone number: %s of user: %s", mobileNumber, user.getUsername());
 
-			int length = Integer.parseInt(config.getConfig().get("length"));
-			int ttl = Integer.parseInt(config.getConfig().get("ttl"));
+			long wait = SmsAuthenticator.sendCode(context.getSession(), realm, user, authSession, config.getConfig(), mobileNumber, resend);
 
-			String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
-			authSession.setAuthNote("code", code);
-			authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
-
-			Theme theme = context.getSession().theme().getTheme(Theme.Type.LOGIN);
-			Locale locale = context.getSession().getContext().resolveLocale(user);
-			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
-			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
-
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
-
-			Response challenge = context.form()
-				.setAttribute("realm", realm)
-				.createForm(SmsAuthenticator.TPL_CODE);
-			context.challenge(challenge);
+			LoginFormsProvider form = SmsAuthenticator.codeForm(context.form(), realm, authSession, config.getConfig(), mobileNumber);
+			if (wait > 0) {
+				form.setError("smsResendCooldown", wait);
+			} else if (resend) {
+				form.setSuccess("smsAuthCodeResent");
+			}
+			context.challenge(form.createForm(SmsAuthenticator.TPL_CODE));
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			context.failure();
@@ -90,39 +82,35 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 	@Override
 	public void processAction(RequiredActionContext context) {
-		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst("code");
-
+		MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
+		if (formData.containsKey(SmsAuthenticator.RESEND)) {
+			sendCodeAndChallenge(context, true);
+			return;
+		}
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
 		String mobileNumber = authSession.getAuthNote("mobile_number");
-		String code = authSession.getAuthNote("code");
-		String ttl = authSession.getAuthNote("ttl");
-
-		if (code == null || ttl == null || enteredCode == null) {
-			logger.warn("Phone number is not set");
-			handleInvalidSmsCode(context);
+		String error = SmsAuthenticator.verifyCode(authSession, formData.getFirst("code"));
+		if (error != null) {
+			AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
+			context.challenge(SmsAuthenticator.codeForm(context.form(), context.getRealm(), authSession, config.getConfig(), mobileNumber)
+				.setError(error)
+				.createForm(SmsAuthenticator.TPL_CODE));
 			return;
 		}
 
-		boolean isValid = enteredCode.equals(code);
-		if (isValid && Long.parseLong(ttl) > System.currentTimeMillis()) {
-			// valid
-			SmsAuthCredentialProvider smnp = (SmsAuthCredentialProvider) context.getSession().getProvider(CredentialProvider.class, "mobile-number");
-			if (!smnp.isConfiguredFor(context.getRealm(), context.getUser(), SmsAuthCredentialModel.TYPE)) {
-				smnp.createCredential(context.getRealm(), context.getUser(), SmsAuthCredentialModel.createSmsAuthenticator(mobileNumber));
-			} else {
-				smnp.updateCredential(
-					context.getRealm(),
-					context.getUser(),
-					new UserCredentialModel("random_id", "mobile-number", mobileNumber)
-				);
-			}
-			context.getAuthenticationSession().removeRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
-			handlePhoneToAttribute(context, mobileNumber);
-			context.success();
+		SmsAuthCredentialProvider smnp = (SmsAuthCredentialProvider) context.getSession().getProvider(CredentialProvider.class, "mobile-number");
+		if (!smnp.isConfiguredFor(context.getRealm(), context.getUser(), SmsAuthCredentialModel.TYPE)) {
+			smnp.createCredential(context.getRealm(), context.getUser(), SmsAuthCredentialModel.createSmsAuthenticator(mobileNumber));
 		} else {
-			// invalid or expired
-			handleInvalidSmsCode(context);
+			smnp.updateCredential(
+				context.getRealm(),
+				context.getUser(),
+				new UserCredentialModel("random_id", "mobile-number", mobileNumber)
+			);
 		}
+		context.getAuthenticationSession().removeRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
+		handlePhoneToAttribute(context, mobileNumber);
+		context.success();
 	}
 
 	private void handlePhoneToAttribute(RequiredActionContext context, String mobileNumber) {
@@ -134,15 +122,6 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 				context.getUser().setSingleAttribute("mobile_number", mobileNumber);
 			}
 		}
-	}
-
-	private void handleInvalidSmsCode(RequiredActionContext context) {
-		Response challenge = context
-			.form()
-			.setAttribute("realm", context.getRealm())
-			.setError("smsAuthCodeInvalid")
-			.createForm(SmsAuthenticator.TPL_CODE);
-		context.challenge(challenge);
 	}
 
 	@Override
