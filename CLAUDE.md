@@ -11,6 +11,7 @@ Use Conventional Commits: `type(scope): description`. Scope is optional.
   | `email-authenticator` | `email` |
   | `enforce-mfa` | `enforce-mfa` |
   | `sms-authenticator` | `sms` |
+  | `sms-vonage-verify` | `vonage` |
   | `trusted-device-authenticator` | `device` |
   | `mfa-dev-runner` | `dev-runner` |
 

@@ -47,7 +47,7 @@ Sending and verifying the code is done by a `SmsVerificationProvider`, which is 
 
 The `generic` provider is the default. It generates the code in Keycloak, sends it as message text to the configured HTTP API, and compares the code the user enters with the one it generated.
 
-Other providers can be added with the `sms-verification` SPI, without changes to this module. This is meant for verification services that generate the code themselves and have to be asked whether the entered code is correct. To add one:
+Other providers can be added with the `sms-verification` SPI, without changes to this module. [sms-vonage-verify](../sms-vonage-verify/README.md) is an example. This is meant for verification services that generate the code themselves and have to be asked whether the entered code is correct. To add one:
 1. Implement `SmsVerificationProvider`. `start` sends a code to the phone number. `verify` judges the code the user entered and returns `VALID`, `INVALID`, `EXPIRED` or `ERROR`. State needed between the two calls (e.g. a request id) is kept as auth notes in the authentication session.
 1. Implement `SmsVerificationProviderFactory`. The properties returned from `getConfigProperties` are added to the config of the execution, so that the provider can be configured per realm in the admin console. All providers share one config, so prefix the property names with the provider id.
 1. Register the factory in `META-INF/services/netzbegruenung.keycloak.authenticator.verification.SmsVerificationProviderFactory` and copy the jar to the `providers` directory next to this module.
