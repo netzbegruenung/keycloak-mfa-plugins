@@ -24,7 +24,9 @@ package netzbegruenung.keycloak.authenticator;
 
 import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialData;
 import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
-import netzbegruenung.keycloak.authenticator.gateway.SmsServiceFactory;
+import netzbegruenung.keycloak.authenticator.verification.SmsVerification;
+import netzbegruenung.keycloak.authenticator.verification.SmsVerificationContext;
+import netzbegruenung.keycloak.authenticator.verification.SmsVerificationResult;
 
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.CredentialValidator;
@@ -33,7 +35,6 @@ import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.RequiredActionFactory;
 import org.keycloak.authentication.RequiredActionProvider;
-import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
 import org.keycloak.models.AuthenticationExecutionModel;
@@ -41,16 +42,14 @@ import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
-import org.keycloak.sessions.AuthenticationSessionModel;
-import org.keycloak.theme.Theme;
 import org.keycloak.util.JsonSerialization;
 
 import jakarta.ws.rs.core.Response;
-import java.util.Locale;
 import java.util.Optional;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsAuthCredentialProvider> {
 
@@ -68,53 +67,22 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		UserModel user = context.getUser();
 		RealmModel realm = context.getRealm();
 
-		Optional<CredentialModel> model = context.getUser().credentialManager().getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
-		String mobileNumber;
-		try {
-			mobileNumber = JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
-		} catch (IOException e1) {
-			logger.warn(e1.getMessage(), e1);
+		String mobileNumber = resolveMobileNumber(context);
+		if (mobileNumber == null) {
 			return;
 		}
 
-		// When storeInAttribute is active, the attribute is the source of truth
-		// Allows admins to update the number without requiring the user to re-enroll.
-		boolean storeInAttribute = Boolean.parseBoolean(config.getConfig().getOrDefault("storeInAttribute", "false"));
-		if (storeInAttribute) {
-			String mobileNumberAttribute = config.getConfig().getOrDefault("mobileNumberAttribute", "mobile_number");
-			String attributeNumber = user.getAttributeStream(mobileNumberAttribute)
-				.filter(n -> n != null && !n.isBlank())
-				.findFirst()
-				.orElse(null);
-			if (attributeNumber != null) {
-				mobileNumber = attributeNumber;
-			} else {
-				logger.warnf("storeInAttribute is active but attribute '%s' is empty for user %s, falling back to credential value",
-					mobileNumberAttribute, user.getUsername());
-			}
-		}
-
-		int length = Integer.parseInt(config.getConfig().get("length"));
-		int ttl = Integer.parseInt(config.getConfig().get("ttl"));
-
-		String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
-		AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		authSession.setAuthNote("code", code);
-		authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
-
 		try {
-			Theme theme = session.theme().getTheme(Theme.Type.LOGIN);
-			Locale locale = session.getContext().resolveLocale(user);
-			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
-			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
-
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
+			SmsVerificationContext verificationContext = new SmsVerificationContext(
+				session, realm, user, context.getAuthenticationSession(), config.getConfig(), mobileNumber);
+			SmsVerification.getProvider(session, config.getConfig()).start(verificationContext);
 
 			context.challenge(context.form()
 				.setAttribute("realm", realm)
 				.setAttribute("phoneNumber", mobileNumber)
 				.createForm(TPL_CODE));
 		} catch (Exception e) {
+			logger.error("Failed to send SMS code", e);
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
 				context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
 					.createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
@@ -125,36 +93,39 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 	public void action(AuthenticationFlowContext context) {
 		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst("code");
 
-		AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		String code = authSession.getAuthNote("code");
-		String ttl = authSession.getAuthNote("ttl");
+		String mobileNumber = resolveMobileNumber(context);
+		Map<String, String> config = context.getAuthenticatorConfig().getConfig();
 
-		if (code == null || ttl == null) {
-			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
-				context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
-			return;
+		SmsVerificationResult result;
+		try {
+			SmsVerificationContext verificationContext = new SmsVerificationContext(
+				context.getSession(), context.getRealm(), context.getUser(), context.getAuthenticationSession(), config, mobileNumber);
+			result = SmsVerification.getProvider(context.getSession(), config).verify(verificationContext, enteredCode);
+		} catch (Exception e) {
+			logger.error("Failed to verify SMS code", e);
+			result = SmsVerificationResult.ERROR;
 		}
 
-		boolean isValid = enteredCode.equals(code);
-		if (isValid) {
-			if (Long.parseLong(ttl) < System.currentTimeMillis()) {
-				// expired
+		switch (result) {
+			case VALID:
+				context.success();
+				break;
+			case EXPIRED:
 				context.getEvent().user(context.getUser()).error(EXPIRED_SMS_CODE);
 				context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE,
 					context.form().setError("smsAuthCodeExpired").createErrorPage(Response.Status.BAD_REQUEST));
-			} else {
-				// valid
-				context.success();
-			}
-		} else {
-			// invalid
-			String mobileNumber = getMobileNumber(context);
-			context.getEvent().user(context.getUser()).error(INVALID_SMS_CODE);
-			Response challenge = context.form()
-				.setAttribute("phoneNumber", mobileNumber)
-				.setError("smsAuthCodeInvalid")
-				.createForm("login-sms.ftl");
-			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
+				break;
+			case INVALID:
+				context.getEvent().user(context.getUser()).error(INVALID_SMS_CODE);
+				Response challenge = context.form()
+					.setAttribute("phoneNumber", mobileNumber)
+					.setError("smsAuthCodeInvalid")
+					.createForm(TPL_CODE);
+				context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
+				break;
+			default:
+				context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
+					context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
 		}
 	}
 
@@ -186,14 +157,35 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		return (SmsAuthCredentialProvider)session.getProvider(CredentialProvider.class, SmsAuthCredentialProviderFactory.PROVIDER_ID);
 	}
 
-	private String getMobileNumber(AuthenticationFlowContext context) {
-		Optional<CredentialModel> model = context.getUser().credentialManager()
-			.getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
+	private String resolveMobileNumber(AuthenticationFlowContext context) {
+		AuthenticatorConfigModel config = context.getAuthenticatorConfig();
+		UserModel user = context.getUser();
+
+		Optional<CredentialModel> model = user.credentialManager().getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
+		String mobileNumber;
 		try {
-			return JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
-		} catch (IOException e) {
-			logger.warn(e.getMessage(), e);
+			mobileNumber = JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
+		} catch (IOException e1) {
+			logger.warn(e1.getMessage(), e1);
 			return null;
 		}
+
+		// When storeInAttribute is active, the attribute is the source of truth
+		// Allows admins to update the number without requiring the user to re-enroll.
+		boolean storeInAttribute = Boolean.parseBoolean(config.getConfig().getOrDefault("storeInAttribute", "false"));
+		if (storeInAttribute) {
+			String mobileNumberAttribute = config.getConfig().getOrDefault("mobileNumberAttribute", "mobile_number");
+			String attributeNumber = user.getAttributeStream(mobileNumberAttribute)
+				.filter(n -> n != null && !n.isBlank())
+				.findFirst()
+				.orElse(null);
+			if (attributeNumber != null) {
+				mobileNumber = attributeNumber;
+			} else {
+				logger.warnf("storeInAttribute is active but attribute '%s' is empty for user %s, falling back to credential value",
+					mobileNumberAttribute, user.getUsername());
+			}
+		}
+		return mobileNumber;
 	}
 }
