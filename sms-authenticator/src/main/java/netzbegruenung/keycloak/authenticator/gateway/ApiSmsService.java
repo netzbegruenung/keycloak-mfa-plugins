@@ -17,6 +17,8 @@
  * @author Niko Köbler, https://www.n-k.de, @dasniko
  * @author Netzbegruenung e.V.
  * @author verdigado eG
+ *
+ * Modified by B-Sharpe, 2026: phone numbers masked in logs.
  */
 
 package netzbegruenung.keycloak.authenticator.gateway;
@@ -138,8 +140,9 @@ public class ApiSmsService implements SmsService{
 			int statusCode = response.statusCode();
 			String payload = hideResponsePayload ? "redacted" : "Response: " + response.body();
 
-			if (statusCode >= 200 && statusCode < 300) {
-				logger.infof("Sent SMS to %s [%s]", phoneNumber, payload);
+			// The HTTP client only returns final responses (>= 200): a 2xx class check is all it takes.
+			if (statusCode / 100 == 2) {
+				logger.infof("Sent SMS to %s [%s]", PhoneNumberMasker.mask(phoneNumber), payload);
 			} else {
 				logErrorStatus(phoneNumber, payload, request, statusCode);
 			}
@@ -148,15 +151,29 @@ public class ApiSmsService implements SmsService{
 		}
 	}
 
-	// The request payload is deliberately not logged: it contains the one-time code.
+	// The request payload is deliberately not logged: it contains the one-time code. For the same reason
+	// only the method and the server of the request are logged (see describe).
 	private void logErrorStatus(String phoneNumber, String responsePayload, HttpRequest request, int statusCode) {
 		logger.errorf("Failed to send message to %s [%s] with request: %s [Status: %s]. Validate your config.",
-			phoneNumber, responsePayload, request != null ? request.toString() : "null", statusCode);
+			PhoneNumberMasker.mask(phoneNumber), responsePayload, describe(request), statusCode);
 	}
 
 	private void logErrorException(String phoneNumber, HttpRequest request) {
 		logger.errorf("Failed to send message to %s with request: %s. Validate your config.",
-			phoneNumber, request != null ? request.toString() : "null");
+			PhoneNumberMasker.mask(phoneNumber), describe(request));
+	}
+
+	/**
+	 * Method and server only: the path and query of a GET request carry the number and the message (with
+	 * the code), and the URI's user info can carry credentials.
+	 */
+	private static String describe(HttpRequest request) {
+		if (request == null) {
+			return "null";
+		}
+		URI uri = request.uri();
+		String port = uri.getPort() == -1 ? "" : ":" + uri.getPort();
+		return request.method() + " " + uri.getScheme() + "://" + uri.getHost() + port;
 	}
 
 	private String getJsonBody(String phoneNumber, String message) {
@@ -241,7 +258,8 @@ public class ApiSmsService implements SmsService{
 		}
 		String stripped = nonDigitPattern.matcher(phone_number).replaceAll("");
 		if (!stripped.equals(phone_number)) {
-			logger.infof("Clean phone number: stripped formatting characters, set phone number to %s", stripped);
+			logger.infof("Clean phone number: stripped formatting characters, set phone number to %s",
+				PhoneNumberMasker.mask(stripped));
 		}
 		return stripped;
 	}

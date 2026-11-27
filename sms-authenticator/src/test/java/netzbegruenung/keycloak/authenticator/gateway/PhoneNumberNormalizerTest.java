@@ -1,10 +1,14 @@
 package netzbegruenung.keycloak.authenticator.gateway;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PhoneNumberNormalizerTest {
 
@@ -55,5 +59,34 @@ class PhoneNumberNormalizerTest {
 	})
 	void toE164Unchanged(String defaultCountryCode, String phoneNumber) {
 		assertEquals(phoneNumber, PhoneNumberNormalizer.toE164(phoneNumber, defaultCountryCode));
+	}
+
+	@Test
+	@DisplayName("A null number stays null")
+	void nullNumberStaysNull() {
+		assertEquals(null, PhoneNumberNormalizer.toE164(null, "+49"));
+	}
+
+	@Test
+	@DisplayName("A null default country code leaves the number unchanged")
+	void nullCountryCodeLeavesTheNumberUnchanged() {
+		assertEquals("017612345678", PhoneNumberNormalizer.toE164("017612345678", null));
+	}
+
+	@Test
+	@DisplayName("No log line contains the full phone number, whatever the path")
+	void logLinesNeverContainTheFullNumber() {
+		List<String> lines;
+		try (LogCapture logs = new LogCapture()) {
+			PhoneNumberNormalizer.toE164("017612345678", "");          // no country code
+			PhoneNumberNormalizer.toE164("017612345678", "abc");       // invalid country code
+			PhoneNumberNormalizer.toE164("017612345678", "+999");      // unknown country code
+			PhoneNumberNormalizer.toE164("017612345678", "+49");       // corrected to E.164
+			PhoneNumberNormalizer.toE164("+43+436641234567", "+49");   // not parseable
+			lines = logs.lines();
+		}
+		assertEquals(5, lines.size(), "Expected one log line per path: " + lines);
+		assertTrue(lines.stream().noneMatch(line -> line.contains("17612345678") || line.contains("436641234567")),
+			"A log line contains the full number: " + lines);
 	}
 }

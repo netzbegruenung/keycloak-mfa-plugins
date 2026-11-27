@@ -17,6 +17,8 @@
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
  * @author Netzbegruenung e.V.
  * @author verdigado eG
+ *
+ * Modified by B-Sharpe, 2026: phone numbers masked in logs; unreachable branch removed.
  */
 
 package netzbegruenung.keycloak.authenticator;
@@ -27,6 +29,7 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import jakarta.ws.rs.core.Response;
 import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
+import netzbegruenung.keycloak.authenticator.gateway.PhoneNumberMasker;
 import org.jboss.logging.Logger;
 import org.keycloak.authentication.CredentialRegistrator;
 import org.keycloak.authentication.InitiatedActionSupport;
@@ -236,9 +239,10 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 			if (formattedNumber != null && !formattedNumber.isBlank()) {
 				mobileNumber = formattedNumber;
 			} else if (forceRetryOnBadFormat) {
-				logger.errorf("Failed phone number formatting checks for: %s", mobileNumber);
+				logger.errorf("Failed phone number formatting checks for: %s", PhoneNumberMasker.mask(mobileNumber));
 				String formatError = context.getAuthenticationSession().getAuthNote("formatError");
-				if (formatError != null && !formatError.isBlank()) {
+				// formatPhoneNumber only ever writes one of its error keys, never a blank note.
+				if (formatError != null) {
 					handleInvalidNumber(context, formatError);
 					return;
 				}
@@ -249,7 +253,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 					.searchForUserByUserAttributeStream(context.getRealm(), mobileNumberAttribute, mobileNumber).count();
 
 			if (count > 0) {
-				logger.errorf("Phone number %s is already in use", mobileNumber);
+				logger.errorf("Phone number %s is already in use", PhoneNumberMasker.mask(mobileNumber));
 				handleInvalidNumber(context, "numberFormatNumberInUse");
 				authSession.setAuthNote("numberFormatNumberInUse", "true");
 				return;
@@ -257,7 +261,8 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		}
 
 		authSession.setAuthNote("mobile_number", mobileNumber);
-		logger.infof("Add required action for phone validation: [%s], user: %s", mobileNumber, context.getUser().getUsername());
+		logger.infof("Add required action for phone validation: [%s], user: %s", PhoneNumberMasker.mask(mobileNumber),
+			context.getUser().getUsername());
 		context.getAuthenticationSession().addRequiredAction(PhoneValidationRequiredAction.PROVIDER_ID);
 		context.success();
 	}

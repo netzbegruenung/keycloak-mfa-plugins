@@ -18,6 +18,8 @@
  * @author Niko Köbler, https://www.n-k.de, @dasniko
  * @author Netzbegruenung e.V.
  * @author verdigado eG
+ *
+ * Modified by B-Sharpe, 2026: merged upstream PRs #400, #443, #444; unreachable branches removed.
  */
 
 package netzbegruenung.keycloak.authenticator;
@@ -153,32 +155,32 @@ public class SmsAuthenticator implements Authenticator {
 		String enteredCode = formData.getFirst("code");
 
 		SmsCode smsCode = new SmsCode(context.getSession(), context.getAuthenticatorConfig().getConfig());
-		switch (smsCode.verify(context.getUser(), enteredCode)) {
-			case NO_CODE -> {
-				// Nothing to check against (e.g. the user was blocked on a fresh login and
-				// submitted anyway, or the code was discarded): re-run the challenge, which
-				// sends a code or re-shows the block.
-				authenticate(context);
-			}
-			case EXPIRED -> {
-				context.getEvent().user(context.getUser()).error(EXPIRED_SMS_CODE);
-				context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE,
-					context.form().setError("smsAuthCodeExpired").createErrorPage(Response.Status.BAD_REQUEST));
-			}
-			case VALID -> context.success();
-			case INVALID -> {
-				String mobileNumber = resolveMobileNumber(context.getAuthenticatorConfig(), context.getUser());
-				context.getEvent().user(context.getUser()).error(INVALID_SMS_CODE);
-				// Record the failure with the realm brute-force protector so repeated wrong SMS codes are
-				// rate-limited / locked out, the same way the built-in OTP form is protected. The lockout
-				// lives only in Keycloak's own store; the LDAP provider is READ_ONLY so AD is never touched.
-				recordBruteForceFailure(context);
-				Response challenge = context.form()
-					.setAttribute("phoneNumber", mobileNumber)
-					.setError("smsAuthCodeInvalid")
-					.createForm("login-sms.ftl");
-				context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
-			}
+		// An if chain rather than a switch: a switch on the enum also compiles an unreachable "none of
+		// these" branch.
+		SmsCode.Verification verification = smsCode.verify(context.getUser(), enteredCode);
+		if (verification == SmsCode.Verification.NO_CODE) {
+			// Nothing to check against (e.g. the user was blocked on a fresh login and
+			// submitted anyway, or the code was discarded): re-run the challenge, which
+			// sends a code or re-shows the block.
+			authenticate(context);
+		} else if (verification == SmsCode.Verification.EXPIRED) {
+			context.getEvent().user(context.getUser()).error(EXPIRED_SMS_CODE);
+			context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE,
+				context.form().setError("smsAuthCodeExpired").createErrorPage(Response.Status.BAD_REQUEST));
+		} else if (verification == SmsCode.Verification.VALID) {
+			context.success();
+		} else {
+			String mobileNumber = resolveMobileNumber(context.getAuthenticatorConfig(), context.getUser());
+			context.getEvent().user(context.getUser()).error(INVALID_SMS_CODE);
+			// Record the failure with the realm brute-force protector so repeated wrong SMS codes are
+			// rate-limited / locked out, the same way the built-in OTP form is protected. The lockout
+			// lives only in Keycloak's own store; the LDAP provider is READ_ONLY so AD is never touched.
+			recordBruteForceFailure(context);
+			Response challenge = context.form()
+				.setAttribute("phoneNumber", mobileNumber)
+				.setError("smsAuthCodeInvalid")
+				.createForm("login-sms.ftl");
+			context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS, challenge);
 		}
 	}
 
@@ -217,7 +219,8 @@ public class SmsAuthenticator implements Authenticator {
 	private boolean isDisabledByBruteForce(AuthenticationFlowContext context) {
 		RealmModel realm = context.getRealm();
 		UserModel user = context.getUser();
-		if (realm.isBruteForceProtected() && user != null
+		// No null check on the user: requiresUser() is true, Keycloak only runs this step with a user.
+		if (realm.isBruteForceProtected()
 				&& context.getSession().getProvider(BruteForceProtector.class)
 					.isTemporarilyDisabled(context.getSession(), realm, user)) {
 			context.getEvent().user(user).error(Errors.USER_TEMPORARILY_DISABLED);
@@ -236,7 +239,7 @@ public class SmsAuthenticator implements Authenticator {
 	private void recordBruteForceFailure(AuthenticationFlowContext context) {
 		RealmModel realm = context.getRealm();
 		UserModel user = context.getUser();
-		if (realm.isBruteForceProtected() && user != null) {
+		if (realm.isBruteForceProtected()) {
 			// Count a wrong SMS code under the "otp" brute-force category. The protector only
 			// accepts password / otp / recovery-authn-codes and silently drops anything else, so
 			// this authenticator's own category ("mobile-number") would be a no-op. A wrong second

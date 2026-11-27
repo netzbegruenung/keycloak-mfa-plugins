@@ -17,6 +17,8 @@
  * @author Niko Köbler, https://www.n-k.de, @dasniko
  * @author Netzbegruenung e.V.
  * @author verdigado eG
+ *
+ * Modified by B-Sharpe, 2026: phone number masked in the simulation log.
  */
 
 package netzbegruenung.keycloak.authenticator.gateway;
@@ -54,14 +56,16 @@ public class SmsServiceFactory {
 	public static SmsService get(Map<String, String> config) {
 		if (Boolean.parseBoolean(config.getOrDefault("simulation", "false"))) {
 			return (phoneNumber, message) ->
-				logger.infof("***** SIMULATION MODE ***** Would send SMS to %s with text: %s", phoneNumber, message);
+				logger.infof("***** SIMULATION MODE ***** Would send SMS to %s with text: %s",
+					PhoneNumberMasker.mask(phoneNumber), message);
 		} else {
 			return new ApiSmsService(config);
 		}
 	}
 
 	private static Map<String, String> resolveSecrets(Map<String, String> config, KeycloakSession session) {
-		if (session == null || config == null) {
+		// Without a session there is no vault. A null config fails in get(Map) either way.
+		if (session == null) {
 			return config;
 		}
 		Map<String, String> resolved = new HashMap<>(config);
