@@ -74,6 +74,9 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 		return List.of(
 			new ProviderConfigProperty("length", "Code length", "The number of digits of the generated code.", ProviderConfigProperty.STRING_TYPE, 6),
 			new ProviderConfigProperty("ttl", "Time-to-live", "The time to live in seconds for the code to be valid.", ProviderConfigProperty.STRING_TYPE, "300"),
+			new ProviderConfigProperty(SmsCode.RESEND_LIMIT_CONFIG, "Re-send limit", "How many times one code may be re-sent (page reload, resend link) before further code requests are blocked.", ProviderConfigProperty.STRING_TYPE, SmsCode.DEFAULT_RESEND_LIMIT),
+			new ProviderConfigProperty(SmsCode.RESEND_BLOCK_DURATION_CONFIG, "Re-send block duration", "How long in seconds code requests stay blocked for the user once the re-send limit is hit.", ProviderConfigProperty.STRING_TYPE, SmsCode.DEFAULT_RESEND_BLOCK_DURATION),
+			new ProviderConfigProperty(SmsCode.RESEND_COOLDOWN_CONFIG, "Re-send cooldown", "Seconds after a send during which re-send requests are ignored and the button is disabled. 0 disables the cooldown.", ProviderConfigProperty.STRING_TYPE, SmsCode.DEFAULT_RESEND_COOLDOWN),
 			new ProviderConfigProperty("senderId", "SenderId", "The sender ID is displayed as the message sender on the receiving device.", ProviderConfigProperty.STRING_TYPE, "Keycloak"),
 			new ProviderConfigProperty("simulation", "Simulation mode", "In simulation mode, the SMS won't be sent, but printed to the server logs", ProviderConfigProperty.BOOLEAN_TYPE, true),
 			new ProviderConfigProperty("countrycode", "Default country prefix", "Default country prefix that is assumed if user does not provide one.", ProviderConfigProperty.STRING_TYPE, "+49"),
