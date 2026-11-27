@@ -1,4 +1,57 @@
-# Keycloak MFA Plugin collection
+# Keycloak MFA Plugin collection (B-Sharpe fork)
+
+> **This is a fork** of [netzbegruenung/keycloak-mfa-plugins](https://github.com/netzbegruenung/keycloak-mfa-plugins),
+> maintained by [B-Sharpe](https://github.com/b-sharpe-SA). It starts from upstream tag
+> [`v26.8.0-1`](https://github.com/netzbegruenung/keycloak-mfa-plugins/releases/tag/v26.8.0-1) and adds community pull
+> requests upstream has not merged yet, plus fraud protection for the SMS step of user registration.
+>
+> It is a drop-in replacement: provider IDs, the `sms-2fa` configuration alias, the credential type, the templates and
+> the Java packages are unchanged, so an existing realm configuration keeps working.
+
+## What this fork adds
+
+### Upstream pull requests integrated
+
+| PR | Change |
+|---|---|
+| [#469](https://github.com/netzbegruenung/keycloak-mfa-plugins/pull/469) | Keycloak 26.8.1 |
+| [#471](https://github.com/netzbegruenung/keycloak-mfa-plugins/pull/471) | libphonenumber 9.0.42 |
+| [#474](https://github.com/netzbegruenung/keycloak-mfa-plugins/pull/474) | `mobileNumberAttribute` respected for storage and uniqueness checks |
+| [#451](https://github.com/netzbegruenung/keycloak-mfa-plugins/pull/451) | Formatting characters stripped from phone numbers before sending |
+| [#439](https://github.com/netzbegruenung/keycloak-mfa-plugins/pull/439) | Phone number masked on the login page (last 4 digits shown) |
+| [#400](https://github.com/netzbegruenung/keycloak-mfa-plugins/pull/400) | SMS gateway credentials can be Keycloak vault references |
+| [#444](https://github.com/netzbegruenung/keycloak-mfa-plugins/pull/444) | Code kept across re-sends, resend button, cooldown and rate limit |
+| [#429](https://github.com/netzbegruenung/keycloak-mfa-plugins/pull/429) | "Change phone number" button on the enrolment code step |
+| [#443](https://github.com/netzbegruenung/keycloak-mfa-plugins/pull/443) | Phone attribute as source of truth; brute-force lockout for wrong SMS and email codes |
+| [#397](https://github.com/netzbegruenung/keycloak-mfa-plugins/pull/397) | Allowed regions for SMS phone numbers (`allowedRegions`) |
+
+From #397 only the region allowlist is kept: its brute-force part overlaps #443, whose version is used.
+
+### Changes of our own (sms-authenticator)
+
+- Phone numbers are masked in logs (`+*****4567`). In GET mode, the request URL, which carries the number and the
+  message with the code, is no longer written to error logs.
+- 100 % branch coverage of the module, measured both in the tests and in the Keycloak server they start; the build
+  fails below it.
+- CI runs the whole test suite on every push and pull request and publishes the coverage report as an artifact.
+
+### In progress: fraud protection at registration
+
+Controls on the phone-number step of registration against SMS pumping (bots creating accounts to trigger paid SMS):
+number-change lock and resend cooldown, Cloudflare Turnstile on number change, a send cap, a wrong-code account lock,
+a number-type check through a configurable URL, and a silent block for fraudulent accounts. They will be documented in
+the [SMS authenticator README](sms-authenticator/README.md) when released.
+
+## Upstream, issues and support
+
+Upstream is [netzbegruenung/keycloak-mfa-plugins](https://github.com/netzbegruenung/keycloak-mfa-plugins), developed
+by Netzbegrünung e.V. and verdigado eG. Issues about this fork go to
+[this repository](https://github.com/b-sharpe-SA/keycloak-mfa-plugins/issues). Changes useful upstream are offered back
+as pull requests.
+
+# Upstream documentation
+
+The sections below come from upstream. The support contact refers to the upstream project.
 
 This repository contains the source code for a collection of Keycloak MFA plugins. The plugins are:
 * [SMS authenticator](sms-authenticator/README.md): Provides SMS as authentication step. SMS are sent via HTTP API, which can be configured. (production ready)
@@ -11,6 +64,9 @@ The different plugins are documented in the submodules README. If you need suppo
 
 ## License
 The code of this project is Apache 2.0 licensed. Parts of the original code are MIT licensed.
+
+This fork keeps the same licenses. Upstream files changed by the fork carry a "Modified by B-Sharpe" line in their
+header.
 
 ## Development
 [Quarkus Dev Server](mfa-dev-runner/README.md)
@@ -26,6 +82,9 @@ The code of this project is Apache 2.0 licensed. Parts of the original code are 
    A file `target/netzbegruenung.keycloak-2fa-sms-authenticator.jar` should be created.
 
 ## Releases
+> **Fork:** this fork does not publish releases yet. Do not push `v*` tags: they trigger `release.yml`, and the fork's
+> version scheme is not decided.
+
 Deployment is done by github actions: `.github/workflows/release.yml`
 To trigger the release workflow be sure to have proper access rights and follow the steps below.
 https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/configuring-tag-protection-rules#about-tag-protection-rules
