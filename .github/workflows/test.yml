@@ -8,5 +8,8 @@ on:
 
 jobs:
   build:
+    # A pull request from a branch of this repository was already built by that branch's push:
+    # only pull requests from other repositories (outside contributors) are built again.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     uses: ./.github/workflows/build.yml
   # TODO further tests
