@@ -157,7 +157,9 @@
                     </execution>
                     <execution>
                         <id>merge</id>
-                        <phase>verify</phase>
+                        <!-- In the test phase, after surefire (declared first): "mvn test" checks the coverage
+                             without packaging anything. -->
+                        <phase>test</phase>
                         <goals>
                             <goal>merge</goal>
                         </goals>
@@ -171,13 +173,13 @@
                                     </includes>
                                 </fileSet>
                             </fileSets>
-                            <!-- Per build too: merge also loads an existing destFile, which would carry old runs. -->
+                            <!-- Per build, like its inputs: each build keeps its own coverage files. -->
                             <destFile>${project.build.directory}/jacoco-merged-${coverage.run}.exec</destFile>
                         </configuration>
                     </execution>
                     <execution>
                         <id>report</id>
-                        <phase>verify</phase>
+                        <phase>test</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>
@@ -187,7 +189,7 @@
                     </execution>
                     <execution>
                         <id>check</id>
-                        <phase>verify</phase>
+                        <phase>test</phase>
                         <goals>
                             <goal>check</goal>
                         </goals>

@@ -10,7 +10,10 @@ on:
       - v**
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
   build:
+    needs: test
     uses: ./.github/workflows/build.yml
   release:
     needs: build
