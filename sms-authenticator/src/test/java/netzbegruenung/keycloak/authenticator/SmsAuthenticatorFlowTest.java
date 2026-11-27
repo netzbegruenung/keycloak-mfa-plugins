@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.keycloak.events.Details;
 import org.keycloak.events.EventType;
+import org.keycloak.representations.idm.ConfigPropertyRepresentation;
 import org.keycloak.testframework.annotations.InjectEvents;
 import org.keycloak.testframework.annotations.InjectHttpServer;
 import org.keycloak.testframework.annotations.InjectKeycloakUrls;
@@ -34,6 +35,7 @@ import java.io.InputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +44,7 @@ import java.util.regex.Pattern;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -234,6 +237,31 @@ public class SmsAuthenticatorFlowTest {
 		} finally {
 			SmsTestSupport.updateSmsExecutionConfig(managedRealm, Map.of("ttl", "300"));
 		}
+	}
+
+	@Test
+	public void verificationProviderContributesConfigProperties() {
+		// The gateway settings (apiurl, ...) are no longer declared by SmsAuthenticatorFactory
+		// itself: they come from the "generic" SmsVerificationProviderFactory, looked up
+		// through the sms-verification SPI. Seeing them here means the SPI is registered and
+		// that a provider can add its own settings to the authenticator config.
+		List<ConfigPropertyRepresentation> properties = managedRealm.admin().flows()
+			.getAuthenticatorConfigDescription("mobile-number-authenticator")
+			.getProperties();
+		List<String> names = properties.stream().map(ConfigPropertyRepresentation::getName).toList();
+
+		ConfigPropertyRepresentation provider = properties.stream()
+			.filter(property -> "provider".equals(property.getName()))
+			.findFirst()
+			.orElseThrow(() -> new AssertionError("Expected a provider property, got: " + names));
+		assertEquals(List.of("generic"), provider.getOptions());
+		assertEquals("generic", provider.getDefaultValue());
+
+		assertTrue(names.containsAll(List.of("length", "ttl", "apiurl", "simulation", "jsonTemplate", "forceSecondFactor")),
+			"Expected authenticator and provider properties, got: " + names);
+		assertTrue(names.indexOf("provider") < names.indexOf("apiurl"),
+			"Expected provider properties after the provider selection, got: " + names);
+		assertEquals(names.size(), names.stream().distinct().count(), "Expected no duplicate properties, got: " + names);
 	}
 
 	private void registerPhoneNumber() throws InterruptedException {

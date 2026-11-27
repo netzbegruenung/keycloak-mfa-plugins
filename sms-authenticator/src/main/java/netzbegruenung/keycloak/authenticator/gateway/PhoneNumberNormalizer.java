@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
  * Corrects phone numbers to E.164 before an SMS is sent, using libphonenumber so that the trunk prefix and
  * international dialing prefix rules of the default country are applied (not only the German ones).
  */
-final class PhoneNumberNormalizer {
+public final class PhoneNumberNormalizer {
 
 	private static final Logger logger = Logger.getLogger(PhoneNumberNormalizer.class);
 	private static final Pattern nonDigitPattern = Pattern.compile("[^0-9]");
@@ -40,7 +40,7 @@ final class PhoneNumberNormalizer {
 	 * @return the number in E.164 format, or the unchanged number if no default country code is configured
 	 *         or the number cannot be parsed
 	 */
-	static String toE164(String phoneNumber, String defaultCountryCode) {
+	public static String toE164(String phoneNumber, String defaultCountryCode) {
 		/*
 		 * If there is no default country prefix, this function does not dare to touch the phone number.
 		 */

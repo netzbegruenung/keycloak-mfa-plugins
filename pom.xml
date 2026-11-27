@@ -11,6 +11,7 @@
 
 	<modules>
 		<module>sms-authenticator</module>
+		<module>sms-vonage-verify</module>
 		<module>email-authenticator</module>
         <module>app-authenticator</module>
 		<module>enforce-mfa</module>

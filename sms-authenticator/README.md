@@ -25,6 +25,7 @@ from the original authenticator provider [documentation](https://www.keycloak.or
 1. Add a new step next to the `OTP Form` step. Choose the `SMS Authentication (2FA)` authenticator and set it to `Alternative`.
 1. Make sure that you name the Alias `sms-2fa`. This is currently a hack that will hopefully be fixed. Additional executions with other names can be added. But this first execution will be used for the confirmation SMS when setting up a new phone number.
 1. Go into the config of the execution and configure the plugin so that it works with the API of your SMS proivder HTTP API. The data is always sent in a HTTP POST request. Refer to the API documentation of your provider to choose the correct configuration values. The details of the request can be configured with the following configuration options:
+   1. `SMS verification provider`: how the code is sent and verified. The default `generic` provider generates the code in Keycloak and sends it with the HTTP API configured below. See [SMS verification providers](#sms-verification-providers).
    1. `SMS API URL`: the URL to which the HTTP POST request should be sent.
    1. `URL encode data`: When off, the data will be sent as an `application/json` body. When on, the data will be encoded as URL parameters.
    1. `Put API Secret Token in Authorization Header`: If set, API Secret will be sent as Authorization Header, 'API Secret Token Attribute' and 'Basic Auth Username' will be ignored.
@@ -40,6 +41,16 @@ from the original authenticator provider [documentation](https://www.keycloak.or
    3. `Request JSON template`: If default JSON template is not enough for your needs, put your custom template here. UUID (if 'Use message UUID' is set), phone number and message (in that order) use placeholders `%s`.
    1. `Default country prefix`: If set, phone numbers are converted to the international format (`+<country code><number>`) before sending, using the dialing rules of this country (e.g. with `+49`, `0176…` and `0049176…` become `+49176…`, `0043…` becomes `+43…`). If empty, phone numbers are sent as stored.
    1. `Strip + from phone number`: Enable if your SMS API expects the international format without the leading `+`.
+
+# SMS verification providers
+Sending and verifying the code is done by a `SmsVerificationProvider`, which is selected with the `SMS verification provider` option of the execution.
+
+The `generic` provider is the default. It generates the code in Keycloak, sends it as message text to the configured HTTP API, and compares the code the user enters with the one it generated.
+
+Other providers can be added with the `sms-verification` SPI, without changes to this module. [sms-vonage-verify](../sms-vonage-verify/README.md) is an example. This is meant for verification services that generate the code themselves and have to be asked whether the entered code is correct. To add one:
+1. Implement `SmsVerificationProvider`. `start` sends a code to the phone number. `verify` judges the code the user entered and returns `VALID`, `INVALID`, `EXPIRED` or `ERROR`. State needed between the two calls (e.g. a request id) is kept as auth notes in the authentication session.
+1. Implement `SmsVerificationProviderFactory`. The properties returned from `getConfigProperties` are added to the config of the execution, so that the provider can be configured per realm in the admin console. All providers share one config, so prefix the property names with the provider id.
+1. Register the factory in `META-INF/services/netzbegruenung.keycloak.authenticator.verification.SmsVerificationProviderFactory` and copy the jar to the `providers` directory next to this module.
 
 # Usage
 After successfully configured the authenticator and the required actions users can set up SMS Authentication in the

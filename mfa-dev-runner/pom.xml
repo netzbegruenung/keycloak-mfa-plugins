@@ -17,6 +17,11 @@
 		</dependency>
 		<dependency>
 			<groupId>netzbegruenung</groupId>
+			<artifactId>sms-vonage-verify</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>netzbegruenung</groupId>
 			<artifactId>email-authenticator</artifactId>
 			<version>${project.version}</version>
 		</dependency>
