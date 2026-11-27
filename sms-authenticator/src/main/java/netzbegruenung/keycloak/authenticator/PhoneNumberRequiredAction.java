@@ -221,11 +221,13 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		boolean forceRetryOnBadFormat = false;
 		boolean enforcePhoneNumberUniqueness = true;
 		boolean storeInAttribute = false;
+        String mobileNumberAttribute = "mobile_number";
 		if (config != null && config.getConfig() != null) {
 			normalizeNumber = Boolean.parseBoolean(config.getConfig().getOrDefault("normalizePhoneNumber", "false"));
 			forceRetryOnBadFormat = Boolean.parseBoolean(config.getConfig().getOrDefault("forceRetryOnBadFormat", "false"));
 			enforcePhoneNumberUniqueness = Boolean.parseBoolean(config.getConfig().getOrDefault("enforcePhoneNumberUniqueness", "false"));
 			storeInAttribute = Boolean.parseBoolean(config.getConfig().getOrDefault("storeInAttribute", "false"));
+            mobileNumberAttribute = config.getConfig().getOrDefault("mobileNumberAttribute", mobileNumberAttribute);
 		}
 
 		// try to format the phone number
@@ -244,7 +246,7 @@ public class PhoneNumberRequiredAction implements RequiredActionProvider, Creden
 		}
 		if (enforcePhoneNumberUniqueness && storeInAttribute) {
 			long count = context.getSession().users()
-					.searchForUserByUserAttributeStream(context.getRealm(), "mobile_number", mobileNumber).count();
+					.searchForUserByUserAttributeStream(context.getRealm(), mobileNumberAttribute, mobileNumber).count();
 
 			if (count > 0) {
 				logger.errorf("Phone number %s is already in use", mobileNumber);

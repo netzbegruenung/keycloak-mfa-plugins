@@ -131,7 +131,10 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 			logger.warn("No config alias sms-2fa found, skip phone number to attribute check");
 		} else {
 			if (Boolean.parseBoolean(config.getConfig().get("storeInAttribute"))) {
-				context.getUser().setSingleAttribute("mobile_number", mobileNumber);
+			    String mobileNumberAttribute = config
+                    .getConfig()
+                    .getOrDefault("mobileNumberAttribute", "mobile_number");
+				context.getUser().setSingleAttribute(mobileNumberAttribute, mobileNumber);
 			}
 		}
 	}
