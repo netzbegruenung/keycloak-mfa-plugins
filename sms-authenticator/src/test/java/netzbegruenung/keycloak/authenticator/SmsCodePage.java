@@ -2,6 +2,7 @@ package netzbegruenung.keycloak.authenticator;
 
 import org.keycloak.testframework.ui.page.AbstractLoginPage;
 import org.keycloak.testframework.ui.webdriver.ManagedWebDriver;
+import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -18,7 +19,7 @@ public class SmsCodePage extends AbstractLoginPage {
 	@FindBy(id = "code")
 	private WebElement codeInput;
 
-	@FindBy(css = "#kc-sms-code-login-form input[name='login']")
+	@FindBy(css = "#kc-sms-code-login-form [name='login']")
 	private WebElement submitButton;
 
 	@FindBy(css = "#kc-sms-code-login-form input[name='resend']")
@@ -26,6 +27,9 @@ public class SmsCodePage extends AbstractLoginPage {
 
 	@FindBy(className = "pf-m-success")
 	private WebElement successMessage;
+
+	@FindBy(css = "button[name='sms-action'][value='change-number']")
+	private WebElement changeNumberButton;
 
 	public SmsCodePage(ManagedWebDriver driver) {
 		super(driver);
@@ -63,5 +67,13 @@ public class SmsCodePage extends AbstractLoginPage {
 		} catch (NoSuchElementException e) {
 			return Optional.empty();
 		}
+	}
+
+	public void changeNumber() {
+		changeNumberButton.click();
+	}
+
+	public boolean hasChangeNumber() {
+		return !driver.driver().findElements(By.cssSelector("button[name='sms-action'][value='change-number']")).isEmpty();
 	}
 }

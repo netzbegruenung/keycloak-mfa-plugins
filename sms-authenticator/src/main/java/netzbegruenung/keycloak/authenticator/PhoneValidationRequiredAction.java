@@ -48,6 +48,9 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 	private static final Logger logger = Logger.getLogger(PhoneValidationRequiredAction.class);
 	public static final String PROVIDER_ID = "phone_validation_config";
 
+	private static final String FORM_ACTION = "sms-action";
+	private static final String ACTION_CHANGE_NUMBER = "change-number";
+
 	@Override
 	public void evaluateTriggers(RequiredActionContext context) {
 	}
@@ -77,15 +80,13 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 				.setAttribute("resendCooldown", outcome.cooldownSecondsRemaining());
 			if (outcome.blocked()) {
 				context.getEvent().clone().user(user).detail("reason", "sms_resend_limit").error(Errors.USER_TEMPORARILY_DISABLED);
-				context.challenge(form
-					.setError("smsAuthResendBlocked", String.valueOf(outcome.blockedMinutesRemaining()))
-					.createForm(SmsAuthenticator.TPL_CODE));
+				context.challenge(createCodeForm(context, form
+					.setError("smsAuthResendBlocked", String.valueOf(outcome.blockedMinutesRemaining())), null));
 				return;
 			}
 			if (outcome.coolingDown()) {
-				context.challenge(form
-					.setInfo("smsAuthResendCooldown", String.valueOf(outcome.cooldownSecondsRemaining()))
-					.createForm(SmsAuthenticator.TPL_CODE));
+				context.challenge(createCodeForm(context, form
+					.setInfo("smsAuthResendCooldown", String.valueOf(outcome.cooldownSecondsRemaining())), null));
 				return;
 			}
 
@@ -101,7 +102,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 			} else if (outcome.resent()) {
 				form.setSuccess("smsAuthCodeResent", String.valueOf(outcome.resendsLeft()));
 			}
-			context.challenge(form.createForm(SmsAuthenticator.TPL_CODE));
+			context.challenge(createCodeForm(context, form, null));
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			context.failure();
@@ -111,6 +112,10 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 	@Override
 	public void processAction(RequiredActionContext context) {
 		MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
+		if (ACTION_CHANGE_NUMBER.equals(formData.getFirst(FORM_ACTION))) {
+			handleChangeNumber(context);
+			return;
+		}
 		if (formData.containsKey(SmsAuthenticator.RESEND_FIELD)) {
 			requiredActionChallenge(context);
 			return;
@@ -153,6 +158,26 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 		}
 	}
 
+	private void handleChangeNumber(RequiredActionContext context) {
+		AuthenticationSessionModel authSession = context.getAuthenticationSession();
+		authSession.removeAuthNote("code");
+		authSession.removeAuthNote("ttl");
+		authSession.removeAuthNote("mobile_number");
+		authSession.addRequiredAction(PhoneNumberRequiredAction.PROVIDER_ID);
+		logger.infof("SMS enrollment: user %s requested a phone number change", context.getUser().getUsername());
+		context.success();
+	}
+
+	private Response createCodeForm(RequiredActionContext context, LoginFormsProvider form, String error) {
+		form.setAttribute("realm", context.getRealm())
+			.setAttribute("smsEnrollment", true)
+			.setAttribute("phoneNumber", context.getAuthenticationSession().getAuthNote("mobile_number"));
+		if (error != null) {
+			form.setError(error);
+		}
+		return form.createForm(SmsAuthenticator.TPL_CODE);
+	}
+
 	private void handlePhoneToAttribute(RequiredActionContext context, String mobileNumber) {
 		AuthenticatorConfigModel config = context.getRealm().getAuthenticatorConfigByAlias("sms-2fa");
 		if (config == null) {
@@ -169,12 +194,7 @@ public class PhoneValidationRequiredAction implements RequiredActionProvider, Cr
 
 	private void handleInvalidSmsCode(RequiredActionContext context) {
 		context.getEvent().clone().user(context.getUser()).error(Errors.INVALID_USER_CREDENTIALS);
-		Response challenge = context
-			.form()
-			.setAttribute("realm", context.getRealm())
-			.setError("smsAuthCodeInvalid")
-			.createForm(SmsAuthenticator.TPL_CODE);
-		context.challenge(challenge);
+		context.challenge(createCodeForm(context, context.form(), "smsAuthCodeInvalid"));
 	}
 
 	@Override
