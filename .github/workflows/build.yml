@@ -19,13 +19,8 @@ jobs:
           distribution: 'temurin'
           cache: maven
       # The jars stay Java 17 bytecode (maven.compiler.release) whatever the JDK that builds them.
-      # On a release tag the version comes from the tag (v26.8.2.0 -> 26.8.2.0); on a pull request the
-      # pom's local default (0-SNAPSHOT) is kept.
       - name: Package with Maven
-        run: |
-          revision=""
-          if [ "$GITHUB_REF_TYPE" = tag ]; then revision="-Drevision=${GITHUB_REF_NAME#v}"; fi
-          mvn -B install -DskipTests -Djacoco.skip=true $revision --file pom.xml
+        run: mvn -B install -DskipTests -Djacoco.skip=true --file pom.xml
       - run: |
           mkdir staging
           cp sms-authenticator/target/*.jar staging

@@ -82,20 +82,38 @@ header.
    A file `target/netzbegruenung.keycloak-2fa-sms-authenticator.jar` should be created.
 
 ## Releases
-Releases are built by GitHub Actions (`.github/workflows/release.yml`) when a `v*` tag is pushed: the tests run on JDK
-21 and 25, the jars are packaged, and a GitHub release is created with the jars and their SHA-512 hashes.
+> **Fork:** this fork does not publish releases yet. Do not push `v*` tags: they trigger `release.yml`, and the fork's
+> version scheme is not decided.
+
+Deployment is done by github actions: `.github/workflows/release.yml`
+To trigger the release workflow be sure to have proper access rights and follow the steps below.
+https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/configuring-tag-protection-rules#about-tag-protection-rules
 
 ### Versioning
-**Fork:** the version is not written in the poms, it comes from the tag. Tags follow
-`v<keycloak.version>.<counter>`, e.g. `v26.8.2.0`: the Keycloak version the plugins are built against, then a counter
-that starts at `0` and resets when `keycloak.version` changes. The dot keeps them apart from upstream's
-`v<keycloak.version>-<counter>` tags. The CI passes the tag's version to Maven (`-Drevision=26.8.2.0`), which names the
-jars, e.g. `netzbegruenung.sms-authenticator-v26.8.2.0.jar`; local builds are versioned `0-SNAPSHOT`.
+Versions follow `<keycloak.version>-<counter>`, e.g. `26.7.0-0`, rather than independent semantic versioning. The counter starts at `0` for the first release built against a given Keycloak version and increments for any additional release against that same Keycloak version (e.g. a hotfix); it resets to `0` whenever `keycloak.version` is bumped in `pom.xml`.
 
-To release, tag a commit of `main` and push the tag:
+Run the block below to bump the version, commit, and tag (in IntelliJ you can run it directly from this file):
 ```shell
-git tag -a v26.8.2.0 -m "Release 26.8.2.0"
-git push origin v26.8.2.0
+set -e
+KEYCLOAK_VERSION=$(mvn help:evaluate -Dexpression=keycloak.version -q -DforceStdout \
+  | awk '{gsub(/\x1b\[[0-9;]*[mK]/,""); print}' \
+  | tr -d '\r')
+LAST_COUNTER=$(git tag -l "v${KEYCLOAK_VERSION}-*" \
+  | sed "s/^v${KEYCLOAK_VERSION}-//" \
+  | sort -n | tail -1)
+NEW_VERSION="${KEYCLOAK_VERSION}-$(( ${LAST_COUNTER:--1} + 1 ))"
+mvn versions:set -DnewVersion="$NEW_VERSION"
+mvn versions:commit
+git add -u
+git commit -m "chore: release $NEW_VERSION"
+git tag -a "v$NEW_VERSION" -m "Release $NEW_VERSION"
+echo "Tagged v$NEW_VERSION - review it, then push with: git push --follow-tags"
 ```
 
-Release notes are generated from the pull requests merged since the last tag (`gh release create --generate-notes`).
+Review the resulting commit and tag, then trigger the release by pushing both together:
+```shell
+git push --follow-tags
+```
+(`--follow-tags` pushes the commit and the new annotated tag in one step; a plain `git push` would not push the tag on its own, and it's the tag push that triggers the workflow.)
+
+After building completes the new release is available on github containing the jar files for each module. Release notes are auto-generated from merged PRs since the last tag (`gh release create --generate-notes` in the workflow), so any PR description explaining a notable change — like this versioning switch — is automatically surfaced to the community.
