@@ -31,12 +31,16 @@ import org.keycloak.authentication.Authenticator;
 import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.email.EmailException;
 import org.keycloak.email.EmailTemplateProvider;
+import org.keycloak.events.Errors;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserModel.RequiredAction;
+import org.keycloak.models.credential.OTPCredentialModel;
+import org.keycloak.services.managers.BruteForceProtector;
+import org.keycloak.services.messages.Messages;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 import jakarta.ws.rs.core.Response;
@@ -44,6 +48,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class EmailAuthenticator implements Authenticator {
 
@@ -63,6 +68,11 @@ public class EmailAuthenticator implements Authenticator {
 		RealmModel realm = context.getRealm();
 
 		Map<String, String> configMap = config != null ? config.getConfig() : Collections.emptyMap();
+
+		// Do not issue a new code to a user already locked out by brute-force protection.
+		if (isDisabledByBruteForce(context)) {
+			return;
+		}
 
 		if (user.getEmail() == null || !user.isEmailVerified()) {
 			context.attempted();
@@ -100,6 +110,11 @@ public class EmailAuthenticator implements Authenticator {
 
 	@Override
 	public void action(AuthenticationFlowContext context) {
+		// Reject further attempts once brute-force protection has temporarily disabled the account.
+		if (isDisabledByBruteForce(context)) {
+			return;
+		}
+
 		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst("code");
 
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
@@ -122,6 +137,9 @@ public class EmailAuthenticator implements Authenticator {
 				context.success();
 			}
 		} else {
+			// Record the failure with the realm brute-force protector so repeated wrong email codes are
+			// rate-limited / locked out, the same way the built-in OTP form is protected.
+			recordBruteForceFailure(context);
 			AuthenticationExecutionModel execution = context.getExecution();
 			if (execution.isRequired()) {
 				context.getEvent().user(context.getUser()).error(INVALID_EMAIL_CODE);
@@ -148,6 +166,46 @@ public class EmailAuthenticator implements Authenticator {
 	public void setRequiredActions(KeycloakSession session, RealmModel realm, UserModel user) {
 		if (user.getEmail() == null || !user.isEmailVerified()) {
 			user.addRequiredAction(RequiredAction.VERIFY_EMAIL);
+		}
+	}
+
+	/**
+	 * Returns true (and fails the flow) if brute-force protection has temporarily disabled the user.
+	 * The stock email authenticator never consulted brute-force state, so email codes could be guessed
+	 * without limit; this brings it in line with the built-in OTP form (same wiring as the SMS
+	 * authenticator, upstream PR netzbegruenung/keycloak-mfa-plugins#394).
+	 */
+	private boolean isDisabledByBruteForce(AuthenticationFlowContext context) {
+		RealmModel realm = context.getRealm();
+		UserModel user = context.getUser();
+		if (realm.isBruteForceProtected() && user != null
+				&& context.getSession().getProvider(BruteForceProtector.class)
+					.isTemporarilyDisabled(context.getSession(), realm, user)) {
+			context.getEvent().user(user).error(Errors.USER_TEMPORARILY_DISABLED);
+			context.failureChallenge(AuthenticationFlowError.USER_TEMPORARILY_DISABLED,
+				context.form().setError(Messages.ACCOUNT_TEMPORARILY_DISABLED)
+					.createErrorPage(Response.Status.UNAUTHORIZED));
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Records a failed second-factor attempt with the realm brute-force protector, mirroring the
+	 * framework's own AuthenticationProcessor.logFailure() call so failures count toward lockout.
+	 */
+	private void recordBruteForceFailure(AuthenticationFlowContext context) {
+		RealmModel realm = context.getRealm();
+		UserModel user = context.getUser();
+		if (realm.isBruteForceProtected() && user != null) {
+			// Count a wrong email code under the "otp" brute-force category. The protector only
+			// accepts password / otp / recovery-authn-codes and silently drops anything else, so an
+			// authenticator-specific category would be a no-op. A wrong second factor is semantically
+			// an OTP failure. Recorded only in Keycloak's attack-detection store; a READ_ONLY user
+			// federation provider is never written to.
+			context.getSession().getProvider(BruteForceProtector.class).failedLogin(
+				realm, user, context.getConnection(), context.getUriInfo(),
+				Set.of(OTPCredentialModel.TYPE));
 		}
 	}
 
