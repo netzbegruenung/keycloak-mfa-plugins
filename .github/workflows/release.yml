@@ -26,7 +26,8 @@ jobs:
         with:
           name: packages
           path: staging
-      - name: "Create release"
-        run: gh release create ${GITHUB_REF_NAME} staging/* --generate-notes --verify-tag
+      # The release and its v** tag are created on GitHub's Releases page; this attaches the jars to it.
+      - name: Attach the jars to the release
+        run: gh release upload "$GITHUB_REF_NAME" staging/* --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
