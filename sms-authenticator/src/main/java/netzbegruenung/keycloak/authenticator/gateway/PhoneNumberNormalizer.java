@@ -13,6 +13,8 @@
  *
  * @author Netzbegruenung e.V.
  * @author verdigado eG
+ *
+ * Modified by B-Sharpe, 2026: phone numbers masked in logs.
  */
 
 package netzbegruenung.keycloak.authenticator.gateway;
@@ -45,7 +47,7 @@ final class PhoneNumberNormalizer {
 		 * If there is no default country prefix, this function does not dare to touch the phone number.
 		 */
 		if (phoneNumber == null || defaultCountryCode == null || defaultCountryCode.isBlank()) {
-			logger.infof("Clean phone number: no country code set, return %s", phoneNumber);
+			logger.infof("Clean phone number: no country code set, return %s", PhoneNumberMasker.mask(phoneNumber));
 			return phoneNumber;
 		}
 
@@ -55,11 +57,13 @@ final class PhoneNumberNormalizer {
 		try {
 			region = phoneNumberUtil.getRegionCodeForCountryCode(Integer.parseInt(countryNumber));
 		} catch (NumberFormatException e) {
-			logger.warnf("Clean phone number: invalid country code %s, return %s", defaultCountryCode, phoneNumber);
+			logger.warnf("Clean phone number: invalid country code %s, return %s", defaultCountryCode,
+				PhoneNumberMasker.mask(phoneNumber));
 			return phoneNumber;
 		}
 		if (!phoneNumberUtil.getSupportedRegions().contains(region)) {
-			logger.warnf("Clean phone number: unknown country code %s, return %s", defaultCountryCode, phoneNumber);
+			logger.warnf("Clean phone number: unknown country code %s, return %s", defaultCountryCode,
+				PhoneNumberMasker.mask(phoneNumber));
 			return phoneNumber;
 		}
 
@@ -74,10 +78,12 @@ final class PhoneNumberNormalizer {
 				phoneNumberUtil.parse(candidate, region),
 				PhoneNumberUtil.PhoneNumberFormat.E164
 			);
-			logger.infof("Clean phone number: set phone number %s to %s", phoneNumber, formatted);
+			logger.infof("Clean phone number: set phone number %s to %s", PhoneNumberMasker.mask(phoneNumber),
+				PhoneNumberMasker.mask(formatted));
 			return formatted;
 		} catch (NumberParseException e) {
-			logger.warnf("Clean phone number: failed to parse %s (%s), return it unchanged", phoneNumber, e.getMessage());
+			logger.warnf("Clean phone number: failed to parse %s (%s), return it unchanged",
+				PhoneNumberMasker.mask(phoneNumber), e.getMessage());
 			return phoneNumber;
 		}
 	}

@@ -2,8 +2,12 @@ package netzbegruenung.keycloak.authenticator;
 
 import org.keycloak.testframework.ui.page.AbstractLoginPage;
 import org.keycloak.testframework.ui.webdriver.ManagedWebDriver;
+import org.openqa.selenium.By;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
+
+import java.util.Optional;
 
 /**
  * login-sms.ftl (SmsAuthenticator.TPL_CODE). Its code input shares id="code" with
@@ -15,8 +19,17 @@ public class SmsCodePage extends AbstractLoginPage {
 	@FindBy(id = "code")
 	private WebElement codeInput;
 
-	@FindBy(css = "#kc-sms-code-login-form input[type='submit']")
+	@FindBy(css = "#kc-sms-code-login-form [name='login']")
 	private WebElement submitButton;
+
+	@FindBy(css = "#kc-sms-code-login-form input[name='resend']")
+	private WebElement resendButton;
+
+	@FindBy(className = "pf-m-success")
+	private WebElement successMessage;
+
+	@FindBy(css = "button[name='sms-action'][value='change-number']")
+	private WebElement changeNumberButton;
 
 	public SmsCodePage(ManagedWebDriver driver) {
 		super(driver);
@@ -34,5 +47,33 @@ public class SmsCodePage extends AbstractLoginPage {
 
 	public void submit() {
 		submitButton.click();
+	}
+
+	public void resend() {
+		resendButton.click();
+	}
+
+	public boolean isResendEnabled() {
+		return resendButton.isEnabled();
+	}
+
+	public String getResendLabel() {
+		return resendButton.getAttribute("value");
+	}
+
+	public Optional<String> getSuccessMessage() {
+		try {
+			return Optional.of(successMessage.getText());
+		} catch (NoSuchElementException e) {
+			return Optional.empty();
+		}
+	}
+
+	public void changeNumber() {
+		changeNumberButton.click();
+	}
+
+	public boolean hasChangeNumber() {
+		return !driver.driver().findElements(By.cssSelector("button[name='sms-action'][value='change-number']")).isEmpty();
 	}
 }

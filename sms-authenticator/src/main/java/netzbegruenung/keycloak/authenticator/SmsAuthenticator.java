@@ -18,6 +18,8 @@
  * @author Niko Köbler, https://www.n-k.de, @dasniko
  * @author Netzbegruenung e.V.
  * @author verdigado eG
+ *
+ * Modified by B-Sharpe, 2026: merged upstream PRs #400, #443, #444; unreachable branches removed.
  */
 
 package netzbegruenung.keycloak.authenticator;
@@ -27,32 +29,41 @@ import netzbegruenung.keycloak.authenticator.credentials.SmsAuthCredentialModel;
 import netzbegruenung.keycloak.authenticator.gateway.SmsServiceFactory;
 
 import org.jboss.logging.Logger;
-import org.keycloak.authentication.CredentialValidator;
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.RequiredActionFactory;
 import org.keycloak.authentication.RequiredActionProvider;
-import org.keycloak.common.util.SecretGenerator;
+import org.keycloak.models.credential.OTPCredentialModel;
+import org.keycloak.services.managers.BruteForceProtector;
+import org.keycloak.services.messages.Messages;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.credential.CredentialProvider;
+import org.keycloak.forms.login.LoginFormsProvider;
+import org.keycloak.events.Errors;
 import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.AuthenticatorConfigModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
-import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 import org.keycloak.util.JsonSerialization;
 
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import java.util.Locale;
 import java.util.Optional;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
 
-public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsAuthCredentialProvider> {
+// Deliberately NOT a CredentialValidator: Keycloak offers CredentialValidator
+// authenticators only when the user has a stored credential of that type
+// (AuthenticationSelectionResolver), which would bypass configuredFor() and
+// make attribute-only users unselectable.
+public class SmsAuthenticator implements Authenticator {
 
 	private static final Logger logger = Logger.getLogger(SmsAuthenticator.class);
 	static final String TPL_CODE = "login-sms.ftl";
@@ -60,6 +71,10 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 	// (invalid_user_credentials) and from Keycloak's own expired codes (expired_code)
 	public static final String INVALID_SMS_CODE = "invalid_sms_code";
 	public static final String EXPIRED_SMS_CODE = "expired_sms_code";
+	/** Name of the "Resend code" submit button in {@link #TPL_CODE}. */
+	static final String RESEND_FIELD = "resend";
+	private static final Pattern ATTRIBUTE_SEPARATORS = Pattern.compile("[\\s().-]");
+	private static final Pattern PHONE_NUMBER = Pattern.compile("^\\+?[0-9]{6,15}$");
 
 	@Override
 	public void authenticate(AuthenticationFlowContext context) {
@@ -68,52 +83,53 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		UserModel user = context.getUser();
 		RealmModel realm = context.getRealm();
 
-		Optional<CredentialModel> model = context.getUser().credentialManager().getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
-		String mobileNumber;
-		try {
-			mobileNumber = JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
-		} catch (IOException e1) {
-			logger.warn(e1.getMessage(), e1);
+		// Do not issue a new code to a user already locked out by brute-force protection.
+		if (isDisabledByBruteForce(context)) {
 			return;
 		}
 
-		// When storeInAttribute is active, the attribute is the source of truth
-		// Allows admins to update the number without requiring the user to re-enroll.
-		boolean storeInAttribute = Boolean.parseBoolean(config.getConfig().getOrDefault("storeInAttribute", "false"));
-		if (storeInAttribute) {
-			String mobileNumberAttribute = config.getConfig().getOrDefault("mobileNumberAttribute", "mobile_number");
-			String attributeNumber = user.getAttributeStream(mobileNumberAttribute)
-				.filter(n -> n != null && !n.isBlank())
-				.findFirst()
-				.orElse(null);
-			if (attributeNumber != null) {
-				mobileNumber = attributeNumber;
-			} else {
-				logger.warnf("storeInAttribute is active but attribute '%s' is empty for user %s, falling back to credential value",
-					mobileNumberAttribute, user.getUsername());
-			}
+		String mobileNumber = resolveMobileNumber(config, user);
+		if (mobileNumber == null) {
+			logger.warnf("No mobile number available for user %s (no SMS credential and no attribute value)", user.getUsername());
+			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
+				context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
+					.createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
+			return;
 		}
 
-		int length = Integer.parseInt(config.getConfig().get("length"));
-		int ttl = Integer.parseInt(config.getConfig().get("ttl"));
-
-		String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
-		AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		authSession.setAuthNote("code", code);
-		authSession.setAuthNote("ttl", Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
+		SmsCode.Outcome outcome = new SmsCode(session, config.getConfig()).issue(user, mobileNumber);
+		LoginFormsProvider form = context.form()
+			.setAttribute("realm", realm)
+			.setAttribute("phoneNumber", mobileNumber)
+			.setAttribute("resendCooldown", outcome.cooldownSecondsRemaining());
+		if (outcome.blocked()) {
+			context.getEvent().clone().user(user).detail("reason", "sms_resend_limit").error(Errors.USER_TEMPORARILY_DISABLED);
+			context.challenge(form
+				.setError("smsAuthResendBlocked", String.valueOf(outcome.blockedMinutesRemaining()))
+				.createForm(TPL_CODE));
+			return;
+		}
+		if (outcome.coolingDown()) {
+			context.challenge(form
+				.setInfo("smsAuthResendCooldown", String.valueOf(outcome.cooldownSecondsRemaining()))
+				.createForm(TPL_CODE));
+			return;
+		}
 
 		try {
 			Theme theme = session.theme().getTheme(Theme.Type.LOGIN);
 			Locale locale = session.getContext().resolveLocale(user);
 			String smsAuthText = theme.getEnhancedMessages(realm,locale).getProperty("smsAuthText");
-			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
+			String smsText = String.format(smsAuthText, outcome.code(), outcome.remainingMinutes());
 
-			SmsServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
+			SmsServiceFactory.get(config.getConfig(), session).send(mobileNumber, smsText);
 
-			context.challenge(context.form()
-				.setAttribute("realm", realm)
-				.setAttribute("phoneNumber", mobileNumber)
-				.createForm(TPL_CODE));
+			if (outcome.resent() && outcome.resendsLeft() == 0) {
+				form.setSuccess("smsAuthCodeResentLast");
+			} else if (outcome.resent()) {
+				form.setSuccess("smsAuthCodeResent", String.valueOf(outcome.resendsLeft()));
+			}
+			context.challenge(form.createForm(TPL_CODE));
 		} catch (Exception e) {
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
 				context.form().setError("smsAuthSmsNotSent", "Error. Use another method.")
@@ -123,33 +139,43 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	@Override
 	public void action(AuthenticationFlowContext context) {
-		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst("code");
-
-		AuthenticationSessionModel authSession = context.getAuthenticationSession();
-		String code = authSession.getAuthNote("code");
-		String ttl = authSession.getAuthNote("ttl");
-
-		if (code == null || ttl == null) {
-			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
-				context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
+		// Reject further attempts once brute-force protection has temporarily disabled the account.
+		if (isDisabledByBruteForce(context)) {
 			return;
 		}
 
-		boolean isValid = enteredCode.equals(code);
-		if (isValid) {
-			if (Long.parseLong(ttl) < System.currentTimeMillis()) {
-				// expired
-				context.getEvent().user(context.getUser()).error(EXPIRED_SMS_CODE);
-				context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE,
-					context.form().setError("smsAuthCodeExpired").createErrorPage(Response.Status.BAD_REQUEST));
-			} else {
-				// valid
-				context.success();
-			}
+		MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
+		if (formData.containsKey(RESEND_FIELD)) {
+			// "Resend code" button: re-run the challenge, which re-sends the current code or
+			// issues a new one, subject to the re-send limit.
+			authenticate(context);
+			return;
+		}
+		// May be null: a GET on the action URL with session_code reaches action() without form data.
+		String enteredCode = formData.getFirst("code");
+
+		SmsCode smsCode = new SmsCode(context.getSession(), context.getAuthenticatorConfig().getConfig());
+		// An if chain rather than a switch: a switch on the enum also compiles an unreachable "none of
+		// these" branch.
+		SmsCode.Verification verification = smsCode.verify(context.getUser(), enteredCode);
+		if (verification == SmsCode.Verification.NO_CODE) {
+			// Nothing to check against (e.g. the user was blocked on a fresh login and
+			// submitted anyway, or the code was discarded): re-run the challenge, which
+			// sends a code or re-shows the block.
+			authenticate(context);
+		} else if (verification == SmsCode.Verification.EXPIRED) {
+			context.getEvent().user(context.getUser()).error(EXPIRED_SMS_CODE);
+			context.failureChallenge(AuthenticationFlowError.EXPIRED_CODE,
+				context.form().setError("smsAuthCodeExpired").createErrorPage(Response.Status.BAD_REQUEST));
+		} else if (verification == SmsCode.Verification.VALID) {
+			context.success();
 		} else {
-			// invalid
-			String mobileNumber = getMobileNumber(context);
+			String mobileNumber = resolveMobileNumber(context.getAuthenticatorConfig(), context.getUser());
 			context.getEvent().user(context.getUser()).error(INVALID_SMS_CODE);
+			// Record the failure with the realm brute-force protector so repeated wrong SMS codes are
+			// rate-limited / locked out, the same way the built-in OTP form is protected. The lockout
+			// lives only in Keycloak's own store; the LDAP provider is READ_ONLY so AD is never touched.
+			recordBruteForceFailure(context);
 			Response challenge = context.form()
 				.setAttribute("phoneNumber", mobileNumber)
 				.setError("smsAuthCodeInvalid")
@@ -165,7 +191,14 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 
 	@Override
 	public boolean configuredFor(KeycloakSession session, RealmModel realm, UserModel user) {
-		return getCredentialProvider(session).isConfiguredFor(realm, user, getType(session));
+		if (getCredentialProvider(session).isConfiguredFor(realm, user, SmsAuthCredentialModel.TYPE)) {
+			return true;
+		}
+		// When storeInAttribute is active, a populated attribute (e.g. federated from
+		// LDAP) is enough: the user can authenticate without an enrolled credential.
+		// TODO: get the alias from somewhere else or move config into realm or application scope
+		AuthenticatorConfigModel config = realm.getAuthenticatorConfigByAlias("sms-2fa");
+		return isStoreInAttribute(config) && getAttributeNumber(config, user) != null;
 	}
 
 	@Override
@@ -177,23 +210,123 @@ public class SmsAuthenticator implements Authenticator, CredentialValidator<SmsA
 		return Collections.singletonList((PhoneNumberRequiredActionFactory)session.getKeycloakSessionFactory().getProviderFactory(RequiredActionProvider.class, PhoneNumberRequiredAction.PROVIDER_ID));
 	}
 
+	/**
+	 * Returns true (and fails the flow) if brute-force protection has temporarily disabled the user.
+	 * The stock SMS authenticator never consulted brute-force state, so SMS codes could be guessed
+	 * without limit; this brings it in line with the built-in OTP form (upstream PR netzbegruenung
+	 * keycloak-mfa-plugins#394).
+	 */
+	private boolean isDisabledByBruteForce(AuthenticationFlowContext context) {
+		RealmModel realm = context.getRealm();
+		UserModel user = context.getUser();
+		// No null check on the user: requiresUser() is true, Keycloak only runs this step with a user.
+		if (realm.isBruteForceProtected()
+				&& context.getSession().getProvider(BruteForceProtector.class)
+					.isTemporarilyDisabled(context.getSession(), realm, user)) {
+			context.getEvent().user(user).error(Errors.USER_TEMPORARILY_DISABLED);
+			context.failureChallenge(AuthenticationFlowError.USER_TEMPORARILY_DISABLED,
+				context.form().setError(Messages.ACCOUNT_TEMPORARILY_DISABLED)
+					.createErrorPage(Response.Status.UNAUTHORIZED));
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Records a failed second-factor attempt with the realm brute-force protector, mirroring the
+	 * framework's own AuthenticationProcessor.logFailure() call so failures count toward lockout.
+	 */
+	private void recordBruteForceFailure(AuthenticationFlowContext context) {
+		RealmModel realm = context.getRealm();
+		UserModel user = context.getUser();
+		if (realm.isBruteForceProtected()) {
+			// Count a wrong SMS code under the "otp" brute-force category. The protector only
+			// accepts password / otp / recovery-authn-codes and silently drops anything else, so
+			// this authenticator's own category ("mobile-number") would be a no-op. A wrong second
+			// factor is semantically an OTP failure. Recorded only in Keycloak's attack-detection
+			// store; the LDAP provider is READ_ONLY so the AD account is never touched.
+			context.getSession().getProvider(BruteForceProtector.class).failedLogin(
+				realm, user, context.getConnection(), context.getUriInfo(),
+				Set.of(OTPCredentialModel.TYPE));
+		}
+	}
+
 	@Override
 	public void close() {
 	}
 
-	@Override
 	public SmsAuthCredentialProvider getCredentialProvider(KeycloakSession session) {
 		return (SmsAuthCredentialProvider)session.getProvider(CredentialProvider.class, SmsAuthCredentialProviderFactory.PROVIDER_ID);
 	}
 
-	private String getMobileNumber(AuthenticationFlowContext context) {
-		Optional<CredentialModel> model = context.getUser().credentialManager()
+	/**
+	 * Resolve the number the code is sent to. The stored SMS credential is used when
+	 * present. When storeInAttribute is active the user attribute is the source of
+	 * truth: it wins over the credential, and a user whose attribute is already
+	 * populated (e.g. via LDAP federation) needs no enrolled credential at all.
+	 * Returns null when neither source has a number.
+	 */
+	static String resolveMobileNumber(AuthenticatorConfigModel config, UserModel user) {
+		String credentialNumber = getCredentialNumber(user);
+		if (!isStoreInAttribute(config)) {
+			return credentialNumber;
+		}
+		String attributeNumber = getAttributeNumber(config, user);
+		if (attributeNumber != null) {
+			return attributeNumber;
+		}
+		if (credentialNumber != null) {
+			logger.warnf("storeInAttribute is active but attribute '%s' is empty for user %s, falling back to credential value",
+				getMobileNumberAttribute(config), user.getUsername());
+		}
+		return credentialNumber;
+	}
+
+	private static String getCredentialNumber(UserModel user) {
+		Optional<CredentialModel> model = user.credentialManager()
 			.getStoredCredentialsByTypeStream(SmsAuthCredentialModel.TYPE).findFirst();
+		if (model.isEmpty()) {
+			return null;
+		}
 		try {
-			return JsonSerialization.readValue(model.orElseThrow().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
+			return JsonSerialization.readValue(model.get().getCredentialData(), SmsAuthCredentialData.class).getMobileNumber();
 		} catch (IOException e) {
 			logger.warn(e.getMessage(), e);
 			return null;
 		}
+	}
+
+	/**
+	 * The attribute is trusted as a phone number only if it looks like one: optional
+	 * leading '+', then 6-15 digits, after dropping spaces, dashes, dots and
+	 * parentheses. Anything else is treated as "no number" and logged. Unlike an
+	 * enrolled credential (validated during phone validation), an attribute may be
+	 * written by an admin, a federation mapper or a user profile, and it is later
+	 * interpolated into the SMS provider request, so it must not carry arbitrary text.
+	 */
+	private static String getAttributeNumber(AuthenticatorConfigModel config, UserModel user) {
+		String raw = user.getAttributeStream(getMobileNumberAttribute(config))
+			.filter(n -> n != null && !n.isBlank())
+			.findFirst()
+			.orElse(null);
+		if (raw == null) {
+			return null;
+		}
+		String normalized = ATTRIBUTE_SEPARATORS.matcher(raw.trim()).replaceAll("");
+		if (!PHONE_NUMBER.matcher(normalized).matches()) {
+			logger.warnf("Attribute '%s' of user %s does not look like a phone number, ignoring it",
+				getMobileNumberAttribute(config), user.getUsername());
+			return null;
+		}
+		return normalized;
+	}
+
+	private static boolean isStoreInAttribute(AuthenticatorConfigModel config) {
+		return config != null && config.getConfig() != null
+			&& Boolean.parseBoolean(config.getConfig().getOrDefault("storeInAttribute", "false"));
+	}
+
+	private static String getMobileNumberAttribute(AuthenticatorConfigModel config) {
+		return config.getConfig().getOrDefault("mobileNumberAttribute", "mobile_number");
 	}
 }

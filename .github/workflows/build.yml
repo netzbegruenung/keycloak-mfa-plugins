@@ -1,6 +1,10 @@
-name: Reusable build workflow
+name: Build
 
-on: workflow_call
+# Packages the jars. The tests run in the Test workflow; a branch protection rule requires them to pass
+# before a pull request is merged, so they are not run again here.
+on:
+  pull_request:
+  workflow_call:
 
 jobs:
   build:
@@ -8,14 +12,20 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v6
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
           cache: maven
-      - name: Build with Maven
-        run: mvn -B install --file pom.xml
+      # The jars stay Java 17 bytecode (maven.compiler.release) whatever the JDK that builds them.
+      # On a release tag the version comes from the tag (v26.8.2.0 -> 26.8.2.0); on a pull request the
+      # pom's local default (0-SNAPSHOT) is kept.
+      - name: Package with Maven
+        run: |
+          revision=""
+          if [ "$GITHUB_REF_TYPE" = tag ]; then revision="-Drevision=${GITHUB_REF_NAME#v}"; fi
+          mvn -B install -DskipTests -Djacoco.skip=true $revision --file pom.xml
       - run: |
           mkdir staging
           cp sms-authenticator/target/*.jar staging

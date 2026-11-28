@@ -4,8 +4,37 @@ on:
   push:
     branches:
       - '**'
+  pull_request:
+  workflow_call:
 
 jobs:
-  build:
-    uses: ./.github/workflows/build.yml
-  # TODO further tests
+  test:
+    # A pull request from a branch of this repository was already tested by that branch's push:
+    # only pull requests from other repositories (outside contributors) are tested again.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    name: test (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Each JDK reports its own result, even when another one fails.
+      fail-fast: false
+      matrix:
+        # 21: the JDK of the official Keycloak image; 25: the newest JDK Keycloak 26.x supports. Java 17 is
+        # deprecated by Keycloak and not tested; the jars stay Java 17 bytecode, like upstream's.
+        java: ['21', '25']
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v6
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+          cache: maven
+      - name: Test, with the coverage check
+        run: mvn -B test --file pom.xml
+      - name: Upload the sms-authenticator coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-sms-authenticator-jdk${{ matrix.java }}
+          path: sms-authenticator/target/site/jacoco
+          if-no-files-found: ignore

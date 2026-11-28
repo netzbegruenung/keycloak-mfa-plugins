@@ -12,21 +12,68 @@
 					<input type="number" min="0" inputmode="numeric" pattern="[0-9]*" id="code" name="code" class="${properties.kcInputClass!}" autocomplete="off" autofocus />
 				</div>
 			</div>
+			<#if smsEnrollment??>
+			<div class="pf-v5-c-form__group pf-m-action">
+				<div class="pf-v5-c-form__actions" style="display:flex; gap:0.5rem; width:100%">
+					<button type="submit" class="${properties.kcButtonClass!} ${properties.kcButtonDefaultClass!} ${properties.kcButtonLargeClass!}" name="sms-action" value="change-number" style="flex:1 1 0; min-width:0">${msg("smsAuthChangeNumber")}</button>
+					<button type="submit" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonLargeClass!}" name="login" style="flex:1 1 0; min-width:0">${msg("doSubmit")}</button>
+				</div>
+				<div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
+					<input name="resend" id="kc-sms-resend" class="${properties.kcButtonClass!} ${properties.kcButtonDefaultClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("smsAuthResend")}" formnovalidate/>
+				</div>
+			</div>
 			<div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
 				<div id="kc-form-options" class="${properties.kcFormOptionsClass!}">
 					<div class="${properties.kcFormOptionsWrapperClass!}">
 						<span><a href="/realms/${realm.name}/account">${msg("backToApplication")?no_esc}</a></span>
 					</div>
 				</div>
-
+			</div>
+			<#else>
+			<div class="${properties.kcFormGroupClass!} ${properties.kcFormSettingClass!}">
+				<div id="kc-form-options" class="${properties.kcFormOptionsClass!}">
+					<div class="${properties.kcFormOptionsWrapperClass!}">
+						<span><a href="/realms/${realm.name}/account">${msg("backToApplication")?no_esc}</a></span>
+					</div>
+				</div>
 				<div id="kc-form-buttons" class="${properties.kcFormButtonsClass!}">
 					<input name="login" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("doSubmit")}"/>
+					<input name="resend" id="kc-sms-resend" class="${properties.kcButtonClass!} ${properties.kcButtonDefaultClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}" type="submit" value="${msg("smsAuthResend")}" formnovalidate/>
 				</div>
 			</div>
+			</#if>
 		</form>
+		<#if resendCooldown?? && resendCooldown gt 0>
+			<script>
+				(function () {
+					var button = document.getElementById("kc-sms-resend");
+					var label = button.value;
+					var left = ${resendCooldown?c};
+					var format = function (seconds) {
+						if (seconds < 60) {
+							return String(seconds);
+						}
+						var rest = seconds % 60;
+						return Math.floor(seconds / 60) + ":" + (rest < 10 ? "0" : "") + rest;
+					};
+					var tick = function () {
+						if (left <= 0) {
+							button.disabled = false;
+							button.value = label;
+							return;
+						}
+						button.disabled = true;
+						button.value = label + " (" + format(left) + ")";
+						left--;
+						setTimeout(tick, 1000);
+					};
+					tick();
+				})();
+			</script>
+		</#if>
 	<#elseif section = "info" >
 		<#if phoneNumber?? && phoneNumber?has_content>
-			<#assign maskedPhone = phoneNumber[0..2] + phoneNumber[3..phoneNumber?length-5]?replace(".", "*") + phoneNumber[phoneNumber?length-4..]>
+			<#assign maskedPhone = phoneNumber?replace(".(?=.{4})", "*", "r")>
 			${msg("smsAuthInstructionWithPhone", maskedPhone)}
 		<#else>
 			${msg("smsAuthInstruction")}

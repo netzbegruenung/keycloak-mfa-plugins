@@ -17,6 +17,8 @@
  * @author Niko Köbler, https://www.n-k.de, @dasniko
  * @author Netzbegruenung e.V.
  * @author verdigado eG
+ *
+ * Modified by B-Sharpe, 2026: phone numbers masked in logs.
  */
 
 package netzbegruenung.keycloak.authenticator.gateway;
@@ -34,10 +36,12 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 public class ApiSmsService implements SmsService{
 
 	private static final Logger logger = Logger.getLogger(SmsServiceFactory.class);
+	private static final Pattern nonDigitPattern = Pattern.compile("[^0-9+]");
 
 	private final String apiurl;
 	private final Boolean urlencode;
@@ -65,6 +69,8 @@ public class ApiSmsService implements SmsService{
 
 	private final boolean stripPlusPrefix;
 
+	private final boolean stripFormattingCharacters;
+
 	ApiSmsService(Map<String, String> config) {
 		apiurl = config.get("apiurl");
 		urlencode = Boolean.parseBoolean(config.getOrDefault("urlencode", "false"));
@@ -91,9 +97,14 @@ public class ApiSmsService implements SmsService{
 		getUrl = config.getOrDefault("getUrl", "");
 
 		stripPlusPrefix = Boolean.parseBoolean(config.getOrDefault("stripPlusPrefix", "false"));
+
+		stripFormattingCharacters = Boolean.parseBoolean(config.getOrDefault("stripFormattingCharacters", "true"));
 	}
 
 	public void send(String phoneNumber, String message) {
+		if (stripFormattingCharacters) {
+			phoneNumber = removeFormattingCharacters(phoneNumber);
+		}
 		phoneNumber = PhoneNumberNormalizer.toE164(phoneNumber, countrycode);
 		if (stripPlusPrefix && phoneNumber.startsWith("+")) {
 			phoneNumber = phoneNumber.substring(1);
@@ -129,38 +140,40 @@ public class ApiSmsService implements SmsService{
 			int statusCode = response.statusCode();
 			String payload = hideResponsePayload ? "redacted" : "Response: " + response.body();
 
-			if (statusCode >= 200 && statusCode < 300) {
-				logger.infof("Sent SMS to %s [%s]", phoneNumber, payload);
+			// The HTTP client only returns final responses (>= 200): a 2xx class check is all it takes.
+			if (statusCode / 100 == 2) {
+				logger.infof("Sent SMS to %s [%s]", PhoneNumberMasker.mask(phoneNumber), payload);
 			} else {
-				logErrorStatus(phoneNumber, payload, request, requestPayload, statusCode);
+				logErrorStatus(phoneNumber, payload, request, statusCode);
 			}
 		} catch (Exception e) {
-			logErrorException(phoneNumber, request, requestPayload);
+			logErrorException(phoneNumber, request);
 		}
 	}
 
-	private void logErrorStatus(String phoneNumber, String responsePayload, HttpRequest request, String requestPayload, int statusCode) {
-		String logMessage = "Failed to send message to %s [%s] with request: %s [Status: %s]";
-		Object[] logParams = new Object[]{phoneNumber, responsePayload, request != null ? request.toString() : "null", statusCode};
-
-		if (!urlencode && requestPayload != null) {
-			logMessage += ". Payload: %s";
-			logParams = new Object[]{phoneNumber, responsePayload, request != null ? request.toString() : "null", statusCode, requestPayload};
-		}
-		logMessage += ". Validate your config.";
-		logger.errorf(logMessage, logParams);
+	// The request payload is deliberately not logged: it contains the one-time code. For the same reason
+	// only the method and the server of the request are logged (see describe).
+	private void logErrorStatus(String phoneNumber, String responsePayload, HttpRequest request, int statusCode) {
+		logger.errorf("Failed to send message to %s [%s] with request: %s [Status: %s]. Validate your config.",
+			PhoneNumberMasker.mask(phoneNumber), responsePayload, describe(request), statusCode);
 	}
 
-	private void logErrorException(String phoneNumber, HttpRequest request, String requestPayload) {
-		String logMessage = "Failed to send message to %s with request: %s";
-		Object[] logParams = new Object[]{phoneNumber, request != null ? request.toString() : "null"};
+	private void logErrorException(String phoneNumber, HttpRequest request) {
+		logger.errorf("Failed to send message to %s with request: %s. Validate your config.",
+			PhoneNumberMasker.mask(phoneNumber), describe(request));
+	}
 
-		if (!urlencode && requestPayload != null) {
-			logMessage += ". Payload: %s";
-			logParams = new Object[]{phoneNumber, request != null ? request.toString() : "null", requestPayload};
+	/**
+	 * Method and server only: the path and query of a GET request carry the number and the message (with
+	 * the code), and the URI's user info can carry credentials.
+	 */
+	private static String describe(HttpRequest request) {
+		if (request == null) {
+			return "null";
 		}
-		logMessage += ". Validate your config.";
-		logger.errorf(logMessage, logParams);
+		URI uri = request.uri();
+		String port = uri.getPort() == -1 ? "" : ":" + uri.getPort();
+		return request.method() + " " + uri.getScheme() + "://" + uri.getHost() + port;
 	}
 
 	private String getJsonBody(String phoneNumber, String message) {
@@ -230,5 +243,24 @@ public class ApiSmsService implements SmsService{
 		String authString = apiuser + ':' + apitoken;
 		String b64_cred = Base64.getEncoder().encodeToString(authString.getBytes());
 		return "Basic " + b64_cred;
+	}
+
+	private static String removeFormattingCharacters(String phone_number) {
+		/*
+		 * Remove everything that is not a digit or a plus sign, e.g. spaces, non-breaking spaces,
+		 * dashes and parentheses. Numbers taken from a user attribute never pass through the phone
+		 * number required action, so this is the only place that sees every send path.
+		 * PhoneNumberNormalizer ignores formatting too, but returns the number verbatim when no
+		 * default country code is configured or the number cannot be parsed.
+		 */
+		if (phone_number == null) {
+			return null;
+		}
+		String stripped = nonDigitPattern.matcher(phone_number).replaceAll("");
+		if (!stripped.equals(phone_number)) {
+			logger.infof("Clean phone number: stripped formatting characters, set phone number to %s",
+				PhoneNumberMasker.mask(stripped));
+		}
+		return stripped;
 	}
 }
